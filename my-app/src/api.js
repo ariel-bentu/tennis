@@ -27,9 +27,9 @@ export async function getUserInfo() {
 export async function getPlannedGames() {
     return exec("getPlannedGames",
          [
-             {id:1, Day: 'ראשון', Time:'20:01', Registered: 0},
-             {id:2, Day: 'שלישי', Time:'20:01', Registered: 4},
-             {id:3, Day: 'חמישי', Time:'20:01', Registered: 3}
+             {id:1, Day: 'ראשון', Time:'20:01', NumOfRegistered: 0, Registered: true},
+             {id:2, Day: 'שלישי', Time:'20:01', NumOfRegistered: 4},
+             {id:3, Day: 'חמישי', Time:'20:01', NumOfRegistered: 3}
         ]);
 }
 
