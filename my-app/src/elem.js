@@ -12,10 +12,8 @@ export function Toolbar(props) {
     return <div style={{flex:1, flexDirection:'row', height: 30, alignItems:'flex-start'}}>{props.children}</div>
 }
 
-export function Name(props) {
-    return <Text>אריאל בן טולילה</Text>
-}
+
 
 export function Text(props) {
-    return <div style={{ textAlign:'right', fontSize:props.fontSize || 15, padding:10}}>{props.children}</div>
+    return <div style={{ textAlign:props.textAlign || 'right', fontSize:props.fontSize || 15, padding:10}}>{props.children}</div>
 }

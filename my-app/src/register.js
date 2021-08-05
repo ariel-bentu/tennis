@@ -1,43 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-//import { DataGrid } from '@material-ui/data-grid';
 import { Button, Checkbox, Table, TableHead, TableRow, TableBody, TableCell} from '@material-ui/core';
+
 import { Spacer, Header } from './elem'
 
-
 import * as api from './api'
-
-
-// const columns = [
-
-//   {
-//     field: 'Day',
-//     headerName: 'יום',
-//     flex: 3,
-//     editable: false,
-//     align: "right",
-//     disableColumnMenu: true
-
-//   },
-//   {
-//     field: 'Time',
-//     headerName: 'שעה',
-//     flex: 3,
-//     editable: false,
-//     align: "right",
-//     disableColumnMenu: true
-
-//   },
-//   {
-//     field: 'Registered',
-//     headerName: 'נרשמו?',
-//     flex: 3,
-//     editable: false,
-//     align: "right",
-//     disableColumnMenu: true
-
-//   }
-// ];
 
 
 export default function Register(props) {
@@ -99,7 +66,8 @@ export default function Register(props) {
           </TableBody>
         </Table>
       <Spacer height={20} />
-      <Button variant="contained" disabled={!isDirty()}>שלח</Button>
+      <Button variant="contained" disabled={!isDirty()} onClick={()=>props.notify.success("נשלח בהצלחה")}>שלח</Button>
+      
     </div>
   );
 }
