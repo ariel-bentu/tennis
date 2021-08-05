@@ -1,3 +1,16 @@
+
+
+function getSpreadsheet() {
+  var files = DriveApp.getFilesByName("main");
+  if (files.hasNext()) {
+    return SpreadsheetApp.open(files.next());
+  }
+}
+
+function getSheet(spreadsheet, name) {
+  return spreadsheet.getSheetByName(name);
+}
+
 function findRow(sheet, searchInColName, searchValue ) {
    let returnVal = null;
 
@@ -21,12 +34,18 @@ function findRow(sheet, searchInColName, searchValue ) {
 
 function getAll(sheet) {
    let results = [];
+   let colNames = {}
+   let data = sheet.getDataRange().getValues();
 
+   //create map of fields names from header line
+   data[0].forEach((name, index)=> {
+     colNames[""+index] = trimName(name);
+   });
   
-  for (let i = 2; i <= sheet.getDataRange().getNumRows(); i++) {
+  for (let i = 1; i < data.length; i++) {
     let row = {};
-    for (let col = 1; col <= sheet.getDataRange().getNumColumns(); col++) {
-      row[getHeaderColumnName(sheet, col)] = sheet.getRange(i, col).getValue();  
+    for (let col = 0; col < data[i].length; col++) {
+      row[colNames[""+col]] = data[i][col];
     }
     results.push(row);
   }
@@ -54,6 +73,11 @@ function vLookup(sheet, searchInColName, searchValue, returnColName) {
   return returnVal;
 }
 
+function mapColNames(sheet, obj) {
+  let ret = {}
+  obj.keys().forEach(key=>ret[key] = getColIndexByHeader(sheet, key));
+  return ret;
+}
   
 
 function getColIndexByHeader(sheet, name) {
@@ -68,10 +92,24 @@ function getColIndexByHeader(sheet, name) {
 
 function getHeaderColumnName(sheet, index) {
   let fullName = sheet.getRange(1, index).getValue();
-  let parStart = fullName.indexOf("(");
+  return trimName(fullName);
+  
+}
+
+function trimName(name) {
+  if (!name) 
+    return "";
+
+  let parStart = name.indexOf("(");
   if (parStart > 0) {
-    return fullName.substr(0, parStart).trim();
+    return name.substr(0, parStart).trim();
   }
-  return fullName.trim();
+  return name.trim();
+}
+
+function logTime(desc) {
+  var start = new Date();
+  var startTime = Number(start.getTime()).toFixed(0);
+  console.log(startTime, desc);
 }
 

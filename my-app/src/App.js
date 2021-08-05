@@ -1,9 +1,9 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertTitle } from '@material-ui/lab';
-import { Collapse, CircularProgress } from '@material-ui/core';
+import { Collapse } from '@material-ui/core';
 import Register from './register';
-import { Toolbar, Text } from './elem'
+import { Toolbar, Text, Loading } from './elem'
 import * as api from './api'
 
 
@@ -16,11 +16,15 @@ function App() {
   useEffect(() => {
 
     api.getUserInfo().then(info => {
-      if (info === undefined) {
+      if (info === null) {
         setBlocked(true);
       } else {
         setUserInfo(info);
       }
+    },
+    (err)=>{
+      setBlocked(true);
+      setMsg({ open: true, severity: "error", title:"שגיאה", body:err })
     });
   }, []);
 
@@ -32,28 +36,18 @@ function App() {
   }
 
   return (
-    userInfo ? <div className="App" dir="rtl" >
+    <div className="App" dir="rtl" >
       <Collapse in={msg.open} timeout={500} style={{ position: 'absolute', top: 0, width: '100%' }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
           {msg.body}
         </Alert>
       </Collapse>
-      <Toolbar><Text>{userInfo.Name}</Text></Toolbar>
-      <Register notify={notify} />
-    </div> : blocked ? <div>משתמש לא מורשה</div> :
-      <div style={{
-        dir:"rtl",
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        width: '100%',
-        alignItems: 'center',
-        alignContent: 'center',
-        justifyContent: 'center'
-      }}>
-        <CircularProgress /><Text fontSize={35} textAlign={"center"}>טוען</Text>
-      </div>
+      {userInfo ?<Toolbar><Text>{userInfo.Name}</Text></Toolbar>:null}
+      {userInfo? <Register notify={notify} />:
+         blocked ? null:
+         <Loading msg="מאמת זהות"/>}
+    </div>
   );
 }
 
