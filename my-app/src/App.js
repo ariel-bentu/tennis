@@ -40,7 +40,7 @@ function App() {
       <Collapse in={msg.open} timeout={500} style={{ position: 'absolute', top: 0, width: '100%' }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
-          {msg.body}
+          <Text>{msg.body}</Text>
         </Alert>
       </Collapse>
       {userInfo ?<Toolbar><Text>{userInfo.Name}</Text></Toolbar>:null}

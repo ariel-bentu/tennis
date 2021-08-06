@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button, Checkbox, Table, TableHead, TableRow, TableBody, TableCell} from '@material-ui/core';
+import { Button, Checkbox, Table, TableHead, TableRow, TableBody} from '@material-ui/core';
 
-import { Spacer, Header,Loading } from './elem'
+import { Spacer, Header,Loading, MyTableCell } from './elem'
 
 import * as api from './api'
 
@@ -39,28 +39,28 @@ export default function Register(props) {
         <Table >
           <TableHead>
             <TableRow>
-              <TableCell align="right">רישום</TableCell>
-              <TableCell align="right">יום</TableCell>
-              <TableCell align="right">שעה</TableCell>
-              <TableCell align="right">נרשמו?</TableCell>
+              <MyTableCell className="tableHeader">רישום</MyTableCell>
+              <MyTableCell >יום</MyTableCell>
+              <MyTableCell >שעה</MyTableCell>
+              <MyTableCell >נרשמו?</MyTableCell>
             </TableRow>
             
           </TableHead>
           {plannedGames ? <TableBody>
             { plannedGames.map((game) => (
               <TableRow key={game.id}>
-                <TableCell align="right">
-                  <Checkbox checked={getChecked(game)} onChange={()=>{
+                <MyTableCell >
+                  <Checkbox size={"medium"} checked={getChecked(game)} onChange={()=>{
                     let edit = {...editRegistration}
                     edit[game.id] = !getChecked(game);
                     setEditRegistration(edit);
                   }}/>
-                </TableCell>
-                <TableCell component="th" scope="row" align="right">
+                </MyTableCell>
+                <MyTableCell component="th" scope="row" >
                   {game.Day}
-                </TableCell>
-                <TableCell align="right">{game.Hour}</TableCell>
-                <TableCell align="right">{game.NumOfRegistered}</TableCell>
+                </MyTableCell>
+                <MyTableCell >{game.Hour}</MyTableCell>
+                <MyTableCell >{game.NumOfRegistered}</MyTableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -68,7 +68,12 @@ export default function Register(props) {
         </Table>
         {plannedGames?null:<Loading msg="טוען משחקים"/>}
       <Spacer height={20} />
-      <Button variant="contained" disabled={submitInProcess || !isDirty()} onClick={()=>{
+      <Button 
+        style={{fontSize:35}}
+        size={"large"}
+        fullWidth={true}
+        variant="contained" 
+        disabled={submitInProcess || !isDirty()} onClick={()=>{
         setSubmitInProcess(true);
         let newReg = plannedGames.map(game=>{return {id:game.id, Registered: getChecked(game)}});
         api.submitRegistration(newReg).then(

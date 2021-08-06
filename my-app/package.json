@@ -16,7 +16,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && npx gulp && cp ./build/index.html ../server/",
+    "build": "react-scripts build",
+    "build-gas": "react-scripts build && npx gulp && cp ./build/index.html ../server/",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
