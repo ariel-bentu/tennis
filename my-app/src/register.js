@@ -15,8 +15,9 @@ export default function Register(props) {
   const [submitInProcess, setSubmitInProcess] = useState(false);
 
   useEffect(() => {
-    api.getPlannedGames().then(games => games?setPlannedGames(games):{})
-  }, []);
+    if (props.UserInfo)
+      api.getPlannedGames(props.UserInfo.email).then(games => games?setPlannedGames(games):{})
+  }, [props.UserInfo]);
 
   let getChecked = (game) => {
     if (!editRegistration)
@@ -76,9 +77,9 @@ export default function Register(props) {
         disabled={submitInProcess || !isDirty()} onClick={()=>{
         setSubmitInProcess(true);
         let newReg = plannedGames.map(game=>{return {id:game.id, Registered: getChecked(game)}});
-        api.submitRegistration(newReg).then(
+        api.submitRegistration(newReg, props.UserInfo.email).then(
           ()=>{
-            api.getPlannedGames().then(games => {
+            api.getPlannedGames(props.UserInfo.email).then(games => {
               setPlannedGames(games);
               setEditRegistration(undefined)
               setSubmitInProcess(false);

@@ -1,38 +1,45 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertTitle } from '@material-ui/lab';
-import { Collapse } from '@material-ui/core';
+import { Collapse, Button } from '@material-ui/core';
 import Register from './register';
 import { Toolbar, Text, Loading } from './elem'
 import * as api from './api'
+import Login from './login'
 
+import firebase from 'firebase/app'
+import 'firebase/auth';
+
+  import { config } from "./config";
+
+firebase.initializeApp(config); 
 
 function App() {
 
   const [userInfo, setUserInfo] = useState(undefined);
   const [blocked, setBlocked] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({});
 
   useEffect(() => {
-
-    api.getUserInfo().then(info => {
-      if (info === null) {
-        setBlocked(true);
-      } else {
-        setUserInfo(info);
-      }
-    },
-    (err)=>{
-      setBlocked(true);
-      setMsg({ open: true, severity: "error", title:"שגיאה", body:err })
+    setTimeout(()=>setLoading(false), 1500);
+    firebase.auth().onAuthStateChanged(function(user) {
+      setUserInfo({ email: user.email });
     });
+
   }, []);
 
   const notify = {
     success: (body, title) => {
       setMsg({ open: true, severity: "success", title, body });
       setTimeout(() => setMsg({}), 5000);
+    },
+    error: (body, title) => {
+      setMsg({ open: true, severity: "error", title, body });
+      setTimeout(() => setMsg({}), 5000);
+
     }
+
   }
 
   return (
@@ -43,12 +50,22 @@ function App() {
           <Text>{msg.body}</Text>
         </Alert>
       </Collapse>
-      {userInfo ?<Toolbar><Text>{userInfo.Name}</Text></Toolbar>:null}
-      {userInfo? <Register notify={notify} />:
+      {userInfo ?<Toolbar><Text>{userInfo.email}</Text></Toolbar>:null}
+      {userInfo? <Register notify={notify} UserInfo={userInfo}/>:
          blocked ? null:
-         <Loading msg="מאמת זהות"/>}
+         loading ? <Loading msg={"מאמת זהות"}/>: <Login onLogin={(userInfo)=>setUserInfo(userInfo)} onError={(err)=>{
+          setBlocked(true);
+          setMsg({ open: true, severity: "error", title:"שגיאה", body:err.toString() })
+        }}/>}
+        {/* <Button onClick={()=> {
+          api.initGames().then(
+            ()=>notify.success("אותחלו משחקים"),
+            (err)=>notify.error(err.toString(), "תקלה")
+          )
+        }}>Init Games</Button> */}
     </div>
   );
 }
+
 
 export default App;
