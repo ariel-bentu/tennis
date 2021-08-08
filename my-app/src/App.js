@@ -1,18 +1,26 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertTitle } from '@material-ui/lab';
-import { Collapse, Button } from '@material-ui/core';
+import { Collapse } from '@material-ui/core';
 import Register from './register';
+import Match from './match'
 import { Toolbar, Text, Loading } from './elem'
 import * as api from './api'
 import Login from './login'
 
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link
+} from "react-router-dom";
+
 import firebase from 'firebase/app'
 import 'firebase/auth';
 
-  import { config } from "./config";
+import { config } from "./config";
 
-firebase.initializeApp(config); 
+firebase.initializeApp(config);
 
 function App() {
 
@@ -22,9 +30,9 @@ function App() {
   const [msg, setMsg] = useState({});
 
   useEffect(() => {
-    setTimeout(()=>setLoading(false), 1500);
-    firebase.auth().onAuthStateChanged(function(user) {
-      setUserInfo({ email: user.email });
+    setTimeout(() => setLoading(false), 1500);
+    firebase.auth().onAuthStateChanged(function (user) {
+      setUserInfo(api.getUserObj(user));
     });
 
   }, []);
@@ -50,14 +58,24 @@ function App() {
           <Text>{msg.body}</Text>
         </Alert>
       </Collapse>
-      {userInfo ?<Toolbar><Text>{userInfo.email}</Text></Toolbar>:null}
-      {userInfo? <Register notify={notify} UserInfo={userInfo}/>:
-         blocked ? null:
-         loading ? <Loading msg={"מאמת זהות"}/>: <Login onLogin={(userInfo)=>setUserInfo(userInfo)} onError={(err)=>{
-          setBlocked(true);
-          setMsg({ open: true, severity: "error", title:"שגיאה", body:err.toString() })
-        }}/>}
-        {/* <Button onClick={()=> {
+      {userInfo ? <Toolbar><Text>{userInfo.email}</Text></Toolbar> : null}
+      {userInfo ?
+        <Router>
+          <Switch>
+            <Route path="/match">
+              <Match />
+            </Route>
+            <Route path="/">
+              <Register notify={notify} UserInfo={userInfo} />
+            </Route>
+          </Switch>
+        </Router> :
+        blocked ? null :
+          loading ? <Loading msg={"מאמת זהות"} /> : <Login onLogin={(userInfo) => setUserInfo(userInfo)} onError={(err) => {
+            setBlocked(true);
+            setMsg({ open: true, severity: "error", title: "שגיאה", body: err.toString() })
+          }} />}
+      {/* <Button onClick={()=> {
           api.initGames().then(
             ()=>notify.success("אותחלו משחקים"),
             (err)=>notify.error(err.toString(), "תקלה")

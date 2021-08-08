@@ -3,6 +3,11 @@ import 'firebase/auth';
 import 'firebase/firestore';
 import { config } from './config';
 
+const REGISTRATION_COLLECTION = "registrations";
+const PLANNED_GAMES_COLLECTION = "planned-games";
+const MATCHES_COLLECTION = "matches";
+
+
 // function exec(funcName, mockValue, ...args) {
 
 //     //if (google === undefined)
@@ -27,13 +32,18 @@ export async function getUserInfo(user, pwd) {
     return firebase.auth().signInWithEmailAndPassword(user, pwd)
         .then((userCredential) => {
             // Signed in
-            return { email: userCredential.user.email };
+            return getUserObj(userCredential.user);
         })
         .catch((error) => {
             throw error.message;
         });
-    // return exec("getUserInfo",
-    //      {Name:'אריאל'});
+}
+
+export function getUserObj(user) {
+    return {
+        Name: user.displayName && user.displayName.length > 0 ? user.displayName : user.email,
+        email: user.email
+    };
 }
 
 
@@ -71,27 +81,25 @@ export async function initGames() {
     var batch = db.batch();
 
     games.forEach(g => {
-        var docRef = db.collection("planned-games").doc();
+        var docRef = db.collection(PLANNED_GAMES_COLLECTION).doc();
         batch.set(docRef, g);
     })
 
     return batch.commit()
 }
 export async function getPlannedGames(currentUser) {
-    // return exec("getPlannedGames",
-    // [{"id":1,"Day":"ראשון","Hour":"20:01","NumOfRegistered":1,"Registered":true},{"id":2,"Day":"שלישי","Hour":"20:01","NumOfRegistered":1},{"id":3,"Day":"חמישי","Hour":"20:00"},{"id":4,"Day":"שישי","Hour":"16:00"},{"id":5,"Day":"שבת","Hour":"20:00"}]);
 
     var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        db.collection("planned-games").get().then((planned) => {
+        db.collection(PLANNED_GAMES_COLLECTION).get().then((planned) => {
             let results = []
             planned.forEach((doc) => {
                 results.push(doc.data());
             });
             results.sort((a, b) => a.id - b.id);
 
-            db.collection("registrations").get().then(
+            db.collection(REGISTRATION_COLLECTION).get().then(
                 regs => {
                     regs.docs.forEach(regDoc => {
                         let reg = regDoc.data();
@@ -107,7 +115,7 @@ export async function getPlannedGames(currentUser) {
                     });
                     resolve(results);
                 },
-                (err)=> resolve(results));
+                (err) => resolve(results));
 
         })
     });
@@ -116,12 +124,11 @@ export async function getPlannedGames(currentUser) {
 
 
 export async function submitRegistration(newRegs, currentUser) {
-    //return exec("submitRegistration", "Success", reg);
 
     var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        db.collection("registrations").get().then((data) => {
+        db.collection(REGISTRATION_COLLECTION).get().then((data) => {
             let batch = db.batch();
             let dirty = false;
 
@@ -135,7 +142,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     // Verify registered
                     if (!data.docs.some(match)) {
                         //not found
-                        var docRef = db.collection("registrations").doc();
+                        var docRef = db.collection(REGISTRATION_COLLECTION).doc();
                         batch.set(docRef, { GameID: reg.id, email: currentUser });
                         dirty = true;
                     }
@@ -159,4 +166,29 @@ export async function submitRegistration(newRegs, currentUser) {
     });
 
 }
+
+export async function getRegistrations() {
+    var db = firebase.firestore();
+
+    return db.collection(REGISTRATION_COLLECTION).get().then((regs) => {
+        return regs.docs.map(docObj => docObj.data())
+    });
+}
+
+export async function getPlannedGamesRaw() {
+    var db = firebase.firestore();
+
+    return db.collection(PLANNED_GAMES_COLLECTION).get().then((planned) => {
+        return planned.docs.map(docObj => docObj.data())
+    });
+}
+
+export async function getMatches() {
+    var db = firebase.firestore();
+
+    return db.collection(MATCHES_COLLECTION).get().then((matches) => {
+        return matches.docs.map(docObj => docObj.data())
+    });
+}
+
 
