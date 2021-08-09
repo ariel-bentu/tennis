@@ -11,8 +11,7 @@ import Login from './login'
 import {
   BrowserRouter as Router,
   Switch,
-  Route,
-  Link
+  Route
 } from "react-router-dom";
 
 import firebase from 'firebase/app'

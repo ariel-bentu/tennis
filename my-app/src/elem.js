@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { CircularProgress, TableCell ,Box, Paper, Card, Typography } from '@material-ui/core';
-import Draggable from "react-draggable";
+import { CircularProgress, TableCell ,Box, Paper } from '@material-ui/core';
 
 
 export function Spacer(props) {
@@ -23,6 +22,10 @@ export function MyTableCell(props) {
     return <TableCell style={{fontSize:25}} align="right">{props.children}</TableCell>
 }
 
+export function SmallTableCell(props) {
+    return <TableCell style={{fontSize:15}} align="right">{props.children}</TableCell>
+}
+
 
 export function Text(props) {
     return <div style={{ textAlign:props.textAlign || 'right', fontSize:props.fontSize || 25, padding:10}}>{props.children}</div>
@@ -40,19 +43,12 @@ export function HBox(props) {
     </Box>
 }
 
-export function DraggableCard({ text, bgColor }) {
-    return (
-      <Draggable>
-        <Card
-          style={{ width: "40%", backgroundColor: bgColor, color: "#ffffff" }}
-        >
-          {/* <Button variant="text">BUY</Button> */}
-          <Typography variant="h6">{text}</Typography>
-        </Card>
-      </Draggable>
-    );
-  };
+export const ItemTypes = {
+    BOX: 'box',
+  }
   
+  
+
 
 export function Loading(props) {
     return <div style={{

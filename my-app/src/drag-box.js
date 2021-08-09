@@ -1,0 +1,42 @@
+import { useDrag } from 'react-dnd';
+import { ItemTypes, Spacer } from './elem';
+const style = {
+    display:'flex',
+    flexDirection:'row',
+    border: '1px dashed gray',
+    backgroundColor: 'white',
+    cursor: 'move',
+    float: 'left',
+    width: '9rem',
+    fontSize: 12, 
+    margin:2
+};
+export const Box = function Box({ user, height, onRemove, source, backgroundColor}) {
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: ItemTypes.BOX,
+        item: { user },
+        end: (item, monitor) => {
+            const dropResult = monitor.getDropResult();
+            if (item && dropResult) {
+                if (source !== dropResult.target) {
+                    dropResult.onDrop(item.user);
+                }
+                
+            }
+        },
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+            handlerId: monitor.getHandlerId(),
+        }),
+    }));
+    const opacity = isDragging ? 0.4 : 1;
+    return (<div ref={drag} style={{ ...style, height:height || style.height , opacity , backgroundColor:backgroundColor || 'transparent'}} >
+            {onRemove?<span style={{ cursor: 'pointer', verticalAlign:'text-top' }} onClick={onRemove}>
+              ×
+            </span>:null}
+            {onRemove?<Spacer width={15}/>:null}
+			{
+            user.displayName
+            }
+		</div>);
+};
