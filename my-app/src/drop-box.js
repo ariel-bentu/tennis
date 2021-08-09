@@ -4,7 +4,7 @@ import { Box } from './drag-box'
 const style = {
     display: 'flex',
     height: '100%',
-    minHeight: '2rem',
+    minHeight: '1rem',
     minWidth:'8rem',
     width: '100%',
     border: '1px solid black',
@@ -19,7 +19,7 @@ export const Dustbin = (props) => {
         accept: ItemTypes.BOX,
         drop: () => {
             return {
-                onDrop: (player) => props.AddPlayer(player) ,
+                onDrop: (user, source) => props.AddPlayer(user, source) ,
                 target: props.target
             }
         },
@@ -37,9 +37,7 @@ export const Dustbin = (props) => {
     }
     return (<div ref={drop} style={{ ...style }}>
         <VBox>
-            {props.Player1 ? <Box source={props.target} user={props.Player1}  height={'1rem'} onRemove={()=>{}}/> : null}
-            <Spacer/>
-            {props.Player2 ? <Box source={props.target} user={props.Player2}  height={'1rem'} onRemove={()=>{}}/> : null}
+            {props.Player ? <Box source={props.source} sourcePair={props.sourcePair} user={props.Player}  height={'1rem'} onRemove={props.onRemove}/> : null}
         </VBox>
     </div>);
 };

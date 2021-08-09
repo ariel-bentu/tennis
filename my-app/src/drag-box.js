@@ -11,15 +11,15 @@ const style = {
     fontSize: 12, 
     margin:2
 };
-export const Box = function Box({ user, height, onRemove, source, backgroundColor}) {
+export const Box = function Box({ user, height, onRemove, source, sourcePair, backgroundColor}) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: ItemTypes.BOX,
         item: { user },
         end: (item, monitor) => {
             const dropResult = monitor.getDropResult();
             if (item && dropResult) {
-                if (source !== dropResult.target) {
-                    dropResult.onDrop(item.user);
+                if (sourcePair !== dropResult.sourcePair) {
+                    dropResult.onDrop(item.user, source);
                 }
                 
             }
@@ -28,7 +28,7 @@ export const Box = function Box({ user, height, onRemove, source, backgroundColo
             isDragging: monitor.isDragging(),
             handlerId: monitor.getHandlerId(),
         }),
-    }));
+    }), [user]);
     const opacity = isDragging ? 0.4 : 1;
     return (<div ref={drag} style={{ ...style, height:height || style.height , opacity , backgroundColor:backgroundColor || 'transparent'}} >
             {onRemove?<span style={{ cursor: 'pointer', verticalAlign:'text-top' }} onClick={onRemove}>

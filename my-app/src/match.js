@@ -21,22 +21,18 @@ const isNotInMatch = (match, email) => {
         (!match.Player4 || match.Player4.email !== email);
 }
 
-const updatePlayer = (match, args) => {
-    let fragment = {}
-    if (args[1]) {
-        if (!match.Player1 || match.Player1.length === 0) {
-            fragment.Player1 = args[0];
-        } else {
-            fragment.Player2 = args[0];
-        }
-    } else {
-        if (!match.Player3 || match.Player3.length === 0) {
-            fragment.Player3 = args[0];
-        } else {
-            fragment.Player4 = args[0];
-        }
+const calcChange = (item, user, source, target) => {
+    
+    if (source == target) 
+        return {};
+    let srcName = "Player"+source;
+    let targetName = "Player"+target;
+
+    if (source == 0) {
+        return {[targetName]: user}
     }
-    return fragment
+    return {[targetName]: user , [srcName]:item[targetName]}
+    
 }
 
 
@@ -77,11 +73,11 @@ export default function Match(props) {
         users.filter(u => registrations.filter(r => r.GameID == currentGame).every(r => r.email !== u.email))
     ), [currentGame]);
 
-    let updateMatch = (id, func, ...args) => {
+    let updateMatch = (id, user, source, target) => {
         setDirty(true);
         setEditedMatches(oldEditedMatches => oldEditedMatches.map(item =>
             item.id === id
-                ? { ...item, ...(func(item, args)) }
+                ? { ...item, ...calcChange(item, user, source, target) }
                 : item));
     }
 
@@ -158,13 +154,24 @@ export default function Match(props) {
                                             <SmallTableCell >{match.Location}</SmallTableCell>
                                             <SmallTableCell >{match.Court}</SmallTableCell>
                                             <SmallTableCell >
-                                                <Dustbin target={'Pair1'} Player1={match.Player1} Player2={match.Player2}
-                                                    AddPlayer={(user) => updateMatch(match.id, updatePlayer, user, true)}
+                                                <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1} 
+                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 1 )}
+                                                    onRemove={()=>updateMatch(match.id, undefined, 0, 1 )}
+                                                />
+                                                <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2} 
+                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 2 )}
+                                                    onRemove={()=>updateMatch(match.id, undefined, 0, 2 )}
+
                                                 />
                                             </SmallTableCell>
                                             <SmallTableCell >
-                                                <Dustbin target={'Pair2'} Player1={match.Player3} Player2={match.Player4}
-                                                    AddPlayer={(user) => updateMatch(match.id, updatePlayer, user, false)}
+                                                <Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3} 
+                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 3 )}
+                                                    onRemove={()=>updateMatch(match.id, undefined, 0, 3 )}
+                                                />
+                                                <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4} 
+                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 4 )}
+                                                    onRemove={()=>updateMatch(match.id, undefined, 0, 4 )}
                                                 />
                                             </SmallTableCell>
                                             <SmallTableCell >
@@ -181,13 +188,13 @@ export default function Match(props) {
                                 <HBox style={{ width: '80%', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
 
                                     {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
-                                        <Box user={reg} source={'unassigned'} backgroundColor={'lightblue'} />
+                                        <Box user={reg} sourcePair={'unassigned'} source={0}  backgroundColor={'lightblue'} />
                                     )}
                                 </HBox>
                                 <HBox style={{ width: '80%', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
 
                                     {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
-                                        <Box user={user} source={'unassigned'} backgroundColor={'yellow'} />
+                                        <Box user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} />
                                     )}
                                 </HBox>
                             </VBox>
