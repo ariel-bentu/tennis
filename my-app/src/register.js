@@ -40,10 +40,10 @@ export default function Register(props) {
         <Table >
           <TableHead>
             <TableRow>
-              <MyTableCell className="tableHeader">רישום</MyTableCell>
-              <MyTableCell >יום</MyTableCell>
-              <MyTableCell >שעה</MyTableCell>
-              <MyTableCell >נרשמו?</MyTableCell>
+              <MyTableCell width={'20%'} className="tableHeader">רישום</MyTableCell>
+              <MyTableCell width={'30%'}>יום</MyTableCell>
+              <MyTableCell width={'25%'}>שעה</MyTableCell>
+              <MyTableCell width={'25%'}>נרשמו?</MyTableCell>
             </TableRow>
             
           </TableHead>

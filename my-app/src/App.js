@@ -62,7 +62,7 @@ function App() {
         <Router>
           <Switch>
             <Route path="/match">
-              <Match />
+              <Match notify={notify}/>
             </Route>
             <Route path="/">
               <Register notify={notify} UserInfo={userInfo} />

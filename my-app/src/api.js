@@ -91,7 +91,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     if (!data.docs.some(match)) {
                         //not found
                         var docRef = db.collection(Collections.REGISTRATION_COLLECTION).doc();
-                        batch.set(docRef, { GameID: reg.id, email: currentUser });
+                        batch.set(docRef, { GameID: reg.id, email: currentUser, time:new Date().toDateString() });
                         dirty = true;
                     }
                 } else {
@@ -115,47 +115,311 @@ export async function submitRegistration(newRegs, currentUser) {
 
 }
 
-export async function getCollection(collName) {
+export async function getCollection(collName, orderBy) {
 
-    if (collName == Collections.REGISTRATION_COLLECTION) {
+    if (collName === Collections.REGISTRATION_COLLECTION) {
         return [
-            { GameID: 2, email: "ariel.bentolila@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila1@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila2@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila3@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila4@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila5@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila6@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila7@gmail.com" },
-            { GameID: 2, email: "ariel.bentolila8@gmail.com"}
+            {
+                "email": "1@gmail.com",
+                "GameID": 4,
+                "_order": 1
+            },
+            {
+                "email": "2@gmail.com",
+                "GameID": 5,
+                "_order": 2
+            },
+            {
+                "email": "3@gmail.com",
+                "GameID": 2,
+                "_order": 3
+            },
+            {
+                "email": "4@gmail.com",
+                "GameID": 2,
+                "_order": 4
+            },
+            {
+                "email": "5@gmail.com",
+                "GameID": 2,
+                "_order": 5
+            },
+            {
+                "email": "6@gmail.com",
+                "GameID": 4,
+                "_order": 6
+            },
+            {
+                "email": "7@gmail.com",
+                "GameID": 1,
+                "_order": 7
+            },
+            {
+                "email": "8@gmail.com",
+                "GameID": 2,
+                "_order": 8
+            },
+            {
+                "email": "9@gmail.com",
+                "GameID": 3,
+                "_order": 9
+            },
+            {
+                "email": "10@gmail.com",
+                "GameID": 2,
+                "_order": 10
+            },
+            {
+                "email": "11@gmail.com",
+                "GameID": 3,
+                "_order": 11
+            },
+            {
+                "email": "12@gmail.com",
+                "GameID": 3,
+                "_order": 12
+            },
+            {
+                "email": "13@gmail.com",
+                "GameID": 2,
+                "_order": 13
+            },
+            {
+                "email": "14@gmail.com",
+                "GameID": 3,
+                "_order": 14
+            },
+            {
+                "email": "15@gmail.com",
+                "GameID": 4,
+                "_order": 15
+            },
+            {
+                "email": "16@gmail.com",
+                "GameID": 3,
+                "_order": 16
+            },
+            {
+                "email": "17@gmail.com",
+                "GameID": 3,
+                "_order": 17
+            },
+            {
+                "email": "18@gmail.com",
+                "GameID": 1,
+                "_order": 18
+            },
+            {
+                "email": "19@gmail.com",
+                "GameID": 3,
+                "_order": 19
+            },
+            {
+                "email": "20@gmail.com",
+                "GameID": 2,
+                "_order": 20
+            },
+            {
+                "email": "21@gmail.com",
+                "GameID": 4,
+                "_order": 21
+            },
+            {
+                "email": "22@gmail.com",
+                "GameID": 2,
+                "_order": 22
+            },
+            {
+                "email": "23@gmail.com",
+                "GameID": 1,
+                "_order": 23
+            },
+            {
+                "email": "24@gmail.com",
+                "GameID": 4,
+                "_order": 24
+            },
+            {
+                "email": "25@gmail.com",
+                "GameID": 5,
+                "_order": 25
+            }
         ]
     }
 
-    if (collName == Collections.USERS_COLLECTION) {
+    if (collName === Collections.USERS_COLLECTION) {
         return [
-            {  email: "ariel.bentolila@gmail.com", displayName: 'אריאל' },
-            {  email: "ariel.bentolila1@gmail.com", displayName: '1אריאל' },
-            {  email: "ariel.bentolila2@gmail.com", displayName: '2אריאל' },
-            {  email: "ariel.bentolila3@gmail.com", displayName: '3אריאל' },
-            {  email: "ariel.bentolila4@gmail.com", displayName: '4אריאל' },
-            {  email: "ariel.bentolila5@gmail.com", displayName: '5אריאל' },
-            {  email: "ariel.bentolila6@gmail.com", displayName: '6אריאל' },
-            {  email: "ariel.bentolila7@gmail.com", displayName: '7אריאל' },
-            {  email: "ariel.bentolila8@gmail.com", displayName: '8אריאל' },
-            {  email: "maayan@gmail.com", displayName: 'מעין' },
-
+            {
+                "email": "1@gmail.com",
+                "displayName": "Dalton Ross",
+                "rank": 53
+            },
+            {
+                "email": "2@gmail.com",
+                "displayName": "Granville Solis",
+                "rank": 74
+            },
+            {
+                "email": "3@gmail.com",
+                "displayName": "Oliver Mueller",
+                "rank": 39
+            },
+            {
+                "email": "4@gmail.com",
+                "displayName": "Sean Manning",
+                "rank": 95
+            },
+            {
+                "email": "5@gmail.com",
+                "displayName": "Brady Espinoza",
+                "rank": 71
+            },
+            {
+                "email": "6@gmail.com",
+                "displayName": "Alec Boyle",
+                "rank": 18
+            },
+            {
+                "email": "7@gmail.com",
+                "displayName": "Gavin Drake",
+                "rank": 45
+            },
+            {
+                "email": "8@gmail.com",
+                "displayName": "Brooks Montoya",
+                "rank": 56
+            },
+            {
+                "email": "9@gmail.com",
+                "displayName": "Geraldo Holloway",
+                "rank": 34
+            },
+            {
+                "email": "10@gmail.com",
+                "displayName": "Vincent Bender",
+                "rank": 4
+            },
+            {
+                "email": "11@gmail.com",
+                "displayName": "Isreal Morales",
+                "rank": 90
+            },
+            {
+                "email": "12@gmail.com",
+                "displayName": "Sebastian Clay",
+                "rank": 6
+            },
+            {
+                "email": "13@gmail.com",
+                "displayName": "Joe Howe",
+                "rank": 81
+            },
+            {
+                "email": "14@gmail.com",
+                "displayName": "Chris Aguirre",
+                "rank": 73
+            },
+            {
+                "email": "15@gmail.com",
+                "displayName": "Curtis Sweeney",
+                "rank": 87
+            },
+            {
+                "email": "16@gmail.com",
+                "displayName": "Theron Vargas",
+                "rank": 79
+            },
+            {
+                "email": "17@gmail.com",
+                "displayName": "Erik Stanton",
+                "rank": 95
+            },
+            {
+                "email": "18@gmail.com",
+                "displayName": "Dudley Burke",
+                "rank": 63
+            },
+            {
+                "email": "19@gmail.com",
+                "displayName": "Nathaniel Crawford",
+                "rank": 94
+            },
+            {
+                "email": "20@gmail.com",
+                "displayName": "Francisco Ellison",
+                "rank": 9
+            },
+            {
+                "email": "21@gmail.com",
+                "displayName": "Martin Terrell",
+                "rank": 59
+            },
+            {
+                "email": "22@gmail.com",
+                "displayName": "Lorenzo Maynard",
+                "rank": 77
+            },
+            {
+                "email": "23@gmail.com",
+                "displayName": "Herman Reid",
+                "rank": 10
+            },
+            {
+                "email": "24@gmail.com",
+                "displayName": "Tony Hale",
+                "rank": 27
+            },
+            {
+                "email": "25@gmail.com",
+                "displayName": "Myles Mcgee",
+                "rank": 58
+            }
         ]
+
+        
     }
 
 
     var db = firebase.firestore();
+    let colRef = db.collection(collName);
+    if (orderBy) {
+        colRef = colRef.orderBy(orderBy);
+    }
+    let i = 1;
+    return colRef.get().then((items) => {
+        return items.docs.map(docObj => {
+            let obj = docObj.data();
+            if (orderBy)
+                obj._order = i++;
 
-    return db.collection(collName).get().then((items) => {
-        return items.docs.map(docObj => docObj.data())
+            obj._ref = docObj.ref;
+            return obj;
+        })
     });
 }
 
+export async function saveMatches(matches) {
+    var db = firebase.firestore();
+    var batch = db.batch();
 
+    matches.forEach(m => {
+        if (m.deleted) {
+            if (m._ref) {
+                batch.delete(m._ref);
+            }
+            //else do nothing
+        } else if (m._ref) {
+            const {_ref, ...dataOnly} = m;
+            batch.set(m._ref, dataOnly);
+        } else {
+            //new match
+            var docRef = db.collection(Collections.MATCHES_COLLECTION).doc();
+            batch.set(docRef, m);
+        }
+    })
+
+    return batch.commit();
+}
 
 
 
