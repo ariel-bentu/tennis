@@ -6,7 +6,8 @@ import { config } from './config';
 export const Collections = {
     REGISTRATION_COLLECTION: "registrations",
     PLANNED_GAMES_COLLECTION: "planned-games",
-    MATCHES_COLLECTION: "matches"
+    MATCHES_COLLECTION: "matches",
+    USERS_COLLECTION: "users"
 }
 
 
@@ -26,10 +27,23 @@ export async function getUserInfo(user, pwd) {
         });
 }
 
+export async function changePwd(user, newPwd) {
+    return user.updatePassword(newPwd);
+}
+
+export async function logout() {
+    return firebase.auth().signOut()
+}
+
+export async function forgotPwd(email) {
+    return firebase.auth().sendPasswordResetEmail(email)
+}
+
 export function getUserObj(user) {
     return {
-        Name: user.displayName && user.displayName.length > 0 ? user.displayName : user.email,
-        email: user.email
+        displayName: user.displayName && user.displayName.length > 0 ? user.displayName : user.email,
+        email: user.email,
+        _user: user
     };
 }
 
@@ -91,7 +105,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     if (!data.docs.some(match)) {
                         //not found
                         var docRef = db.collection(Collections.REGISTRATION_COLLECTION).doc();
-                        batch.set(docRef, { GameID: reg.id, email: currentUser, time:new Date().toDateString() });
+                        batch.set(docRef, { GameID: reg.id, email: currentUser, time: new Date().toDateString() });
                         dirty = true;
                     }
                 } else {
@@ -376,7 +390,7 @@ export async function getCollection(collName, orderBy) {
             }
         ]
 
-        
+
     }
 
 
@@ -409,7 +423,7 @@ export async function saveMatches(matches) {
             }
             //else do nothing
         } else if (m._ref) {
-            const {_ref, ...dataOnly} = m;
+            const { _ref, ...dataOnly } = m;
             batch.set(m._ref, dataOnly);
         } else {
             //new match
@@ -463,4 +477,22 @@ export async function initGames() {
     })
 
     return batch.commit()
+}
+
+
+export function addUser(user) {
+    return firebase.auth().createUserWithEmailAndPassword(user.email, user.phone)
+        .then((userCredential) => {
+            var db = firebase.firestore();
+            db.collection(Collections.USERS_COLLECTION).doc(user.email).set({...user, mustChangePwd:true}).catch(err=>{
+                //revert 
+                firebase.auth().delete(userCredential.user.uid);
+                throw(err.message);
+            })
+        })
+        .catch((error) => {
+            var errorCode = error.code;
+            var errorMessage = error.message;
+            throw(errorMessage);
+        });
 }

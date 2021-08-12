@@ -15,18 +15,6 @@ import Container from '@material-ui/core/Container';
 
 import * as api from './api'
 
-function Copyright() {
-  return (
-    <Typography variant="body2" color="textSecondary" align="center">
-      {'Copyright © '}
-      <Link color="inherit" href="https://material-ui.com/">
-        Your Website
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -63,7 +51,7 @@ export default function Login(props) {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          התחברות
         </Typography>
         <form className={classes.form} noValidate>
           <TextField
@@ -71,9 +59,7 @@ export default function Login(props) {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
+            label="אימייל"
             autoComplete="email"
             autoFocus
             onChange={(e)=>setUser(e.currentTarget.value)}
@@ -83,16 +69,10 @@ export default function Login(props) {
             margin="normal"
             required
             fullWidth
-            name="password"
-            label="Password"
+            label="סיסמא"
             type="password"
-            id="password"
             autoComplete="current-password"
             onChange={(e)=>setPwd(e.currentTarget.value)}
-          />
-          <FormControlLabel
-            control={<Checkbox value="remember" color="primary" />}
-            label="Remember me"
           />
           <Button
             
@@ -107,25 +87,23 @@ export default function Login(props) {
                 );
             }}
           >
-            Sign In
+            התחבר
           </Button>
           <Grid container>
             <Grid item xs>
-              <Link href="#" variant="body2">
-                Forgot password?
+              <Link  variant="body2" onClick={props.onForgotPwd}>
+                שכחתי סיסמא?
               </Link>
             </Grid>
             <Grid item>
               <Link href="#" variant="body2">
-                {"Don't have an account? Sign Up"}
+                {"משתמש חדש? הרשם"}
               </Link>
             </Grid>
           </Grid>
         </form>
       </div>
-      <Box mt={8}>
-        <Copyright />
-      </Box>
+     
     </Container>
   );
 }
