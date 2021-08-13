@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -14,6 +14,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 
 import * as api from './api'
+import SelfRegistration from './self-registeration';
 
 
 const useStyles = makeStyles((theme) => ({
@@ -41,9 +42,30 @@ export default function Login(props) {
 
   const [user, setUser] = useState("");
   const [pwd, setPwd] = useState("");
+  const [selfRegister, setSelfRegister] = useState(false);
+
+  useEffect(() => {
+    const listener = event => {
+      if (event.code === "Enter" || event.code === "NumpadEnter") {
+        event.preventDefault();
+        ok();
+      }
+    };
+    document.addEventListener("keydown", listener);
+    return () => {
+      document.removeEventListener("keydown", listener);
+    };
+  }, []);
+
+  const ok = useCallback(() => {
+    api.getUserInfo(user, pwd).then(
+      info => props.onLogin(info),
+      err => props.onError(err)
+    );
+  }, [user, pwd])
 
 
-  return (
+  return (selfRegister? <SelfRegistration notify={props.notify} onCancel={()=>setSelfRegister(false)}/> :
     <Container component="main" maxWidth="xs">
       <CssBaseline />
       <div className={classes.paper}>
@@ -53,7 +75,7 @@ export default function Login(props) {
         <Typography component="h1" variant="h5">
           התחברות
         </Typography>
-        <form className={classes.form} noValidate>
+        <div style={{width:'100%'}} dir={'ltr'}>
           <TextField
             variant="outlined"
             margin="normal"
@@ -62,48 +84,43 @@ export default function Login(props) {
             label="אימייל"
             autoComplete="email"
             autoFocus
-            onChange={(e)=>setUser(e.currentTarget.value)}
+            onChange={(e) => setUser(e.currentTarget.value)}
           />
-          <TextField
-            variant="outlined"
-            margin="normal"
-            required
-            fullWidth
-            label="סיסמא"
-            type="password"
-            autoComplete="current-password"
-            onChange={(e)=>setPwd(e.currentTarget.value)}
-          />
-          <Button
-            
-            fullWidth
-            variant="contained"
-            color="primary"
-            className={classes.submit}
-            onClick={()=>{
-                api.getUserInfo(user, pwd).then(
-                    info=> props.onLogin(info),
-                    err=> props.onError(err)
-                );
-            }}
-          >
-            התחבר
-          </Button>
-          <Grid container>
-            <Grid item xs>
-              <Link  variant="body2" onClick={props.onForgotPwd}>
-                שכחתי סיסמא?
-              </Link>
-            </Grid>
-            <Grid item>
-              <Link href="#" variant="body2">
-                {"משתמש חדש? הרשם"}
-              </Link>
-            </Grid>
+        </div>
+        <TextField
+          variant="outlined"
+          margin="normal"
+          required
+          fullWidth
+          label="סיסמא"
+          type="password"
+          autoComplete="current-password"
+          onChange={(e) => setPwd(e.currentTarget.value)}
+        />
+        <Button
+
+          fullWidth
+          variant="contained"
+          color="primary"
+          className={classes.submit}
+          onClick={ok}
+        >
+          התחבר
+        </Button>
+        <Grid container>
+          <Grid item xs>
+            <Link variant="body2" onClick={props.onForgotPwd}>
+              שכחתי סיסמא?
+            </Link>
           </Grid>
-        </form>
+          <Grid item>
+            <Link href="#" variant="body2" onClick={()=>setSelfRegister(true)}>
+              {"משתמש חדש? הרשם"}
+            </Link>
+          </Grid>
+        </Grid>
       </div>
-     
+
     </Container>
   );
 }

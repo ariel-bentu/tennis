@@ -1,2 +1,7 @@
+- num of registered according to dirty
+- 
+
+
 - who to play with
 - if you play twice, and someone is once - get precedence?
+-

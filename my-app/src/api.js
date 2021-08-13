@@ -69,11 +69,12 @@ export async function getPlannedGames(currentUser) {
                         if (!game)
                             return;
                         let NumOfRegistered = game.NumOfRegistered || 0;
-                        NumOfRegistered++;
-                        game.NumOfRegistered = NumOfRegistered;
                         if (reg.email === currentUser) {
                             game.Registered = true;
+                        } else {
+                            NumOfRegistered++;    
                         }
+                        game.NumOfRegistered = NumOfRegistered;
                     });
                     resolve(results);
                 },
@@ -261,7 +262,7 @@ export async function getCollection(collName, orderBy) {
         ]
     }
 
-    if (collName === Collections.USERS_COLLECTION) {
+    if (collName === Collections.USERS_COLLECTION ) {
         return [
             {
                 "email": "1@gmail.com",
@@ -424,17 +425,31 @@ export async function saveMatches(matches) {
             //else do nothing
         } else if (m._ref) {
             const { _ref, ...dataOnly } = m;
-            batch.set(m._ref, dataOnly);
+
+
+
+            batch.set(m._ref, cleanseMatch(dataOnly));
         } else {
             //new match
             var docRef = db.collection(Collections.MATCHES_COLLECTION).doc();
-            batch.set(docRef, m);
+            batch.set(docRef, cleanseMatch(m));
         }
     })
 
     return batch.commit();
 }
 
+function cleanseMatch(m) {
+    if (!m.Player1)
+        delete m.Player1;
+    if (!m.Player2)
+        delete m.Player2;
+    if (!m.Player3)
+        delete m.Player3;
+    if (!m.Player4)
+        delete m.Player4;
+    return m;
+}
 
 
 //----------
@@ -480,19 +495,46 @@ export async function initGames() {
 }
 
 
-export function addUser(user) {
-    return firebase.auth().createUserWithEmailAndPassword(user.email, user.phone)
+export function addUser(user, pwd) {
+    return firebase.auth().createUserWithEmailAndPassword(user.email, pwd || user.phone)
         .then((userCredential) => {
             var db = firebase.firestore();
-            db.collection(Collections.USERS_COLLECTION).doc(user.email).set({...user, mustChangePwd:true}).catch(err=>{
+            db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).catch(err => {
                 //revert 
                 firebase.auth().delete(userCredential.user.uid);
-                throw(err.message);
+                throw (err.message);
             })
         })
         .catch((error) => {
-            var errorCode = error.code;
+            //var errorCode = error.code;
             var errorMessage = error.message;
-            throw(errorMessage);
+            throw (errorMessage);
         });
 }
+
+export async function deleteUser(user) {
+    throw("Operation not supported")
+}
+
+export async function saveUsers(users) {
+    var db = firebase.firestore();
+    return new Promise((resolve, reject) => {
+
+        let batch = db.batch();
+
+        users.forEach(({ dirty, _ref, ...user }) => {
+            if (dirty) {
+                batch.set(_ref, user);
+            }
+        })
+        batch.commit().then(
+            () => resolve(),
+            (err) => reject(err)
+        );
+    })
+}
+
+export async function registerUser(user, pwd) {
+    return addUser(user, pwd);
+}
+

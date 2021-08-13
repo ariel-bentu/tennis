@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Checkbox, Table, TableHead, TableRow, TableBody} from '@material-ui/core';
 
-import { Spacer, Header,Loading, MyTableCell } from './elem'
+import { Spacer, Header,Loading, MyTableCell, IOSSwitch } from './elem'
 
 import * as api from './api'
 
@@ -49,9 +49,9 @@ export default function Register(props) {
           </TableHead>
           {plannedGames ? <TableBody>
             { plannedGames.map((game) => (
-              <TableRow key={game.id}>
+              <TableRow key={game.id} style={{height:'3rem'}}>
                 <MyTableCell >
-                  <Checkbox size={"medium"} checked={getChecked(game)} onChange={()=>{
+                <IOSSwitch checked={getChecked(game)}  onChange={()=>{
                     let edit = {...editRegistration}
                     edit[game.id] = !getChecked(game);
                     setEditRegistration(edit);
@@ -61,7 +61,7 @@ export default function Register(props) {
                   {game.Day}
                 </MyTableCell>
                 <MyTableCell >{game.Hour}</MyTableCell>
-                <MyTableCell >{game.NumOfRegistered}</MyTableCell>
+                <MyTableCell >{(game.NumOfRegistered || 0) + (getChecked(game)?1:0)}</MyTableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
-import { List, ListItem, ListItemText } from '@material-ui/core';
+import { List, ListItem, ListItemText, TextareaAutosize } from '@material-ui/core';
 
-import { Spacer, Header, Loading, SmallTableCell, Paper1, HBox, VBox, Text, SmallTableCeEditable } from './elem'
+import { Spacer, Header, Loading, SmallTableCell, Paper1, HBox, VBox, Text, SmallTableCellEditable } from './elem'
 import { Dustbin } from './drop-box';
 import { Box } from './drag-box'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
-import { newMatch, isNotInMatches, suggestMatch } from './utils'
+import { newMatch, isNotInMatches, suggestMatch, cleansePlayer, getMatchMessage } from './utils'
 
 import * as api from './api'
 
@@ -26,9 +26,9 @@ const calcChange = (item, user, source, target) => {
             delete item[targetName];
             return item;
         }
-        return { ...item, [targetName]: user }
+        return { ...item, [targetName]: cleansePlayer(user) }
     }
-    return { ...item, [targetName]: user, [srcName]: item[targetName] }
+    return { ...item, [targetName]: cleansePlayer(user), [srcName]: item[targetName] }
 
 }
 
@@ -40,6 +40,7 @@ export default function Match(props) {
     const [editedMatches, setEditedMatches] = useState(undefined);
     const [users, setUsers] = useState([]);
     const [unregUsers, setUnregUsers] = useState([]);
+    const [matchText, setMatchText] = useState(undefined);
 
     const [currentGame, setCurrentGame] = useState(undefined);
 
@@ -47,7 +48,12 @@ export default function Match(props) {
     const [submitInProcess, setSubmitInProcess] = useState(false);
 
     useEffect(() => {
-        api.getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => setGames(games))
+        api.getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
+            setGames(games);
+            if (games && games.length > 0) {
+                setCurrentGame(games[0].id)
+            }
+        })
         Promise.all([
             api.getCollection(api.Collections.REGISTRATION_COLLECTION, "time").then(regs => {
                 setRegistrations(regs)
@@ -91,7 +97,7 @@ export default function Match(props) {
         [currentGame, games]);
 
 
-    let currentMatches = editedMatches ? editedMatches.filter(em => em.GameID === currentGame) : [];
+    let currentMatches = editedMatches ? editedMatches.filter(em => em.GameID === currentGame && !em.deleted) : [];
     let currentRegistrations = registrations ? registrations.filter(em => em.GameID === currentGame) : [];
 
     return (
@@ -100,151 +106,179 @@ export default function Match(props) {
             <Header>שיבוץ משחקים</Header>
 
 
+            {matchText ?
+                <VBox>
+                    <TextareaAutosize style={{width:'60%'}}>{matchText}</TextareaAutosize>
+                    <HBox>
+                    <Button variant="contained" onClick={() => navigator.clipboard.writeText(matchText)}>העתק</Button>
+                    <Button variant="contained" onClick={() => setMatchText(undefined)}>סגור</Button>
+                    </HBox>
+                    
+                </VBox>
+                :
 
+                <HBox>
+                    <Paper1 width={'15%'}>
+                        <List style={{ margin: 5, height: '30%' }}>
+                            {games.sort((g1, g2) => g1.id - g2.id).map((game) => (
+                                <ListItem key={game.id}
+                                    button
+                                    selected={currentGame === game.id}
+                                    onClick={() => setCurrentGame(game.id)}
+                                    onDoubleClick={() => { }}
+                                >
+                                    <ListItemText primary={game.Day + " " + game.Hour} />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper1>
+                    <DndProvider backend={HTML5Backend}>
+                        <Paper1 width={'85%'}>
+                            <VBox>
+                                <Table >
+                                    <TableHead>
+                                        <TableRow>
 
-            <HBox>
-                <Paper1 width={'15%'}>
-                    <List style={{ margin: 5, height: '30%' }}>
-                        {games.sort((g1, g2) => g1.id - g2.id).map((game) => (
-                            <ListItem key={game.id}
-                                button
-                                selected={currentGame === game.id}
-                                onClick={() => setCurrentGame(game.id)}
-                                onDoubleClick={() => { }}
-                            >
-                                <ListItemText primary={game.Day + " " + game.Hour} />
-                            </ListItem>
-                        ))}
-                    </List>
-                </Paper1>
-                <DndProvider backend={HTML5Backend}>
-                    <Paper1 width={'85%'}>
-                        <VBox>
-                            <Table >
-                                <TableHead>
-                                    <TableRow>
+                                            <SmallTableCell width={'8%'} >יום</SmallTableCell>
+                                            <SmallTableCell width={'10%'}>שעה</SmallTableCell>
+                                            <SmallTableCell width={'15%'}>מיקום</SmallTableCell>
+                                            <SmallTableCell width={'7%'}>מגרש</SmallTableCell>
+                                            <SmallTableCell width={'25%'}>זוג 1</SmallTableCell>
+                                            <SmallTableCell width={'25%'}>זוג 2</SmallTableCell>
+                                            <SmallTableCell width={'15%'}>
+                                                <VBox>
+                                                <HBox style={{ justifyContent: 'center' }}>
+                                                    <Button variant="contained" disabled={!currentGame} onClick={() => {
+                                                        let game = currentGameObj();
+                                                        let nm = newMatch(game);
+                                                        setEditedMatches([...editedMatches, nm]);
+                                                    }} style={{ fontSize: 35, height: '3rem' }}>+</Button>
+                                                    <Spacer height={20} />
+                                                    <Button
+                                                        style={{ fontSize: 15, height: '3rem' }}
+                                                        size={"large"}
 
-                                        <SmallTableCell width={'8%'} >יום</SmallTableCell>
-                                        <SmallTableCell width={'10%'}>שעה</SmallTableCell>
-                                        <SmallTableCell width={'15%'}>מיקום</SmallTableCell>
-                                        <SmallTableCell width={'7%'}>מגרש</SmallTableCell>
-                                        <SmallTableCell width={'25%'}>זוג 1</SmallTableCell>
-                                        <SmallTableCell width={'25%'}>זוג 2</SmallTableCell>
-                                        <SmallTableCell width={'15%'}>
-                                            <HBox style={{ justifyContent: 'center' }}>
-                                                <Button disabled={!currentGame} onClick={() => {
-                                                    let game = currentGameObj();
-                                                    let nm = newMatch(game);
-                                                    setEditedMatches([...editedMatches, nm]);
-                                                }} style={{ fontSize: 35 }}>+</Button>
-                                                <Spacer height={20} />
-                                                <Button
-                                                    style={{ fontSize: 15 }}
-                                                    size={"large"}
-
-                                                    variant="contained"
-                                                    disabled={submitInProcess || !dirty} onClick={() => {
-                                                        setSubmitInProcess(true);
-                                                        api.saveMatches(editedMatches).then(
-                                                            () => api.getCollection(api.Collections.MATCHES_COLLECTION).then(
-                                                                m => setEditedMatches(m)).then(() => {
-                                                                    setSubmitInProcess(false)
-                                                                    props.notify.success("נשמר בהצלחה");
+                                                        variant="contained"
+                                                        disabled={submitInProcess || !dirty} onClick={() => {
+                                                            setSubmitInProcess(true);
+                                                            api.saveMatches(editedMatches).then(
+                                                                () => api.getCollection(api.Collections.MATCHES_COLLECTION).then(
+                                                                    m => setEditedMatches(m)).then(() => {
+                                                                        setSubmitInProcess(false)
+                                                                        props.notify.success("נשמר בהצלחה");
+                                                                    })
+                                                                ,
+                                                                //error
+                                                                (err) => {
+                                                                    props.notify.error(err.toString(), "שגיאה");
+                                                                    setSubmitInProcess(false);
                                                                 })
-                                                            ,
-                                                            //error
-                                                            (err) => {
-                                                                props.notify.error(err.toString(), "שגיאה");
-                                                                setSubmitInProcess(false);
-                                                            })
-                                                    }
-                                                    }>שמור</Button>
-                                                <Spacer height={20} />
-                                                <Button
-                                                    style={{ fontSize: 15 }}
-                                                    size={"large"}
+                                                        }
+                                                        }>שמור</Button>
+                                                    <Spacer height={20} />
+                                                </HBox>
+                                                <Spacer />
+                                                <HBox>
 
-                                                    variant="contained"
-                                                    disabled={submitInProcess} onClick={() => {
-                                                        setEditedMatches(suggestMatch(games, editedMatches, registrations))
-                                                        setDirty(true);
-                                                    }}
-                                                >שבץ</Button>
-                                            </HBox>
-                                        </SmallTableCell>
-                                    </TableRow>
+                                                    <Button
+                                                        style={{ fontSize: 15, height: '3rem' }}
+                                                        size={"large"}
 
-                                </TableHead>
-                                {currentGame ? <TableBody>
-                                    {currentMatches.map((match, i) => (
-                                        <TableRow key={i}>
+                                                        variant="contained"
+                                                        disabled={submitInProcess} onClick={() => {
+                                                            setEditedMatches(suggestMatch(games, editedMatches, registrations))
+                                                            setDirty(true);
+                                                        }}
+                                                    >שבץ</Button>
+                                                    <Spacer />
+                                                    <Button
+                                                        style={{ fontSize: 15, height: '3rem' }}
+                                                        size={"large"}
 
-
-                                            <SmallTableCell>
-                                                {match.Day}
-                                            </SmallTableCell>
-                                            <SmallTableCeEditable value={match.Hour}
-                                                onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })} />
-                                            <SmallTableCeEditable value={match.Location}
-                                                onChange={e => updateMatchValue(match.id, { Location: e.currentTarget.value })} />
-
-                                            <SmallTableCeEditable value={match.Court}
-                                                onChange={e => updateMatchValue(match.id, { Court: e.currentTarget.value })} />
-
-                                            <SmallTableCell >
-                                                <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 1)}
-                                                />
-                                                <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2}
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 2)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 2)}
-
-                                                />
-                                            </SmallTableCell>
-                                            <SmallTableCell >
-                                                <Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3} 
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 3)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 3)}
-                                                />
-                                                <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4}
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 4)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 4)}
-                                                />
-                                            </SmallTableCell>
-                                            <SmallTableCell >
-                                                <Button variant="contained" onClick={() => {
-
-                                                }}>מחק</Button>
+                                                        variant="contained"
+                                                        disabled={submitInProcess} onClick={() => {
+                                                            let msg = getMatchMessage(games, editedMatches);
+                                                            setMatchText(msg);
+                                                        }}
+                                                    >הודעה</Button>
+                                                </HBox>
+                                                </VBox>
                                             </SmallTableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                                    : null}
-                            </Table>
-                            <VBox>
-                                <Text fontSize={15}>שחקנים שנירשמו</Text>
-                                <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
 
-                                    {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
-                                        <Box key={reg.email} user={reg} sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} />
-                                    )}
-                                </HBox>
-                                <Text fontSize={15}>כל שאר השחקנים</Text>
-                                <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    </TableHead>
+                                    {currentGame ? <TableBody>
+                                        {currentMatches.map((match, i) => (
+                                            <TableRow key={i}>
 
-                                    {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
-                                        <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} />
-                                    )}
-                                </HBox>
+
+                                                <SmallTableCell>
+                                                    {match.Day}
+                                                </SmallTableCell>
+                                                <SmallTableCellEditable value={match.Hour}
+                                                    onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })} />
+                                                <SmallTableCellEditable value={match.Location}
+                                                    onChange={e => updateMatchValue(match.id, { Location: e.currentTarget.value })} />
+
+                                                <SmallTableCellEditable value={match.Court}
+                                                    onChange={e => updateMatchValue(match.id, { Court: e.currentTarget.value })} />
+
+                                                <SmallTableCell >
+                                                    <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
+                                                        AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
+                                                        onRemove={() => updateMatch(match.id, undefined, 0, 1)}
+                                                    />
+                                                    <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2}
+                                                        AddPlayer={(user, source) => updateMatch(match.id, user, source, 2)}
+                                                        onRemove={() => updateMatch(match.id, undefined, 0, 2)}
+
+                                                    />
+                                                </SmallTableCell>
+                                                <SmallTableCell >
+                                                    <Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3}
+                                                        AddPlayer={(user, source) => updateMatch(match.id, user, source, 3)}
+                                                        onRemove={() => updateMatch(match.id, undefined, 0, 3)}
+                                                    />
+                                                    <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4}
+                                                        AddPlayer={(user, source) => updateMatch(match.id, user, source, 4)}
+                                                        onRemove={() => updateMatch(match.id, undefined, 0, 4)}
+                                                    />
+                                                </SmallTableCell>
+                                                <SmallTableCell >
+                                                    <Button variant="contained" onClick={() => props.notify.ask("האם למחוק משחק זה?", "מחיקת משחק", [
+                                                        { caption: "מחק", callback: () => updateMatchValue(match.id, { deleted: true }) },
+                                                        { caption: "בטל", callback: () => { } }
+                                                    ])
+                                                    }>מחק</Button>
+                                                </SmallTableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                        : null}
+                                </Table>
+                                <VBox>
+                                    <Text fontSize={15}>שחקנים שנירשמו</Text>
+                                    <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+
+                                        {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
+                                            <Box key={reg.email} user={reg} sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} />
+                                        )}
+                                    </HBox>
+                                    <Text fontSize={15}>כל שאר השחקנים</Text>
+                                    <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+
+                                        {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
+                                            <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} />
+                                        )}
+                                    </HBox>
+                                </VBox>
+
+
+
                             </VBox>
-
-
-
-                        </VBox>
-                    </Paper1>
-                </DndProvider>
-            </HBox>
+                        </Paper1>
+                    </DndProvider>
+                </HBox>}
             {games ? null : <Loading msg="טוען משחקים" />}
 
         </div >
