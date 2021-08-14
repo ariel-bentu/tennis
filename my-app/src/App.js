@@ -3,14 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { withOrientationChange } from 'react-device-detect'
 
 import { Alert, AlertTitle } from '@material-ui/lab';
-import { Collapse, Button } from '@material-ui/core';
+import { Collapse, Button, Tabs, Tab} from '@material-ui/core';
 import Register from './register';
 import Match from './match'
 import Users from './users'
 import ChangePwd from './change-pwd';
 import ForgotPwd from './forgot-pwd'
 
-import { Toolbar, Text, Loading, HBox, Spacer } from './elem'
+import { Toolbar, Text, Loading, HBox, Spacer, TabPanel } from './elem'
 
 import { PowerSettingsNew } from '@material-ui/icons';
 
@@ -39,6 +39,8 @@ let App = props => {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [tab, setTab] = React.useState(0);
+
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1500);
@@ -119,8 +121,29 @@ let App = props => {
           userInfo ?
             <Router>
               <Switch>
-              <Route path="/admin">
-                  <Admin notify={notify}  isLandscape={isLandscape} windowSize={windowSize} />
+                <Route path="/admin">
+                  <Tabs
+                    value={tab}
+                    onChange={(e, tab)=>setTab(tab)}
+                    indicatorColor="primary"
+                    textColor="primary"
+                    scrollButtons="auto"
+                    centered
+                  >
+                    <Tab label={"ניהול" } />
+                    <Tab label={"שיבוץ"} />
+                    <Tab label={"משתמשים"} />
+                  </Tabs>
+                  <TabPanel value={tab} index={0} >
+                    <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                  </TabPanel>
+                  <TabPanel value={tab} index={1} >
+                  <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                  </TabPanel>
+                  <TabPanel value={tab} index={2} >
+                  <Users notify={notify} isLandscape={isLandscape} />
+                  </TabPanel>
+
                 </Route>
                 <Route path="/match-test">
                   <Match notify={notify} test={true} isLandscape={isLandscape} windowSize={windowSize} />
