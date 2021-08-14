@@ -8,7 +8,8 @@ export const Collections = {
     REGISTRATION_COLLECTION: "registrations",
     PLANNED_GAMES_COLLECTION: "planned-games",
     MATCHES_COLLECTION: "matches",
-    USERS_COLLECTION: "users"
+    USERS_COLLECTION: "users",
+    SYSTEM_INFO: "systemInfo"
 }
 
 
@@ -564,3 +565,21 @@ export async function registerUser(user, pwd) {
     return addUser(user, pwd);
 }
 
+export async function getRegistrationOpen() {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.SYSTEM_INFO).doc("registration");
+    if (docRef) {
+        return docRef.get().then(doc=>{
+            return doc.data().open
+        })
+    }
+    return false;
+}
+
+export async function setRegistrationOpen(isOpen) {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.SYSTEM_INFO).doc("registration");
+    if (docRef) {
+        return docRef.update({open: isOpen})
+    }
+}

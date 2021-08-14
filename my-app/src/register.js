@@ -15,10 +15,13 @@ export default function Register(props) {
   const [submitInProcess, setSubmitInProcess] = useState(false);
   const [flip, setFlip] = useState(false);
   const [timer, setTimer] = useState(undefined);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+
 
   useEffect(() => {
     if (props.UserInfo)
       api.getPlannedGames(props.UserInfo.email).then(games => games ? setPlannedGames(games) : {})
+    api.getRegistrationOpen().then(val => setRegistrationOpen(val));
   }, [props.UserInfo]);
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function Register(props) {
 
   const isDirty = useCallback(() => {
     //console.log(JSON.stringify(editRegistration))
-    return editRegistration && plannedGames.some(g=>!g.Registered != !editRegistration[g.id]);
+    return editRegistration && plannedGames.some(g => !g.Registered != !editRegistration[g.id]);
   }, [editRegistration]);
 
   let nowDirty = isDirty();
@@ -73,9 +76,11 @@ export default function Register(props) {
             <TableRow key={game.id} style={{ height: '3rem' }}>
               <MyTableCell >
                 <IOSSwitch checked={getChecked(game)} onChange={() => {
-                  let edit = { ...editRegistration }
-                  edit[game.id] = !getChecked(game);
-                  setEditRegistration(edit);
+                  if (registrationOpen) {
+                    let edit = { ...editRegistration }
+                    edit[game.id] = !getChecked(game);
+                    setEditRegistration(edit);
+                  }
                 }} />
               </MyTableCell>
               <MyTableCell component="th" scope="row" >
@@ -98,7 +103,7 @@ export default function Register(props) {
         size={"large"}
         fullWidth={true}
         variant="contained"
-        disabled={submitInProcess || !nowDirty} onClick={() => {
+        disabled={submitInProcess || !nowDirty || !registrationOpen} onClick={() => {
           setSubmitInProcess(true);
           let newReg = plannedGames.map(game => { return { id: game.id, Registered: getChecked(game) } });
           api.submitRegistration(newReg, props.UserInfo.email).then(
@@ -116,7 +121,7 @@ export default function Register(props) {
               setSubmitInProcess(false);
             }
           )
-        }}>{nowDirty?"שלח":"ללא שינוי"}</Button>
+        }}>{registrationOpen ? (nowDirty ? "שלח" : "ללא שינוי") : "הרשמה סגורה"}</Button>
 
     </div>
   );

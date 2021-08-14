@@ -16,6 +16,7 @@ import { PowerSettingsNew } from '@material-ui/icons';
 
 import * as api from './api'
 import Login from './login'
+import Admin from './admin';
 
 import {
   BrowserRouter as Router,
@@ -118,6 +119,9 @@ let App = props => {
           userInfo ?
             <Router>
               <Switch>
+              <Route path="/admin">
+                  <Admin notify={notify}  isLandscape={isLandscape} windowSize={windowSize} />
+                </Route>
                 <Route path="/match-test">
                   <Match notify={notify} test={true} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>

@@ -1,13 +1,12 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import Button from '@material-ui/core/Button';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import Grid from '@material-ui/core/Grid';
+import React, {  useState, useEffect } from 'react';
+import { CssBaseline, FormControlLabel } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 
+import { IOSSwitch, Loading } from './elem';
+
 import * as api from './api'
-import SelfRegistration from './self-registeration';
 
 
 const useStyles = makeStyles((theme) => ({
@@ -30,48 +29,42 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-export default function Login(props) {
+export default function Admin(props) {
     const classes = useStyles();
 
-    const [user, setUser] = useState("");
-    const [pwd, setPwd] = useState("");
-    const [selfRegister, setSelfRegister] = useState(false);
+    const [registrationOpen, setRegistrationOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const listener = event => {
-            if (event.code === "Enter" || event.code === "NumpadEnter") {
-                event.preventDefault();
-                ok();
-            }
-        };
-        document.addEventListener("keydown", listener);
-        return () => {
-            document.removeEventListener("keydown", listener);
-        };
+        api.getRegistrationOpen().then(val=>setRegistrationOpen(val));
     }, []);
 
-    const ok = useCallback(() => {
-        api.getUserInfo(user, pwd).then(
-            info => props.onLogin(info),
-            err => props.onError(err)
-        );
-    }, [user, pwd])
+   
 
 
-    return (selfRegister ? <SelfRegistration notify={props.notify} onCancel={() => setSelfRegister(false)} /> :
-        <Container component="main" maxWidth="xs">
+    return (<Container component="main" maxWidth="xs">
             <CssBaseline />
             <div className={classes.paper}>
                 <Typography component="h1" variant="h5">
                     ניהול שבוע
                 </Typography>
+                <FormControlLabel
+                    control={<IOSSwitch
+                        checked={registrationOpen}
+                        onChange={(e) => {
+                            setLoading(true)
+                            api.setRegistrationOpen(!registrationOpen).then(
+                                ()=>{
+                                    setRegistrationOpen(!registrationOpen)
+                                    props.notify.success("עודכן בהצלחה");
+                                },
+                                (err)=>props.notify.error(err.message)
+                            ).finally(()=>setLoading(false));
+                        }} />}
+                    label="הרשמה פתוחה"
+                />
+                {loading?<Loading msg="מעדכן..." />:null}
 
-                <IOSSwitch
-                    checked={true}
-                    value={"הרשמה פתוחה"}
-                    onChange={() => {
-
-                    }} />
             </div>
 
         </Container>
