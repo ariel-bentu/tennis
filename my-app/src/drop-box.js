@@ -1,17 +1,17 @@
 import { useDrop } from 'react-dnd';
-import { ItemTypes ,  VBox} from './elem';
+import { ItemTypes, VBox } from './elem';
 import { Box } from './drag-box'
 const style = {
     display: 'flex',
-    height: '100%',
+    
     minHeight: '2rem',
-    
-    
+
+
     border: '1px solid black',
     padding: 2,
     textAlign: 'center',
-    
-    
+
+
     backgroundColor: 'transparent'
 };
 export const Dustbin = (props) => {
@@ -19,7 +19,7 @@ export const Dustbin = (props) => {
         accept: ItemTypes.BOX,
         drop: () => {
             return {
-                onDrop: (user, source) => props.AddPlayer(user, source) ,
+                onDrop: (user, source) => props.AddPlayer(user, source),
                 target: props.target
             }
         },
@@ -35,9 +35,11 @@ export const Dustbin = (props) => {
     else {
         style.backgroundColor = 'transparent';
     }
-    return (<div ref={drop} style={{display:'flex', ...style }}>
+    return (<div ref={drop} style={{ display: 'flex', ...style }}>
         <VBox>
-            {props.Player ? <Box source={props.source} sourcePair={props.sourcePair} user={props.Player}   onRemove={props.onRemove}/> : null}
+            {props.Player ? <Box source={props.source} sourcePair={props.sourcePair} user={props.Player}
+                backgroundColor={props.Player._order ? 'lightblue' : 'yellow'}
+            onRemove={props.onRemove}/> : null}
         </VBox>
     </div>);
 };

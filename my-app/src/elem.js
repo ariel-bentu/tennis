@@ -19,7 +19,7 @@ export function Toolbar(props) {
 }
 
 export function MyTableCell(props) {
-    return <TableCell style={{ fontSize: 25, padding: 0, width: props.width }} align="right">{props.children}</TableCell>
+    return <TableCell style={{ fontSize: 25, padding: 0, width: props.width }}  align="right">{props.children}</TableCell>
 }
 
 export function SmallTableCell(props) {

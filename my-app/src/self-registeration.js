@@ -39,7 +39,7 @@ export default function SelfRegistration(props) {
     const [phone, setPhone] = useState("");
     const [pwd, setPwd] = useState("");
     const [pwd2, setPwd2] = useState("");
-
+    const [disableReg, setDisableReg] = useState(false);
 
 
     return (
@@ -115,7 +115,7 @@ export default function SelfRegistration(props) {
                 />
                 <HBox>
                     <Button
-
+                        disabled={disableReg}
                         variant="contained"
                         color="primary"
                         className={classes.submit}
@@ -132,13 +132,19 @@ export default function SelfRegistration(props) {
                                 props.notify.error("מספר טלפון שגוי");
                                 return;
                             }
+                                setDisableReg(true)
                                 api.registerUser({
                                     displayName: name,
                                     email,
                                     phone
                                 }, pwd).then(
-                                    ()=> props.notify.success("רישום עבר בהצלחה"),
-                                    (err)=> props.notify.error(err.message),
+                                    ()=> {
+                                        props.notify.success("רישום עבר בהצלחה")
+                                    },
+                                    (err)=> {
+                                        props.notify.error(err.message);
+                                        setDisableReg(false);
+                                    },
                                 );
                                 
                         }}

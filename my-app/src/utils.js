@@ -27,7 +27,7 @@ export function suggestMatch(plannedGames, matches, registrations) {
         for (let j = 0; j < unassignedRegsForGame.length; j++) {
             let unassginedReg = unassignedRegsForGame[j];
 
-            let user = cleansePlayer(unassginedReg);
+            let user = (unassginedReg);
             //refresh the list
             matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
 

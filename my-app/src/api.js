@@ -2,6 +2,7 @@ import firebase from 'firebase/app'
 import 'firebase/auth';
 import 'firebase/firestore';
 import { config } from './config';
+import { cleansePlayer } from './utils';
 
 export const Collections = {
     REGISTRATION_COLLECTION: "registrations",
@@ -72,7 +73,7 @@ export async function getPlannedGames(currentUser) {
                         if (reg.email === currentUser) {
                             game.Registered = true;
                         } else {
-                            NumOfRegistered++;    
+                            NumOfRegistered++;
                         }
                         game.NumOfRegistered = NumOfRegistered;
                     });
@@ -130,8 +131,7 @@ export async function submitRegistration(newRegs, currentUser) {
 
 }
 
-export async function getCollection(collName, orderBy) {
-
+export async function getCollectionTest(collName, orderBy) {
     if (collName === Collections.REGISTRATION_COLLECTION) {
         return [
             {
@@ -262,7 +262,7 @@ export async function getCollection(collName, orderBy) {
         ]
     }
 
-    if (collName === Collections.USERS_COLLECTION ) {
+    if (collName === Collections.USERS_COLLECTION) {
         return [
             {
                 "email": "1@gmail.com",
@@ -393,6 +393,11 @@ export async function getCollection(collName, orderBy) {
 
 
     }
+    return getCollection(collName, orderBy);
+}
+
+export async function getCollection(collName, orderBy) {
+
 
 
     var db = firebase.firestore();
@@ -413,7 +418,7 @@ export async function getCollection(collName, orderBy) {
     });
 }
 
-export async function saveMatches(matches) {
+export async function saveMatches(matches, isTest) {
     var db = firebase.firestore();
     var batch = db.batch();
 
@@ -435,20 +440,36 @@ export async function saveMatches(matches) {
             batch.set(docRef, cleanseMatch(m));
         }
     })
-
+    if (isTest) {
+        throw ("No Save In Testing");
+    }
     return batch.commit();
 }
 
 function cleanseMatch(m) {
-    if (!m.Player1)
-        delete m.Player1;
-    if (!m.Player2)
-        delete m.Player2;
-    if (!m.Player3)
-        delete m.Player3;
-    if (!m.Player4)
-        delete m.Player4;
-    return m;
+    let newMatch = { ...m };
+    if (!newMatch.Player1)
+        delete newMatch.Player1;
+    else
+        newMatch.Player1 = cleansePlayer(newMatch.Player1)
+
+
+    if (!newMatch.Player2)
+        delete newMatch.Player2;
+    else
+        newMatch.Player2 = cleansePlayer(newMatch.Player2)
+
+    if (!newMatch.Player3)
+        delete newMatch.Player3;
+    else
+        newMatch.Player3 = cleansePlayer(newMatch.Player3)
+
+    if (!newMatch.Player4)
+        delete newMatch.Player4;
+    else
+        newMatch.Player4 = cleansePlayer(newMatch.Player4)
+
+    return newMatch;
 }
 
 
@@ -496,24 +517,29 @@ export async function initGames() {
 
 
 export function addUser(user, pwd) {
-    return firebase.auth().createUserWithEmailAndPassword(user.email, pwd || user.phone)
-        .then((userCredential) => {
-            var db = firebase.firestore();
-            db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).catch(err => {
-                //revert 
-                firebase.auth().delete(userCredential.user.uid);
-                throw (err.message);
-            })
-        })
-        .catch((error) => {
-            //var errorCode = error.code;
-            var errorMessage = error.message;
-            throw (errorMessage);
-        });
+    return new Promise((resolve, reject) => firebase.auth().createUserWithEmailAndPassword(user.email, pwd || user.phone)
+        .then(
+            (userCredential) => {
+                var db = firebase.firestore();
+                db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).then(
+                    () => resolve(),
+                    (err) => {
+                        //retry in 2 seconds
+                        setTimeout(() => {
+                            db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).then(
+                                () => resolve(),
+                                (err2) => reject(err2.message));
+                        }
+                            , 2000)
+
+                    })
+            },
+            (err) => reject(err.message)
+        ));
 }
 
 export async function deleteUser(user) {
-    throw("Operation not supported")
+    throw ("Operation not supported")
 }
 
 export async function saveUsers(users) {

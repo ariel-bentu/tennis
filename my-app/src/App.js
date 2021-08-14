@@ -1,5 +1,7 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
+import { withOrientationChange } from 'react-device-detect'
+
 import { Alert, AlertTitle } from '@material-ui/lab';
 import { Collapse, Button } from '@material-ui/core';
 import Register from './register';
@@ -25,25 +27,35 @@ import firebase from 'firebase/app'
 import 'firebase/auth';
 
 import { config } from "./config";
-import SelfRegistration from './self-registeration';
 
 firebase.initializeApp(config);
 
-function App() {
+let App = props => {
 
   const [userInfo, setUserInfo] = useState(undefined);
   const [changePwd, setChangePwd] = useState(false);
   const [forgotPwd, setForgotPwd] = useState(false);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({});
+  const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1500);
     firebase.auth().onAuthStateChanged(function (user) {
-      setUserInfo(api.getUserObj(user));
+      if (user)
+        setUserInfo(api.getUserObj(user));
+      else
+        setUserInfo(undefined);
     });
-
   }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({ w: window.innerWidth, h: window.innerHeight })
+    }
+
+    window.addEventListener('resize', handleResize)
+  }, [])
 
   const notify = {
     success: (body, title) => {
@@ -60,6 +72,9 @@ function App() {
     },
 
   }
+  const { isLandscape } = props;
+
+
 
   return (
     <div className="App" dir="rtl" >
@@ -85,11 +100,12 @@ function App() {
         :
         userInfo ? <Toolbar>
           <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'space-between' }}>
-            <HBox style={{ alignItems: 'center'}}>
+            <HBox style={{ alignItems: 'center' }}>
               <PowerSettingsNew onClick={() => api.logout().then(() => setUserInfo(undefined))} />
               <Button onClick={() => setChangePwd(true)}>שנה סיסמא</Button>
             </HBox>
             <Text fontSize={15}>{userInfo.displayName}</Text>
+            {/* <Text>{window.innerWidth}</Text> */}
           </HBox>
         </Toolbar> : null}
       {forgotPwd ? null :
@@ -102,11 +118,14 @@ function App() {
           userInfo ?
             <Router>
               <Switch>
+                <Route path="/match-test">
+                  <Match notify={notify} test={true} isLandscape={isLandscape} windowSize={windowSize} />
+                </Route>
                 <Route path="/match">
-                  <Match notify={notify} />
+                  <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
                 <Route path="/users">
-                  <Users notify={notify} />
+                  <Users notify={notify} isLandscape={isLandscape} />
                 </Route>
                 <Route path="/">
                   <Register notify={notify} UserInfo={userInfo} />
@@ -132,6 +151,6 @@ function App() {
     </div>
   );
 }
-
+App = withOrientationChange(App);
 
 export default App;
