@@ -71,17 +71,17 @@ export function newMatch(game) {
 }
 
 export function getMatchMessage(plannedGames, matches) {
-    let message = "שיבוץ טניס!ֿ\n";
+    let message = "שיבוץ טניס!ֿ\n\n";
     for (let i = 0; i < plannedGames.length; i++) {
-        message += `** *${plannedGames[i].Day}* **\n`;
-        let dayMatches = matches.filter(m => m.GameID == plannedGames[i].id && !m.deleted);
-        if (!dayMatches || dayMatches.length == 0) {
-            message += "אין משחק!"
+        message += `***** ${plannedGames[i].Day} *****\n`;
+        let dayMatches = matches.filter(m => m.GameID === plannedGames[i].id && !m.deleted);
+        if (!dayMatches || dayMatches.length === 0) {
+            message += "טרם"
         } else {
             for (let j = 0; j < dayMatches.length; j++) {
                 if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {
-                    if (dayMatches.length == 1) {
-                        message += "אין משחק!"
+                    if (dayMatches.length === 1) {
+                        message += "טרם"
                     }
                     //skip this game
                     continue;

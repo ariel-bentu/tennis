@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Checkbox, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
+import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
 
 import { Spacer, Header, Loading, MyTableCell, IOSSwitch } from './elem'
 
@@ -24,6 +24,12 @@ export default function Register(props) {
     api.getRegistrationOpen().then(val => setRegistrationOpen(val));
   }, [props.UserInfo]);
 
+  const isDirty = useCallback(() => {
+    //console.log(JSON.stringify(editRegistration))
+    // eslint-disable-next-line
+    return editRegistration && plannedGames.some(g => !g.Registered != !editRegistration[g.id]);
+  }, [editRegistration, plannedGames]);
+
   useEffect(() => {
     if (!submitInProcess && isDirty()) {
       console.log("set blicking")
@@ -38,7 +44,7 @@ export default function Register(props) {
       }
     }
 
-  }, [submitInProcess, editRegistration, timer]);
+  }, [submitInProcess, editRegistration, timer, isDirty]);
 
 
   let getChecked = (game) => {
@@ -52,10 +58,7 @@ export default function Register(props) {
     return game.Registered === true;
   }
 
-  const isDirty = useCallback(() => {
-    //console.log(JSON.stringify(editRegistration))
-    return editRegistration && plannedGames.some(g => !g.Registered != !editRegistration[g.id]);
-  }, [editRegistration]);
+  
 
   let nowDirty = isDirty();
   return (
@@ -117,7 +120,7 @@ export default function Register(props) {
             },
             //error
             (err) => {
-              props.notify.error(err, "שגיאה");
+              props.notify.error(err.toString(), "שגיאה");
               setSubmitInProcess(false);
             }
           )

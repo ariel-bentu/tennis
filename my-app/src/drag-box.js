@@ -11,7 +11,7 @@ const style = {
     fontSize: 12,
     margin: 2
 };
-export const Box = function Box({ user, height, onRemove, source, sourcePair, backgroundColor }) {
+export const Box = function Box({ user, height, width, onRemove, source, sourcePair, backgroundColor }) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: ItemTypes.BOX,
         item: { user },
@@ -30,18 +30,18 @@ export const Box = function Box({ user, height, onRemove, source, sourcePair, ba
         }),
     }), [user]);
     const opacity = isDragging ? 0.4 : 1;
-    return (<div ref={drag} style={{ ...style, height: height || style.height, opacity, backgroundColor: backgroundColor || 'transparent' }} >
+    return (<div ref={drag} style={{ ...style, height: height || style.height,  width: width || style.width, opacity, backgroundColor: backgroundColor || 'transparent' }} >
         {onRemove ? <div style={{ display:'flex', width:'10%', cursor: 'pointer', verticalAlign: 'text-top' }} onClick={onRemove}>
             ×
         </div> : null}
         {onRemove ? <Spacer width={15} /> : null}
-        <div style={{  display:'flex', width:onRemove?'70%':'80%',  verticalAlign: 'text-top' }}>
+        <div style={{  display:'flex', width:onRemove?'80%':'80%',  verticalAlign: 'text-top' }}>
         {            user.displayName        }
         </div>
-        {user.rank ? <div style={{ display:'flex', width:'10%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
+        {user.rank ? <div style={{ display:'flex', width:'14%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
             {user.rank}
         </div> : null}
-        {user._order ? <div style={{ display:'flex', width:'10%', verticalAlign: 'text-bottom', backgroundColor: 'white' }}>
+        {user._order ? <div style={{ display:'flex', width:'14%', verticalAlign: 'text-bottom', backgroundColor: 'white' }}>
             {user._order}
         </div> : null}
     </div>);

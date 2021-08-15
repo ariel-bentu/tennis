@@ -34,12 +34,20 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function Login(props) {
+export default function Login({onForgotPwd, onLogin, onError, notify}) {
   const classes = useStyles();
 
   const [user, setUser] = useState("");
   const [pwd, setPwd] = useState("");
   const [selfRegister, setSelfRegister] = useState(false);
+
+  const ok = useCallback(() => {
+    api.getUserInfo(user, pwd).then(
+      info => onLogin(info),
+      err => onError(err)
+    );
+  }, [user, pwd, onError, onLogin])
+
 
   useEffect(() => {
     const listener = event => {
@@ -52,17 +60,11 @@ export default function Login(props) {
     return () => {
       document.removeEventListener("keydown", listener);
     };
-  }, []);
+  }, [ok]);
 
-  const ok = useCallback(() => {
-    api.getUserInfo(user, pwd).then(
-      info => props.onLogin(info),
-      err => props.onError(err)
-    );
-  }, [user, pwd])
+  
 
-
-  return (selfRegister? <SelfRegistration notify={props.notify} onCancel={()=>setSelfRegister(false)}/> :
+  return (selfRegister? <SelfRegistration notify={notify} onCancel={()=>setSelfRegister(false)}/> :
     <Container component="main" maxWidth="xs">
       <CssBaseline />
       <div className={classes.paper}>
@@ -106,7 +108,7 @@ export default function Login(props) {
         </Button>
         <Grid container>
           <Grid item xs>
-            <Link variant="body2" onClick={props.onForgotPwd}>
+            <Link variant="body2" onClick={onForgotPwd}>
               שכחתי סיסמא?
             </Link>
           </Grid>

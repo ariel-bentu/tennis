@@ -38,7 +38,7 @@ export const Dustbin = (props) => {
     return (<div ref={drop} style={{ display: 'flex', ...style }}>
         <VBox>
             {props.Player ? <Box source={props.source} sourcePair={props.sourcePair} user={props.Player}
-                backgroundColor={props.Player._order ? 'lightblue' : 'yellow'}
+                backgroundColor={props.Player._order ? 'lightblue' : 'yellow'} width={props.width}
             onRemove={props.onRemove}/> : null}
         </VBox>
     </div>);

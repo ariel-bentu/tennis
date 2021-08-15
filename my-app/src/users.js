@@ -14,7 +14,6 @@ export default function Users(props) {
     const [addName, setAddName] = useState("");
     const [addEmail, setAddEmail] = useState("");
     const [addPhone, setAddPhone] = useState("");
-    const [addRank, setAddRank] = useState("");
 
     useEffect(() => {
         api.getCollection(api.Collections.USERS_COLLECTION).then(u => setUsers(u))
@@ -97,7 +96,7 @@ export default function Users(props) {
                                             {caption:"מחק", callback:()=>{
                                                 api.deleteUser(user).then(
                                                     ()=>props.notify.success("נמחק בהצלחה"),
-                                                    (err)=>props.notify.error(err)
+                                                    (err)=>props.notify.error(err.toString())
                                                 );
                                             }},
                                             {caption:"בטל", callback:()=>{}},
@@ -129,7 +128,7 @@ export default function Users(props) {
                                 api.getCollection(api.Collections.USERS_COLLECTION).then(u => setUsers(u));
                                 setAddMode(false);
                             },
-                            (err) => props.notify.error(err, "שמירה נכשלה")
+                            (err) => props.notify.error(err.message, "שמירה נכשלה")
                         );
                     }} >שמור</Button>
                     <Button variant="contained" onClick={() => setAddMode(false)} >בטל</Button>

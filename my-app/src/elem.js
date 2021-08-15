@@ -150,9 +150,10 @@ export function TabPanel(props) {
             hidden={value !== index}
             id={`scrollable-auto-tabpanel-${index}`}
             {...other}
+            style={{padding:0}}
         >
             {props.title ? <h1 align="center">{props.title}</h1> : null}
-            <Box className={props.cls} p={3}>{children}</Box>
+            <Box style={{padding:2}} p={3}>{children}</Box>
         </Typography>
     );
 }

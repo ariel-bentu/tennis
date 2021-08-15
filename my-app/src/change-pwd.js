@@ -73,7 +73,7 @@ export default function ChangePwd(props) {
             color="primary"
             className={classes.submit}
             onClick={()=>{
-                if (pwd == pwd2) {
+                if (pwd === pwd2) {
                     api.changePwd(props.userInfo._user, pwd).then(
                         ()=>props.onPwdChanged(),
                         (err)=>props.notify.error(err.message, "שינוי סיסמא נכשל"));

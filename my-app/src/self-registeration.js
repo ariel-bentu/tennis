@@ -120,11 +120,11 @@ export default function SelfRegistration(props) {
                         color="primary"
                         className={classes.submit}
                         onClick={() => {
-                            if (pwd != pwd2) {
+                            if (pwd !== pwd2) {
                                 props.notify.error("סיסמאות אינן תואמות");
                                 return;
                             }
-                            if (email != email2) {
+                            if (email !== email2) {
                                 props.notify.error("אימיילים אינם תואמים");
                                 return;
                             }

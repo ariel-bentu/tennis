@@ -9,9 +9,12 @@ export const Collections = {
     PLANNED_GAMES_COLLECTION: "planned-games",
     MATCHES_COLLECTION: "matches",
     USERS_COLLECTION: "users",
-    SYSTEM_INFO: "systemInfo"
+    SYSTEM_INFO: "systemInfo",
+    REGISTRATION_ARCHIVE_COLLECTION: "registrations-archive",
+    MATCHES_ARCHIVE_COLLECTION: "matches-archive"
 }
 
+const SYSTEM_RECORD_REGISTRATION = "registration"
 
 
 export function initAPI() {
@@ -108,7 +111,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     if (!data.docs.some(match)) {
                         //not found
                         var docRef = db.collection(Collections.REGISTRATION_COLLECTION).doc();
-                        batch.set(docRef, { GameID: reg.id, email: currentUser, time: new Date().toDateString() });
+                        batch.set(docRef, { GameID: reg.id, email: currentUser, time: getTimestamp() });
                         dirty = true;
                     }
                 } else {
@@ -132,7 +135,44 @@ export async function submitRegistration(newRegs, currentUser) {
 
 }
 
-export async function getCollectionTest(collName, orderBy) {
+function getTimestamp() {
+    var m = new Date();
+    return m.getUTCFullYear() + "/" + (m.getUTCMonth() + 1) + "/" + m.getUTCDate() + " " + m.getUTCHours() + ":" + m.getUTCMinutes() + ":" + m.getUTCSeconds();
+}
+
+function getWeek() {
+    let now = new Date()
+    var onejan = new Date(now.getFullYear(), 0, 1);
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var dayOfYear = ((today - onejan + 86400000) / 86400000);
+    return Math.ceil(dayOfYear / 7)
+
+}
+
+export async function openWeek() {
+    var db = firebase.firestore();
+    var batch = db.batch();
+    return moveCollectionData(db, batch, Collections.REGISTRATION_COLLECTION, Collections.REGISTRATION_ARCHIVE_COLLECTION, true)
+    .then(()=>moveCollectionData(db, batch, Collections.MATCHES_COLLECTION, Collections.MATCHES_ARCHIVE_COLLECTION, true)
+    .then(()=>batch.commit()))
+}
+
+
+export async function moveCollectionData(db, batch, fromCollName, toCollName, addWeek) {
+    let week = getWeek();
+
+    return getCollection(fromCollName).then(srcData => {
+
+        srcData.forEach(({ _ref, ...item }) => {
+            let docRef = db.collection(toCollName).doc(_ref.id);
+            let newItem = addWeek ? { ...item, week } : item;
+            batch.set(docRef, newItem);
+            //batch.delete(_ref);
+        })
+    })
+}
+
+export async function getCollectionTest(collName, orderBy, noObjRef) {
     if (collName === Collections.REGISTRATION_COLLECTION) {
         return [
             {
@@ -394,13 +434,13 @@ export async function getCollectionTest(collName, orderBy) {
 
 
     }
-    return getCollection(collName, orderBy);
+    if (collName === Collections.MATCHES_COLLECTION) {
+        return [];
+    }
+    return getCollection(collName, orderBy, noObjRef);
 }
 
-export async function getCollection(collName, orderBy) {
-
-
-
+export async function getCollection(collName, orderBy, noObjRef) {
     var db = firebase.firestore();
     let colRef = db.collection(collName);
     if (orderBy) {
@@ -413,7 +453,9 @@ export async function getCollection(collName, orderBy) {
             if (orderBy)
                 obj._order = i++;
 
-            obj._ref = docObj.ref;
+            if (!noObjRef)
+                obj._ref = docObj.ref;
+
             return obj;
         })
     });
@@ -442,7 +484,7 @@ export async function saveMatches(matches, isTest) {
         }
     })
     if (isTest) {
-        throw ("No Save In Testing");
+        throw new Error("No Save In Testing");
     }
     return batch.commit();
 }
@@ -540,7 +582,7 @@ export function addUser(user, pwd) {
 }
 
 export async function deleteUser(user) {
-    throw ("Operation not supported")
+    throw new Error("Operation not supported")
 }
 
 export async function saveUsers(users) {
@@ -567,9 +609,9 @@ export async function registerUser(user, pwd) {
 
 export async function getRegistrationOpen() {
     var db = firebase.firestore();
-    let docRef = db.collection(Collections.SYSTEM_INFO).doc("registration");
+    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_REGISTRATION);
     if (docRef) {
-        return docRef.get().then(doc=>{
+        return docRef.get().then(doc => {
             return doc.data().open
         })
     }
@@ -578,8 +620,8 @@ export async function getRegistrationOpen() {
 
 export async function setRegistrationOpen(isOpen) {
     var db = firebase.firestore();
-    let docRef = db.collection(Collections.SYSTEM_INFO).doc("registration");
+    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_REGISTRATION);
     if (docRef) {
-        return docRef.update({open: isOpen})
+        return docRef.update({ open: isOpen })
     }
 }
