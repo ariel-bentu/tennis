@@ -470,7 +470,7 @@ export async function saveMatches(matches, isTest) {
             if (m._ref) {
                 batch.delete(m._ref);
             }
-            //else do nothing
+            //else do nothing (was created and deleted before save)
         } else if (m._ref) {
             const { _ref, ...dataOnly } = m;
 
