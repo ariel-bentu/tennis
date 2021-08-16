@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, CssBaseline, FormControlLabel } from '@material-ui/core';
 import Container from '@material-ui/core/Container';
 
-import { IOSSwitch, Loading, Spacer, Header } from './elem';
+import { IOSSwitch, Loading, Spacer, Header, VBox } from './elem';
 
 import * as api from './api'
 
@@ -23,6 +23,7 @@ export default function Admin(props) {
         <CssBaseline />
         <Header>ניהול שבוע</Header>
         <Spacer height={30} />
+        <VBox>
         <FormControlLabel
             control={<IOSSwitch
                 checked={registrationOpen}
@@ -41,11 +42,11 @@ export default function Admin(props) {
         <Spacer height={30} />
 
         <Button variant="contained" onClick={() => {
-            props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום והמשחקים לגיבוי, ותמחק את המשחקים והרישומים`, "פתיחת שבוע", [
+            props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת שבוע", [
                 {
-                    caption: "פתח שבוע", callback: () => {
-                        api.openWeek().then(
-                            () => props.notify.success("שבוע נפתח בהצלחה"),
+                    caption: "פתח שיבוץ", callback: () => {
+                        api.openWeekForRegistration().then(
+                            () => props.notify.success("שיבוץ נפתח בהצלחה"),
                             (err) => props.notify.error(err.message)
                         );
                     }
@@ -54,7 +55,24 @@ export default function Admin(props) {
             ])
 
 
-        }}>פתיחת שבוע</Button>
+        }}>פתיחת שיבוצים</Button>
+        <Spacer height={30} />
+        <Button variant="contained" onClick={() => {
+            props.notify.ask("התחלת שיבוץ תעביר את השיבוצים הקיימים לגיבוי ותנקה את טבלאות השיבוץ","פתיחת שיבוץ", [
+                {
+                    caption: "התחל שיבוץ", callback: () => {
+                        api.openWeekForMatch().then(
+                            () => props.notify.success("הכנה לשיבוץ בוצעה בהצלחה"),
+                            (err) => props.notify.error(err.message)
+                        );
+                    }
+                },
+                { caption: "בטל", callback: () => { } },
+            ])
+
+
+        }}>התחלת שיבוץ</Button>
+        </VBox>
         {loading ? <Loading msg="מעדכן..." /> : null}
 
 

@@ -149,16 +149,23 @@ function getWeek() {
 
 }
 
-export async function openWeek() {
+export async function openWeekForRegistration() {
     var db = firebase.firestore();
     var batch = db.batch();
     return moveCollectionData(db, batch, Collections.REGISTRATION_COLLECTION, Collections.REGISTRATION_ARCHIVE_COLLECTION, true)
-    .then(()=>moveCollectionData(db, batch, Collections.MATCHES_COLLECTION, Collections.MATCHES_ARCHIVE_COLLECTION, true)
-    .then(()=>batch.commit()))
+    .then(()=>batch.commit());
+}
+
+export async function openWeekForMatch() {
+    var db = firebase.firestore();
+    var batch = db.batch();
+    return moveCollectionData(db, batch, Collections.MATCHES_COLLECTION, Collections.MATCHES_ARCHIVE_COLLECTION, true)
+    .then(()=>batch.commit());
 }
 
 
 export async function moveCollectionData(db, batch, fromCollName, toCollName, addWeek) {
+    throw new Error("Not Implemented Yet");
     let week = getWeek();
 
     return getCollection(fromCollName).then(srcData => {
