@@ -111,7 +111,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     if (!data.docs.some(match)) {
                         //not found
                         var docRef = db.collection(Collections.REGISTRATION_COLLECTION).doc();
-                        batch.set(docRef, { GameID: reg.id, email: currentUser, time: getTimestamp() });
+                        batch.set(docRef, { GameID: reg.id, email: currentUser, utcTime: getTimestamp() });
                         dirty = true;
                     }
                 } else {
@@ -165,7 +165,7 @@ export async function openWeekForMatch() {
 
 
 export async function moveCollectionData(db, batch, fromCollName, toCollName, addWeek) {
-    throw new Error("Not Implemented Yet");
+    //throw new Error("Not Implemented Yet");
     let week = getWeek();
 
     return getCollection(fromCollName).then(srcData => {
@@ -174,7 +174,7 @@ export async function moveCollectionData(db, batch, fromCollName, toCollName, ad
             let docRef = db.collection(toCollName).doc(_ref.id);
             let newItem = addWeek ? { ...item, week } : item;
             batch.set(docRef, newItem);
-            //batch.delete(_ref);
+            batch.delete(_ref);
         })
     })
 }

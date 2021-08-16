@@ -56,29 +56,40 @@ export default function Match(props) {
     const [submitInProcess, setSubmitInProcess] = useState(false);
 
     useEffect(() => {
-        getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
-            setGames(games);
-            if (games && games.length > 0) {
-                setCurrentGame(games[0].id)
-            }
-        })
         Promise.all([
-            getCollection(api.Collections.REGISTRATION_COLLECTION, "time").then(regs => {
+            getCollection(api.Collections.REGISTRATION_COLLECTION, "utcTime").then(regs => {
+                //order by GameID
+
                 setRegistrations(regs)
                 return regs;
             }),
             getCollection(api.Collections.USERS_COLLECTION).then(us => {
                 setUsers(us)
                 return us;
+            }),
+            getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
+                setGames(games);
+                if (games && games.length > 0) {
+                    setCurrentGame(games[0].id)
+                }
+                return games;
             })
+
         ]).then(all => {
-            setRegistrations(all[0].map(reg => {
+            //add user displayNames names
+            let regs = all[0].map(reg => {
                 let user = all[1].find(u => u.email === reg.email);
                 if (!user) {
                     reg.displayName = reg.email;
                 }
                 return user ? { ...reg, ...user } : reg;
-            }))
+            });
+            //make order local to game
+            all[2].forEach(game => {
+                regs.filter(r => r.GameID === game.id).sort((a, b) => a._order - b._order).forEach((orderedReg, i) => (orderedReg._order = i + 1))
+            })
+
+            setRegistrations(regs);
         });
 
     }, [getCollection]);
@@ -138,6 +149,8 @@ export default function Match(props) {
 
     let currentMatches = editedMatches ? editedMatches.filter(em => em.GameID === currentGame && !em.deleted) : [];
     let currentRegistrations = registrations ? registrations.filter(em => em.GameID === currentGame) : [];
+
+    currentRegistrations = currentRegistrations.sort((cr1, cr2) => cr1._order - cr2._order);
 
     let width = props.windowSize.w;
     let condense = width < 760;
@@ -311,7 +324,7 @@ export default function Match(props) {
                                             </Grid>}
                                             <Grid xs={1}>
                                                 <Delete onClick={() => {
-                                                    props.notify.ask("האם למחוק משחקון זה?", "מחיקה" ,[
+                                                    props.notify.ask("האם למחוק משחקון זה?", "מחיקה", [
                                                         {
                                                             caption: "מחק",
                                                             callback: () => updateMatchValue(match.id, { deleted: true })

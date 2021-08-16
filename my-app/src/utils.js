@@ -17,37 +17,24 @@ export function suggestMatch(plannedGames, matches, registrations) {
 
     for (let i = 0; i < plannedGames.length; i++) {
         let plannedGame = plannedGames[i];
-
-        let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id);
+        let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id).sort((r1,r2)=>r1._order - r2._order);
         let matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
 
         let unassignedRegsForGame = regsForGame.filter(r => isNotInMatches(matchesForGame, r.email));
 
+        //take only multiple of 4
+        let numOfMatches = Math.floor(unassignedRegsForGame.length / 4);
 
-        for (let j = 0; j < unassignedRegsForGame.length; j++) {
-            let unassginedReg = unassignedRegsForGame[j];
+        let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches*4).sort((r1,r2)=>r1.rank - r2.rank)
 
-            let user = (unassginedReg);
-            //refresh the list
-            matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
+        for (let j=0;j<numOfMatches*4;j+=4) {
+            let newM = newMatch(plannedGame);
+            newM.Player1 = unassignedRegsByRank[j];
+            newM.Player2 = unassignedRegsByRank[j+3];
+            newM.Player3 = unassignedRegsByRank[j+1];
+            newM.Player4 = unassignedRegsByRank[j+2];
 
-            let matchWithFreePlayer = matchesForGame.find(m => !m.Player1 || !m.Player2 || !m.Player3 || !m.Player4);
-            if (matchWithFreePlayer) {
-                //add player to this match
-                if (!matchWithFreePlayer.Player1) {
-                    matchWithFreePlayer.Player1 = user;
-                } else if (!matchWithFreePlayer.Player2) {
-                    matchWithFreePlayer.Player2 = user;
-                } else if (!matchWithFreePlayer.Player3) {
-                    matchWithFreePlayer.Player3 = user;
-                } else {
-                    matchWithFreePlayer.Player4 = user;
-                }
-            } else {
-                let match = newMatch(plannedGame);
-                match.Player1 = user;
-                newMatches.push(match);
-            }
+            newMatches.push(newM);
         }
     };
     return newMatches;
@@ -56,7 +43,7 @@ export function suggestMatch(plannedGames, matches, registrations) {
 export function cleansePlayer(user) {
     if (!user)
         return user;
-    return { displayName: user.displayName, email: user.email }
+    return { displayName: user.displayName, email: user.email, _order:user._order }
 }
 
 export function newMatch(game) {
