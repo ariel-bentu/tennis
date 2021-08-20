@@ -52,6 +52,10 @@ export function Text(props) {
     return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 25, padding: 10 }}>{props.children}</div>
 }
 
+export function SmallText(props) {
+    return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 15, padding: 2 }}>{props.children}</div>
+}
+
 export function VBox(props) {
     return <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ...props.style }}>
         {props.children}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
 
-import { Spacer, Header, Loading, MyTableCell, IOSSwitch } from './elem'
+import { Spacer, Loading, MyTableCell, IOSSwitch } from './elem'
 
 import * as api from './api'
 
@@ -63,7 +63,7 @@ export default function Register(props) {
   let nowDirty = isDirty();
   return (
     <div style={{ height: '65vh', width: '100%' }}>
-      <Header>רישום לטניס</Header>
+      <Spacer height={20}/>
       <Table >
         <TableHead>
           <TableRow>

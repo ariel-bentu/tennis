@@ -43,7 +43,12 @@ export function suggestMatch(plannedGames, matches, registrations) {
 export function cleansePlayer(user) {
     if (!user)
         return user;
-    return { displayName: user.displayName, email: user.email, _order:user._order }
+
+    let cPlayer =  { displayName: user.displayName, email: user.email};
+    if (user._order)
+        cPlayer._order = user._order;
+
+    return cPlayer;
 }
 
 export function newMatch(game) {

@@ -42,9 +42,9 @@ export default function Admin(props) {
         <Spacer height={30} />
 
         <Button variant="contained" onClick={() => {
-            props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת שבוע", [
+            props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת רישום", [
                 {
-                    caption: "פתח שיבוץ", callback: () => {
+                    caption: "פתח רישום", callback: () => {
                         api.openWeekForRegistration().then(
                             () => props.notify.success("שיבוץ נפתח בהצלחה"),
                             (err) => props.notify.error(err.message)
@@ -55,14 +55,14 @@ export default function Admin(props) {
             ])
 
 
-        }}>פתיחת שיבוצים</Button>
+        }}>פתיחת רישום</Button>
         <Spacer height={30} />
         <Button variant="contained" onClick={() => {
-            props.notify.ask("התחלת שיבוץ תעביר את השיבוצים הקיימים לגיבוי ותנקה את טבלאות השיבוץ","פתיחת שיבוץ", [
+            props.notify.ask("פתיחת שבוע תעביר את השיבוצים הקיימים לגיבוי, תחשב לכל שחקן את חובו, ותכין המערכת לשיבוץ שבוע","פתיחת שבוע", [
                 {
-                    caption: "התחל שיבוץ", callback: () => {
+                    caption: "התחל שבוע", callback: () => {
                         api.openWeekForMatch().then(
-                            () => props.notify.success("הכנה לשיבוץ בוצעה בהצלחה"),
+                            () => props.notify.success("פתיחת שבוע בוצעה בהצלחה"),
                             (err) => props.notify.error(err.message)
                         );
                     }
@@ -71,7 +71,7 @@ export default function Admin(props) {
             ])
 
 
-        }}>התחלת שיבוץ</Button>
+        }}>סגירת ופתיחת שבוע</Button>
         </VBox>
         {loading ? <Loading msg="מעדכן..." /> : null}
 

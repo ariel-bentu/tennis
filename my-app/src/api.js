@@ -3,18 +3,40 @@ import 'firebase/auth';
 import 'firebase/firestore';
 import { config } from './config';
 import { cleansePlayer } from './utils';
+import dayjs from 'dayjs'
 
 export const Collections = {
     REGISTRATION_COLLECTION: "registrations",
     PLANNED_GAMES_COLLECTION: "planned-games",
     MATCHES_COLLECTION: "matches",
+    BILLING_COLLECTION: "billing",
+    DEBTS_SUB_COLLECTION: "debts",
+
     USERS_COLLECTION: "users",
     SYSTEM_INFO: "systemInfo",
     REGISTRATION_ARCHIVE_COLLECTION: "registrations-archive",
     MATCHES_ARCHIVE_COLLECTION: "matches-archive"
 }
 
+const offset = {
+    "ראשון":
+        0,
+    "שני":
+        1,
+    "שלישי":
+        2,
+    "רביעי":
+        3,
+    "חמישי":
+        4,
+    "שישי":
+        5,
+    "שבת":
+        6
+}
+
 const SYSTEM_RECORD_REGISTRATION = "registration"
+const SYSTEM_RECORD_BILLING = "Billing"
 
 
 export function initAPI() {
@@ -140,39 +162,126 @@ function getTimestamp() {
     return m.getUTCFullYear() + "/" + (m.getUTCMonth() + 1) + "/" + m.getUTCDate() + " " + m.getUTCHours() + ":" + m.getUTCMinutes() + ":" + m.getUTCSeconds();
 }
 
-function getWeek() {
-    let now = new Date()
-    var onejan = new Date(now.getFullYear(), 0, 1);
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var dayOfYear = ((today - onejan + 86400000) / 86400000);
-    return Math.ceil(dayOfYear / 7)
-
-}
 
 export async function openWeekForRegistration() {
     var db = firebase.firestore();
     var batch = db.batch();
-    return moveCollectionData(db, batch, Collections.REGISTRATION_COLLECTION, Collections.REGISTRATION_ARCHIVE_COLLECTION, true)
-    .then(()=>batch.commit());
+    return moveCollectionData(db, batch, Collections.REGISTRATION_COLLECTION, Collections.REGISTRATION_ARCHIVE_COLLECTION)
+        .then(() => batch.commit());
 }
 
 export async function openWeekForMatch() {
-    var db = firebase.firestore();
-    var batch = db.batch();
-    return moveCollectionData(db, batch, Collections.MATCHES_COLLECTION, Collections.MATCHES_ARCHIVE_COLLECTION, true)
-    .then(()=>batch.commit());
+    // var db = firebase.firestore();
+    //     var batch = db.batch();
+    // return moveCollectionData(db, batch, Collections.MATCHES_ARCHIVE_COLLECTION, Collections.MATCHES_COLLECTION, false).then(()=>batch.commit());
+
+    let gameTarif = await getGameTarif();
+
+    return getCollection(Collections.MATCHES_COLLECTION).then(srcData => {
+        var db = firebase.firestore();
+        var batch = db.batch();
+        let debtUpdateMap = {}
+
+        return getCollection(Collections.BILLING_COLLECTION).then(billing => {
+
+            //Add Debt for each player
+            srcData.forEach((match) => {
+                let isSingles = !match.Player2 && !match.Player4;
+                let gameDate = getMatchDate(match)
+                for (let i = 1; i <= 4; i++) {
+                    if (match["Player" + i]) {
+                        let email = match["Player" + i].email
+                        addOneGameDebt(db, batch, gameTarif, email,
+                            match._ref.id,
+                            isSingles, gameDate);
+                        if (!debtUpdateMap[email]) {
+                            debtUpdateMap[email] = 0;
+                        }
+                        debtUpdateMap[email] += gameTarif * (isSingles ? 1 : 1); //no difference for singles
+                    }
+                }
+            });
+
+
+            //update the balance field
+            for (const [email, addToBalance] of Object.entries(debtUpdateMap)) {
+                let billingRecord = billing.find(b => b._ref.id === email);
+
+                if (billingRecord) {
+                    batch.update(billingRecord._ref, { balance: billingRecord.balance - addToBalance });
+                } else {
+                    let newBillingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email);
+                    batch.set(newBillingRecord, { balance: -addToBalance });
+                }
+            }
+
+            //move to archive
+            srcData.forEach(({ _ref, ...item }) => {
+                let docRef = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION).doc(_ref.id);
+                let gameDate = getMatchDate(item)
+                let newItem = { ...item, date: gameDate };
+                batch.set(docRef, newItem);
+                batch.delete(_ref);
+            })
+
+            return batch.commit();
+        })
+    });
+}
+
+function getMatchDate(match) {
+
+    let begin = dayjs().startOf('week');
+    return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");
 }
 
 
-export async function moveCollectionData(db, batch, fromCollName, toCollName, addWeek) {
+async function getGameTarif() {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_BILLING);
+    if (docRef) {
+        return docRef.get().then(doc => {
+            return doc.data().PricePerGame
+        })
+    }
+    throw new Error("Cannot obtain price per game");
+}
+
+export async function getUserBalance(email) {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.BILLING_COLLECTION).doc(email);
+    if (docRef) {
+        return docRef.get().then(doc => {
+            let data = doc.data();
+            if (data) {
+                let initialBalance = data.initialBalance ? data.initialBalance : 0;
+                return data.balance + initialBalance;
+            } else
+                return undefined
+        })
+    }
+    throw new Error("Not able to obtaining Billing");
+}
+
+function addOneGameDebt(db, batch, gameTarif, email, matchID, isSingles, date) {
+    let newBillingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION).doc();
+    batch.set(newBillingRecord, {
+        date,
+        matchID,
+        amount: gameTarif, // *(isSingles ? 1:1), //no difference for singles
+        singles: isSingles
+    });
+}
+
+export async function moveCollectionData(db, batch, fromCollName, toCollName, addDate) {
     //throw new Error("Not Implemented Yet");
-    let week = getWeek();
+    let date = dayjs().format("DD/MMM/YYYY");
 
     return getCollection(fromCollName).then(srcData => {
 
         srcData.forEach(({ _ref, ...item }) => {
             let docRef = db.collection(toCollName).doc(_ref.id);
-            let newItem = addWeek ? { ...item, week } : item;
+            let newItem = addDate ? { ...item, date } : item;
             batch.set(docRef, newItem);
             batch.delete(_ref);
         })
