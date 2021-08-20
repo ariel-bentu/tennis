@@ -42,7 +42,7 @@ export default function MyBill({ UserInfo, notify }) {
                     :
                     balance ?
                         <Text>{balance > 0 ? balance + ' ש״ח בזכות' :
-                            balance == 0 ? "0 - אין חוב" :
+                            balance === 0 ? "0 - אין חוב" :
                                 -balance + ' ש״ח חוב'
                         }</Text> :
                         <Loading msg="טוען מאזן" />

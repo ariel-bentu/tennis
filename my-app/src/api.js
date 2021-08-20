@@ -11,6 +11,7 @@ export const Collections = {
     MATCHES_COLLECTION: "matches",
     BILLING_COLLECTION: "billing",
     DEBTS_SUB_COLLECTION: "debts",
+    PAYMENTS_SUB_COLLECTION: "payments",
 
     USERS_COLLECTION: "users",
     SYSTEM_INFO: "systemInfo",
@@ -261,6 +262,33 @@ export async function getUserBalance(email) {
         })
     }
     throw new Error("Not able to obtaining Billing");
+}
+
+
+export async function addPayment(email, amountStr, comment) {
+    var db = firebase.firestore();
+    let amount = parseInt(amountStr);
+    if (!comment) {
+        comment = "";
+    }
+    let billingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email);
+    return billingRecord.get().then(rec=>{
+        var batch = db.batch();
+        if (rec && rec.data()) {
+            batch.update(billingRecord, {balance: rec.data().balance + amount});
+        } else {
+            batch.set(billingRecord, {balance: amount})
+        }
+
+        //insert record in payments
+        let paymentRec = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION).doc();
+        batch.set(paymentRec, {
+            date: dayjs().format("DD/MMM/YYYY"),
+            amount,
+            comment
+        })
+        return batch.commit();
+    })
 }
 
 function addOneGameDebt(db, batch, gameTarif, email, matchID, isSingles, date) {
