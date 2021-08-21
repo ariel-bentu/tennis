@@ -5,6 +5,7 @@ import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core
 import { Spacer, Loading, MyTableCell, IOSSwitch } from './elem'
 
 import * as api from './api'
+import dayjs from 'dayjs';
 
 
 export default function Register(props) {
@@ -22,6 +23,8 @@ export default function Register(props) {
     if (props.UserInfo)
       api.getPlannedGames(props.UserInfo.email).then(games => games ? setPlannedGames(games) : {})
     api.getRegistrationOpen().then(val => setRegistrationOpen(val));
+
+    
   }, [props.UserInfo]);
 
   const isDirty = useCallback(() => {

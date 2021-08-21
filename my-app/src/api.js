@@ -159,8 +159,7 @@ export async function submitRegistration(newRegs, currentUser) {
 }
 
 function getTimestamp() {
-    var m = new Date();
-    return m.getUTCFullYear() + "/" + (m.getUTCMonth() + 1) + "/" + m.getUTCDate() + " " + m.getUTCHours() + ":" + m.getUTCMinutes() + ":" + m.getUTCSeconds();
+    return dayjs().format("YYYY/MM/DD HH:mm:ss");
 }
 
 
