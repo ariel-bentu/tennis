@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Table, TableHead, TableRow, TableBody, TextField } from '@material-ui/core';
+import {
+    Button, Divider,
+    TextField, Grid, InputBase
+} from '@material-ui/core';
 
 import {
-    Paper1, VBox, HBox, Spacer, SmallTableCellEditable,
-    SmallTableCell, SmallTableCellLeft, Header, Text
+    Paper1, VBox, HBox, Spacer,
+    Header, Text, SmallText
 } from './elem'
 
 import * as api from './api'
@@ -37,93 +40,106 @@ export default function Users(props) {
     },
         [users]);
 
+    let width = props.windowSize.w;
+    let condense = width < 600;
+
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
-                <Table stickyHeader >
-                    <TableHead>
-                        <TableRow>
+                <Grid container spacing={2} >
+                    <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
+                        <Grid item xs={condense ? 5 : 3}>שם</Grid>
+                        {condense ? null : <Grid item xs={4}>אימייל</Grid>}
+                        <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
+                        <Grid item xs={condense ? 2 : 1}>דירוג</Grid>
+                        <Grid item xs={2}>
+                            <VBox style={{ justifyContent: 'center' }}>
+                                <Button variant="contained" onClick={() => setAddMode(true)}
+                                    style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button>
 
-                            <SmallTableCell width={'30%'} >שם</SmallTableCell>
-                            <SmallTableCell width={'20%'}>אימייל</SmallTableCell>
-                            <SmallTableCell width={'15%'}>טלפון</SmallTableCell>
-                            <SmallTableCell width={'10%'}>דירוג</SmallTableCell>
-                            <SmallTableCell width={'15%'}>
-                                <HBox style={{ justifyContent: 'center' }}>
-                                    <Button variant="contained" onClick={() => setAddMode(true)} style={{ height: '3rem', fontSize: 35 }}>+</Button>
+                                <Spacer />
+                                <Button
+                                    style={{ fontSize: 15, height: '1.5rem', width: '2.5rem' }}
+                                    size={"large"}
 
-
-                                    <Spacer height={20} />
-                                    <Button
-                                        style={{ fontSize: 15, height: '3rem', }}
-                                        size={"large"}
-
-                                        variant="contained"
-                                        disabled={submitInProcess || !isDirty()} onClick={() => {
-                                            setSubmitInProcess(true);
-                                            api.saveUsers(users).then(
-                                                () => {
-                                                    props.notify.success("נשמר בהצלחה");
-                                                    let updatedUsers = users.map(({ dirty, ...user }) => user);
-                                                    setUsers(updatedUsers);
-                                                },
-                                                (err) => props.notify.error(err.message)
-                                            ).finally(
-                                                () => setSubmitInProcess(false)
-                                            );
-                                        }
-                                        }>שמור</Button>
-                                    <Spacer height={20} />
-
-                                </HBox>
-                            </SmallTableCell>
-                        </TableRow>
-
-                    </TableHead>
-                    <TableBody>
-                        {users.map((user, i) => (
-                            <TableRow key={i}>
+                                    variant="contained"
+                                    disabled={submitInProcess || !isDirty()} onClick={() => {
+                                        setSubmitInProcess(true);
+                                        api.saveUsers(users).then(
+                                            () => {
+                                                props.notify.success("נשמר בהצלחה");
+                                                let updatedUsers = users.map(({ dirty, ...user }) => user);
+                                                setUsers(updatedUsers);
+                                            },
+                                            (err) => props.notify.error(err.message)
+                                        ).finally(
+                                            () => setSubmitInProcess(false)
+                                        );
+                                    }
+                                    }>שמור</Button>
 
 
+                            </VBox>
+                        </Grid>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Divider  flexItem style={{height:2, backgroundColor:'gray'}}/>
+                    </Grid>
+                    {users.map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
+                        <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
+                            <InputBase
+                                style={{ backgroundColor: '#F3F3F3' }}
+                                fullWidth={true}
+                                value={user.displayName}
+                                onChange={e => updateUserValue(user.email, { displayName: e.currentTarget.value })}
+                            />
+                        </Grid>
+                        {condense ? null : <Grid item xs={4} style={{ paddingRight: 2, paddingLeft: 8 }}>
+                            <SmallText textAlign='end'>{user.email}</SmallText>
+                        </Grid>}
+                        <Grid item xs={condense ? 3 : 2} style={{ paddingRight: 2, paddingLeft: 2 }}>
+                            <InputBase
+                                style={{ backgroundColor: '#F3F3F3' }}
+                                fullWidth={true}
+                                value={user.phone}
+                                onChange={e => updateUserValue(user.email, { phone: e.currentTarget.value })}
+                            />
+                        </Grid>
+                        <Grid item xs={condense ? 2 : 1} style={{ paddingRight: 2, paddingLeft: 2 }}>
+                            <InputBase
+                                style={{ backgroundColor: '#F3F3F3' }}
+                                fullWidth={true}
+                                value={user.rank}
+                                onChange={e => updateUserValue(user.email, { rank: e.currentTarget.value })}
+                            />
+                        </Grid>
+                        <Grid item xs={2}>
+                            <VBox>
+                                {/* <Button variant="contained" onClick={() => {
+                                    props.notify.ask(`האם למחוק משמתמש ${user.displayName}?`, "מחיקת משתמש", [
+                                        {
+                                            caption: "מחק", callback: () => {
+                                                api.deleteUser(user).then(
+                                                    () => props.notify.success("נמחק בהצלחה"),
+                                                    (err) => props.notify.error(err.toString())
+                                                );
+                                            }
+                                        },
+                                        { caption: "בטל", callback: () => { } },
+                                    ])
+                                }}> מחק</Button> */}
 
-                                <SmallTableCellEditable value={user.displayName}
-                                    onChange={e => updateUserValue(user.email, { displayName: e.currentTarget.value })} />
-                                <SmallTableCellLeft>
-                                    {user.email}
-                                </SmallTableCellLeft>
-                                <SmallTableCellEditable value={user.phone} dir={"ltr"}
-                                    onChange={e => updateUserValue(user.email, { phone: e.currentTarget.value })} />
-                                <SmallTableCellEditable value={user.rank}
-                                    onChange={e => updateUserValue(user.email, { rank: e.currentTarget.value })} />
-
-                                <SmallTableCell >
-                                    <VBox>
-                                        <Button variant="contained" onClick={() => {
-                                            props.notify.ask(`האם למחוק משמתמש ${user.displayName}?`, "מחיקת משתמש", [
-                                                {
-                                                    caption: "מחק", callback: () => {
-                                                        api.deleteUser(user).then(
-                                                            () => props.notify.success("נמחק בהצלחה"),
-                                                            (err) => props.notify.error(err.toString())
-                                                        );
-                                                    }
-                                                },
-                                                { caption: "בטל", callback: () => { } },
-                                            ])
-                                        }}> מחק</Button>
-                                        <Spacer/>
-                                        <Button variant="contained" onClick={() => {
-                                            setPaymentUser(user);
-                                            setPaymentAmount(0);
-                                            setPaymentComment("");
-                                        }}>תשלום</Button>
-                                    </VBox>
-                                </SmallTableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-
-                </Table>
+                                <Button variant="contained"
+                                    style={{ fontSize: 12, height: '1.5rem', width: '2.5rem' }}
+                                    onClick={() => {
+                                        setPaymentUser(user);
+                                        setPaymentAmount(0);
+                                        setPaymentComment("");
+                                    }}>תשלום</Button>
+                            </VBox>
+                        </Grid>
+                    </Grid>))}
+                </Grid>
             </VBox>
             : addMode ?
                 <VBox>
@@ -151,12 +167,12 @@ export default function Users(props) {
                     </HBox>
                 </VBox>
                 :
-                <VBox>
+                <VBox style={{ width: '100%' }}>
                     <Header>הזנת תשלום</Header>
                     <Text>{"עבור " + paymentUser.displayName}</Text>
                     <TextField required label="סכום" onChange={(e) => setPaymentAmount(e.currentTarget.value)} />
                     <TextField required label="הערה" onChange={(e) => setPaymentComment(e.currentTarget.value)} />
-                    <Spacer width={20} />
+                    <Spacer height={20} />
                     <HBox>
                         <Button variant="contained" onClick={() => {
                             api.addPayment(paymentUser.email, paymentAmount, paymentComment).then(
@@ -167,6 +183,7 @@ export default function Users(props) {
                                 (err) => props.notify.error(err.message, "שמירת תשלום נכשלה")
                             );
                         }} >שמור</Button>
+                        <Spacer width={20} />
                         <Button variant="contained" onClick={() => setPaymentUser(undefined)} >בטל</Button>
                     </HBox>
                 </VBox>

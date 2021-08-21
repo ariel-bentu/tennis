@@ -5,7 +5,6 @@ import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core
 import { Spacer, Loading, MyTableCell, IOSSwitch } from './elem'
 
 import * as api from './api'
-import dayjs from 'dayjs';
 
 
 export default function Register(props) {

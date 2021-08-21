@@ -170,7 +170,7 @@ let App = props => {
                     <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                   </TabPanel>
                   <TabPanel value={tab} index={2} >
-                    <Users notify={notify} isLandscape={isLandscape} />
+                    <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
                   </TabPanel>
 
                 </Route>
@@ -181,7 +181,7 @@ let App = props => {
                   <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
                 <Route path="/users">
-                  <Users notify={notify} isLandscape={isLandscape} />
+                  <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
                 </Route>
                 <Route path="/">
                   <Tabs
