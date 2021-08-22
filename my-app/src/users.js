@@ -9,6 +9,7 @@ import {
     Header, Text, SmallText
 } from './elem'
 
+import { Sort } from '@material-ui/icons';
 import * as api from './api'
 
 
@@ -23,6 +24,8 @@ export default function Users(props) {
     const [paymentUser, setPaymentUser] = useState(undefined);
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [paymentComment, setPaymentComment] = useState("");
+    const [sortByRank, setSortByRank] = useState(false);
+    
 
     useEffect(() => {
         api.getCollection(api.Collections.USERS_COLLECTION).then(u => setUsers(u))
@@ -48,10 +51,20 @@ export default function Users(props) {
             <VBox style={{ width: '100%', margin: 10 }}>
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
-                        <Grid item xs={condense ? 5 : 3}>שם</Grid>
+                        <Grid item xs={condense ? 5 : 3}>
+                            <HBox style={{ justifyContent: 'space-between' }}>
+                                <SmallText>שם</SmallText>
+                                <Sort onClick={()=>setSortByRank(false)}/>
+                            </HBox>
+                        </Grid>
                         {condense ? null : <Grid item xs={4}>אימייל</Grid>}
                         <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
-                        <Grid item xs={condense ? 2 : 1}>דירוג</Grid>
+                        <Grid item xs={condense ? 2 : 1}>
+                        <HBox style={{ justifyContent: 'space-between' }}>
+                                <SmallText>דירוג</SmallText>
+                                <Sort onClick={()=>setSortByRank(true)}/>
+                            </HBox>
+                        </Grid>
                         <Grid item xs={2}>
                             <VBox style={{ justifyContent: 'center' }}>
                                 <Button variant="contained" onClick={() => setAddMode(true)}
@@ -83,9 +96,9 @@ export default function Users(props) {
                         </Grid>
                     </Grid>
                     <Grid item xs={12}>
-                        <Divider  flexItem style={{height:2, backgroundColor:'gray'}}/>
+                        <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
                     </Grid>
-                    {users.map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
+                    {users.sort((u1,u2)=>sortByRank?(u1.rank-u2.rank):(u1.displayName > u2.displayName?1:-1)).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                             <InputBase
                                 style={{ backgroundColor: '#F3F3F3' }}

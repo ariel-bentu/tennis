@@ -35,13 +35,13 @@ export const Box = function Box({ user, height, width, onRemove, source, sourceP
             ×
         </div> : null}
         {onRemove ? <Spacer width={15} /> : null}
-        <div style={{  display:'flex', width:onRemove?'80%':'80%',  verticalAlign: 'text-top' }}>
+        <div style={{  display:'flex', width:onRemove?'70%':'70%',  verticalAlign: 'text-top' }}>
         {            user.displayName        }
         </div>
-        {user.rank ? <div style={{ display:'flex', width:'14%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
+        {user.rank ? <div style={{ display:'flex', width:'23%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
             {user.rank}
         </div> : null}
-        {user._order ? <div style={{ display:'flex', width:'14%', verticalAlign: 'text-bottom', backgroundColor: 'white' }}>
+        {user._order ? <div style={{ display:'flex', width:'15%', verticalAlign: 'text-bottom', backgroundColor: 'white' }}>
             {user._order}
         </div> : null}
     </div>);
