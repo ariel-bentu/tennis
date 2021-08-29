@@ -249,7 +249,7 @@ export default function Match(props) {
                             <Spacer />
                             <Grid container spacing={2}>
                                 <Grid container item xs={12} spacing={3}>
-                                    <Grid item xs={condense ? 2 : 2}>שעה</Grid>
+                                    <Grid item xs={condense ? 2 : 2}>מתי</Grid>
                                     <Grid item xs={condense ? 4 : 2}>מיקום</Grid>
                                     {condense ? null : <Grid item xs={1}>מגרש</Grid>}
                                     <Grid item xs={condense ? 5 : 3}>{condense ? "צוותים" : "זוג 1"}</Grid>
@@ -281,11 +281,23 @@ export default function Match(props) {
 
                                         return <Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}>
                                             <Grid item xs={2} style={{ paddingRight: 2, paddingLeft: 2 }}>
+                                                <VBox>
+                                                <div dir="ltr">
                                                 <InputBase
+                                                    style={{ backgroundColor: '#F3F3F3' }}
                                                     fullWidth={true}
                                                     value={match.Hour}
                                                     onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })}
                                                 />
+                                                <Spacer/>
+                                                <InputBase
+                                                    style={{ backgroundColor: '#F3F3F3', fontSize:12 }}
+                                                    fullWidth={true}
+                                                    value={match.date}
+                                                    onChange={e => updateMatchValue(match.id, { date: e.currentTarget.value })}
+                                                />
+                                                </div>
+                                                </VBox>
                                             </Grid>
                                             <Grid item xs={condense ? 4 : 2}>
                                                 <InputBase

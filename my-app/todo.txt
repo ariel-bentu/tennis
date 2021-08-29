@@ -1,4 +1,4 @@
-- num of registered according to dirty
+- when changing a name, the sort is moving the lines all the time
 - 
 
 

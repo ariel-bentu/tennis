@@ -9,6 +9,7 @@ import MyMatches from './myMatches'
 import MyBill from './myBill';
 import Match from './match'
 import Users from './users'
+import Billing from './billing';
 import ChangePwd from './change-pwd';
 import ForgotPwd from './forgot-pwd'
 
@@ -29,13 +30,15 @@ import {
 import firebase from 'firebase/app'
 import 'firebase/auth';
 
-import { config } from "./config";
+//import { config } from "./config";
 
-firebase.initializeApp(config);
+//firebase.initializeApp(config);
+api.initAPI(); 
 
 let App = props => {
 
   const [userInfo, setUserInfo] = useState(undefined);
+  const [userBlocked, setUserBlocked] = useState(false);
   const [changePwd, setChangePwd] = useState(false);
   const [forgotPwd, setForgotPwd] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,12 +49,15 @@ let App = props => {
   const anchorRef = React.useRef(null);
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 1500);
+    setTimeout(() => setLoading(false), 1000);
     firebase.auth().onAuthStateChanged(function (user) {
-      if (user)
-        setUserInfo(api.getUserObj(user));
-      else
-        setUserInfo(undefined);
+        api.getUserObj(user).then(
+          uo=>setUserInfo(uo),
+          (err)=> {
+            setUserBlocked(true);
+            setMsg({ open: true, severity: "error", title:"", body:err.message, top:100 })
+          }
+        )
     });
   }, []);
 
@@ -85,7 +91,7 @@ let App = props => {
   return (
     <div className="App" dir="rtl" >
 
-      <Collapse in={msg.open} timeout={500} style={{ position: 'absolute', top: 0, width: '100%', fontSize: 15, zIndex: 1000 }} >
+      <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left:0, right:0, fontSize: 15, zIndex: 1000 }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
           <Text>{msg.body}</Text>
@@ -105,8 +111,8 @@ let App = props => {
       </Collapse>
       {forgotPwd ? <ForgotPwd notify={notify} onCancel={() => setForgotPwd(false)} />
         :
-        userInfo ? <Toolbar>
-          <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 }}>
+        userBlocked || userInfo ? <Toolbar>
+          <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 10 }}>
             <Menu ref={anchorRef} onClick={() => setMenuOpen(prev => !prev)} />
             <Popper open={menuOpen} anchorEl={anchorRef.current} role={undefined} transition disablePortal style={{ zIndex: 1000, backgroundColor: 'white' }}>
               {({ TransitionProps, placement }) => (
@@ -122,6 +128,8 @@ let App = props => {
                           setMenuOpen(false);
                         }}>שנה סיסמא</MenuItem>
                         <MenuItem onClick={() => {
+                          setUserBlocked(false);
+                          setMsg({});
                           api.logout().then(() => setUserInfo(undefined));
                           setMenuOpen(false);
                         }}>התנתק</MenuItem>
@@ -135,7 +143,7 @@ let App = props => {
               <PowerSettingsNew onClick={() => api.logout().then(() => setUserInfo(undefined))} />
               <Button onClick={() => setChangePwd(true)}>שנה סיסמא</Button>
             </HBox> */}
-            <Text fontSize={15}>{userInfo.displayName}</Text>
+            {userInfo?<Text fontSize={15}>{userInfo.displayName}</Text>:null}
             {/* <Text>{window.innerWidth}</Text> */}
           </HBox>
         </Toolbar> : null}
@@ -162,6 +170,7 @@ let App = props => {
                     <Tab label={"ניהול"} />
                     <Tab label={"שיבוץ"} />
                     <Tab label={"משתמשים"} />
+                    <Tab label={"חובות"} />
                   </Tabs>
                   <TabPanel value={tab} index={0} >
                     <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
@@ -171,6 +180,9 @@ let App = props => {
                   </TabPanel>
                   <TabPanel value={tab} index={2} >
                     <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
+                  </TabPanel>
+                  <TabPanel value={tab} index={3} >
+                    <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
                   </TabPanel>
 
                 </Route>
@@ -214,13 +226,26 @@ let App = props => {
               </Switch>
             </Router> :
 
-            loading ? <Loading msg={"מאמת זהות"} /> : <Login
-              onLogin={(userInfo) => setUserInfo(userInfo)}
+            loading ? <Loading msg={"מאמת זהות"} /> : 
+            userBlocked?
+            null
+            :
+            <Login
+              onLogin={(userInfo) => {
+                //setUserInfo(userInfo)
+                //todo
+              }}
               onError={(err) => notify.error(err.toString())}
               onForgotPwd={() => setForgotPwd(true)}
               notify={notify}
             />}
-      {/* <Button onClick={()=>api.registerUser()}>test</Button> */}
+      {/* <Button variant="contained" onClick={()=>api.test1().then(
+        (ret)=>{
+          notify.success(JSON.stringify(ret))
+        },
+        (err)=>{
+          notify.error(err.message)
+      })}>test sms</Button> */}
 
 
       {/* <Button onClick={()=> {

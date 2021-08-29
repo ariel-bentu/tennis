@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-
+import dayjs from 'dayjs'
 export function isNotInMatches(matches, email) {
     return matches.every(m => isNotInMatch(m, email));
 }
@@ -56,11 +56,41 @@ export function newMatch(game) {
         id: uuidv4(),
         GameID: game.id,
         Day: game.Day,
+        date: getMatchDate(game),
         Hour: game.Hour,
-        Location: "רמת השרון",
-        Court: "?"
+        Location: game.Location || "רמת השרון",
+        Court: game.Court || "?"
     }
 }
+
+const offset = {
+    "ראשון":
+        0,
+    "שני":
+        1,
+    "שלישי":
+        2,
+    "רביעי":
+        3,
+    "חמישי":
+        4,
+    "שישי":
+        5,
+    "שבת":
+        6
+}
+
+export function getMatchDate(match) {
+    let begin = dayjs()
+    if (begin.day() === 6) {
+        begin = begin.startOf('week').add(1, 'week');    
+    } else {
+        begin = dayjs().add(7,'day').startOf('week');
+    }
+    
+    return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");
+}
+
 
 export function getMatchMessage(plannedGames, matches) {
     let message = "שיבוץ טניס!ֿ\n\n";
@@ -96,7 +126,7 @@ export function getMatchMessage(plannedGames, matches) {
                     if (dayMatches[j].Player4) {
                         message += `${dayMatches[j].Player4.displayName}\n`;
                     }
-                    message += "חסר אחד!";
+                    message += "עדיין חסר/ים!";
                 } else {
                     if (couples) {
                         message += `ו${dayMatches[j].Player2.displayName} `;

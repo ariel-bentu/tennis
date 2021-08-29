@@ -33,18 +33,23 @@ export default function MyBill({ UserInfo, notify }) {
 
     return (
         <div style={{ height: '65vh', width: '100%' }}>
-            <Spacer height={20} />
+            <Spacer height={45} />
 
-            <Text>נתונים עדיין אינם נכונים!!!</Text>
+            
             <VBox>
                 {noBalance ?
                     "אין נתונים עבורך"
                     :
                     balance ?
-                        <Text>{balance > 0 ? balance + ' ש״ח בזכות' :
+                        <VBox>
+                        <Text fontSize={35}>{balance > 0 ? balance + ' ש״ח בזכות' :
                             balance === 0 ? "0 - אין חוב" :
-                                -balance + ' ש״ח חוב'
-                        }</Text> :
+                                -balance + ' ש״ח בחובה'
+                        }</Text>
+                        <Spacer height={20} />
+                        <a href="https://payboxapp.page.link/nUbbPFMPQMeBQ8YB9">לתשלום בפייבוקס</a>
+                        </VBox>
+                         :
                         <Loading msg="טוען מאזן" />
                 }
             </VBox>

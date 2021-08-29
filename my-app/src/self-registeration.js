@@ -139,7 +139,7 @@ export default function SelfRegistration(props) {
                                     phone
                                 }, pwd).then(
                                     ()=> {
-                                        props.notify.success("רישום עבר בהצלחה")
+                                        props.onCancel();
                                     },
                                     (err)=> {
                                         props.notify.error(err.message);

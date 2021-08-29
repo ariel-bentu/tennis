@@ -1,6 +1,10 @@
 import firebase from 'firebase/app'
 import 'firebase/auth';
 import 'firebase/firestore';
+import 'firebase/functions';
+
+
+
 import { config } from './config';
 import { cleansePlayer } from './utils';
 import dayjs from 'dayjs'
@@ -14,41 +18,44 @@ export const Collections = {
     PAYMENTS_SUB_COLLECTION: "payments",
 
     USERS_COLLECTION: "users",
+    USERS_INFO_COLLECTION: "users-info",
     SYSTEM_INFO: "systemInfo",
     REGISTRATION_ARCHIVE_COLLECTION: "registrations-archive",
     MATCHES_ARCHIVE_COLLECTION: "matches-archive"
 }
 
-const offset = {
-    "ראשון":
-        0,
-    "שני":
-        1,
-    "שלישי":
-        2,
-    "רביעי":
-        3,
-    "חמישי":
-        4,
-    "שישי":
-        5,
-    "שבת":
-        6
-}
+
 
 const SYSTEM_RECORD_REGISTRATION = "registration"
 const SYSTEM_RECORD_BILLING = "Billing"
 
+let app = undefined;
+//let functions = undefined;
 
 export function initAPI() {
-    firebase.initializeApp({ ...config });
+    if (!app) {
+        app = firebase.initializeApp({ ...config });
+        // functions = getFunctions(app)
+    }
+}
+
+export async function test1() {
+    const openWeek = app.functions('europe-west1').httpsCallable('openWeek');
+
+    //firebase.functions().httpsCallable('openWeek');
+
+    return openWeek()
+        .then((result) => {
+            const data = result.data;
+            return data;
+        });
 }
 
 export async function getUserInfo(user, pwd) {
     return firebase.auth().signInWithEmailAndPassword(user, pwd)
         .then((userCredential) => {
             // Signed in
-            return getUserObj(userCredential.user);
+            return userCredential.user;
         })
         .catch((error) => {
             throw error.message;
@@ -67,13 +74,44 @@ export async function forgotPwd(email) {
     return firebase.auth().sendPasswordResetEmail(email)
 }
 
-export function getUserObj(user) {
-    return {
-        displayName: user.displayName && user.displayName.length > 0 ? user.displayName : user.email,
-        email: user.email,
-        _user: user
-    };
+export async function getUserObj(user) {
+    var db = firebase.firestore();
+    if (user && user.email) {
+        let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+        return docRef.get().then(
+            u => {
+                let data = u.data();
+                if (!data) {
+                    throw new Error("חשבונך מחכה לאישור - יש לפנות למנהל המערכת");
+                } else if (data.inactive) {
+                    throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
+                }
+                return { displayName: data.displayName, email: user.email, _user: user };
+            },
+            (err)=>{
+                throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
+            });
+    }
+    return undefined;
 }
+
+// export function temp() {
+//     return getCollection(Collections.USERS_COLLECTION).then(srcData => {
+//         var db = firebase.firestore();
+//         let batch = db.batch();
+//         srcData.forEach(({ _ref, ...item }) => {
+//             let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(_ref.id);
+
+//             batch.set(docRef, {
+//                 email: item.email,
+//                 displayName: item.displayName,
+//                 inactive: false
+//             });
+
+//         })
+//         batch.commit();
+//     })
+// }
 
 
 
@@ -187,13 +225,12 @@ export async function openWeekForMatch() {
             //Add Debt for each player
             srcData.forEach((match) => {
                 let isSingles = !match.Player2 && !match.Player4;
-                let gameDate = getMatchDate(match)
                 for (let i = 1; i <= 4; i++) {
                     if (match["Player" + i]) {
                         let email = match["Player" + i].email
                         addOneGameDebt(db, batch, gameTarif, email,
                             match._ref.id,
-                            isSingles, gameDate);
+                            isSingles, match.date);
                         if (!debtUpdateMap[email]) {
                             debtUpdateMap[email] = 0;
                         }
@@ -218,8 +255,7 @@ export async function openWeekForMatch() {
             //move to archive
             srcData.forEach(({ _ref, ...item }) => {
                 let docRef = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION).doc(_ref.id);
-                let gameDate = getMatchDate(item)
-                let newItem = { ...item, date: gameDate };
+                let newItem = { ...item};
                 batch.set(docRef, newItem);
                 batch.delete(_ref);
             })
@@ -229,11 +265,6 @@ export async function openWeekForMatch() {
     });
 }
 
-function getMatchDate(match) {
-
-    let begin = dayjs().startOf('week');
-    return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");
-}
 
 
 async function getGameTarif() {
@@ -263,20 +294,44 @@ export async function getUserBalance(email) {
     throw new Error("Not able to obtaining Billing");
 }
 
+export async function getUserPayments(email) {
+    var db = firebase.firestore();
+    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION);
+    if (subColRef) {
+        return subColRef.get().then((payments) => {
+            return payments.docs.map(docObj => docObj.data());
+        });
+    }
+    throw new Error("Not able to obtaining Payments info");
+}
+
+export async function getUserDebts(email) {
+    var db = firebase.firestore();
+    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION);
+    if (subColRef) {
+        return subColRef.get().then((dents) => {
+            return dents.docs.map(docObj => docObj.data());
+        });
+    }
+    throw new Error("Not able to obtaining Dents info");
+}
+
+
+
 
 export async function addPayment(email, amountStr, comment) {
     var db = firebase.firestore();
-    let amount = parseInt(amountStr);
+    let amount = parseFloat(amountStr);
     if (!comment) {
         comment = "";
     }
     let billingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email);
-    return billingRecord.get().then(rec=>{
+    return billingRecord.get().then(rec => {
         var batch = db.batch();
         if (rec && rec.data()) {
-            batch.update(billingRecord, {balance: rec.data().balance + amount});
+            batch.update(billingRecord, { balance: rec.data().balance + amount });
         } else {
-            batch.set(billingRecord, {balance: amount})
+            batch.set(billingRecord, { balance: amount })
         }
 
         //insert record in payments
@@ -623,7 +678,9 @@ export async function saveMatches(matches, isTest) {
         } else {
             //new match
             var docRef = db.collection(Collections.MATCHES_COLLECTION).doc();
-            batch.set(docRef, cleanseMatch(m));
+            let newMatch = cleanseMatch(m);
+            
+            batch.set(docRef, newMatch);
         }
     })
     if (isTest) {
@@ -728,15 +785,38 @@ export async function deleteUser(user) {
     throw new Error("Operation not supported")
 }
 
+export async function activateUser(user, inactive, newUser) {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+
+    if (newUser) {
+        return docRef.set({
+            email: user.email,
+            displayName: user.displayName,
+            inactive: inactive
+        })
+    } else {
+        return docRef.update({
+            email: user.email,
+            displayName: user.displayName,
+            inactive: inactive
+        })
+    }
+}
+
 export async function saveUsers(users) {
     var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
         let batch = db.batch();
 
-        users.forEach(({ dirty, _ref, ...user }) => {
+        users.forEach(({ dirty, _ref, _inactive, _waitForApproval, _origDisplayName, ...user }) => {
             if (dirty) {
                 batch.set(_ref, user);
+                if (user.displayName !== _origDisplayName) {
+                    let userInfo = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+                    batch.update(userInfo, { displayName: user.displayName });
+                }
             }
         })
         batch.commit().then(
