@@ -58,13 +58,13 @@ const getNiceDate = (d) => {
 
 const getDeletedMsg = (name, day, date, location, hour, court) => {
     return `${name},
-הוסרת ממשחק הטניס ביום ${day}, ${getNiceDate(date)} ב ${hour} ב${location} במגרש ${court}.
+הוסרת ממשחק הטניס ביום ${day}, ${getNiceDate(date)} ב- ${hour} ב${location} במגרש ${court}.
 לצפיה בשאר המשחקים שלך כנס לאפליקציה.
 https://atpenn-fe837.web.app
 טניס טוב!`;
 };
 
-const inThePast = (d) => dayjs().subtract(1, "day").isAfter(dayjs(d));
+const inThePast = (d, afterBy) => dayjs().subtract(afterBy || 1, "day").isAfter(dayjs(d));
 
 const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) => {
     const missing = !p1 || !p2 || !p3 || !p4;
@@ -95,7 +95,7 @@ const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) =
 
     return `${name},
 שובצת, או משחקך עודכן.
-ביום ${day}, ${getNiceDate(date)} ב ${hour} ב${location} במגרש ${court}.
+ביום ${day}, ${getNiceDate(date)} ב- ${hour} ב${location} במגרש ${court}.
 ${team}
 
 לצפיה במשחקים שלך כנס לאפליקציה.
@@ -234,7 +234,7 @@ exports.archiveMatches = functions.region("europe-west1").pubsub
                 const batch = db.batch();
                 const debtUpdateMap = {};
 
-                const matches = allMatches.docs.filter((m) => inThePast(m.data().date));
+                const matches = allMatches.docs.filter((m) => inThePast(m.data().date), 2);
 
                 msg += "Number of Matches to process: " + matches.length + "\n";
                 return db.collection(BILLING_COLLECTION).get().then((billing) => {
