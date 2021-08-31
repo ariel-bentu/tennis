@@ -91,58 +91,70 @@ export function getMatchDate(match) {
     return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");
 }
 
+export function getTodayMatchMessage(plannedGames, gameID, matches) {
+    let message = "שיבוץ טניס!ֿ\n\n";
+    let i = plannedGames.findIndex(pg=>pg.id === gameID);
+    if (i >= 0) 
+        message += getOneDayMsg(plannedGames, i, matches)
+
+    return message;
+}
 
 export function getMatchMessage(plannedGames, matches) {
     let message = "שיבוץ טניס!ֿ\n\n";
     for (let i = 0; i < plannedGames.length; i++) {
-        message += `***** ${plannedGames[i].Day} *****\n`;
-        let dayMatches = matches.filter(m => m.GameID === plannedGames[i].id && !m.deleted);
-        if (!dayMatches || dayMatches.length === 0) {
-            message += "טרם"
-        } else {
-            for (let j = 0; j < dayMatches.length; j++) {
-                if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {
-                    if (dayMatches.length === 1) {
-                        message += "טרם"
-                    }
-                    //skip this game
-                    continue;
-                }
-                let couples = dayMatches[j].Player2 || dayMatches[j].Player4;
-                let missing = couples && (!dayMatches[j].Player2 || !dayMatches[j].Player4);
-
-                message += `${dayMatches[j].Location} מגרש ${dayMatches[j].Court} (${dayMatches[j].Hour}):\n`;
-
-
-                message += `${dayMatches[j].Player1.displayName} `;
-                if (missing) {
-                    message += "\n";
-                    if (dayMatches[j].Player2) {
-                        message += `${dayMatches[j].Player2.displayName}\n`;
-                    }
-                    if (dayMatches[j].Player3) {
-                        message += `${dayMatches[j].Player3.displayName}\n`;
-                    }
-                    if (dayMatches[j].Player4) {
-                        message += `${dayMatches[j].Player4.displayName}\n`;
-                    }
-                    message += "עדיין חסר/ים!";
-                } else {
-                    if (couples) {
-                        message += `ו${dayMatches[j].Player2.displayName} `;
-                    }
-                    message += "vs ";
-                    message += `${dayMatches[j].Player3.displayName} `;
-                    if (couples) {
-                        message += `ו${dayMatches[j].Player4.displayName}`;
-                    }
-                }
-
-                message += "\n\n"
-            }
-        }
+        message += getOneDayMsg(plannedGames, i, matches)
     }
 
     return message;
+}
 
+function getOneDayMsg(plannedGames, i, matches) {
+    let message = `***** ${plannedGames[i].Day} *****\n`;
+    let dayMatches = matches.filter(m => m.GameID === plannedGames[i].id && !m.deleted);
+    if (!dayMatches || dayMatches.length === 0) {
+        message += "טרם"
+    } else {
+        for (let j = 0; j < dayMatches.length; j++) {
+            if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {
+                if (dayMatches.length === 1) {
+                    message += "טרם"
+                }
+                //skip this game
+                continue;
+            }
+            let couples = dayMatches[j].Player2 || dayMatches[j].Player4;
+            let missing = couples && (!dayMatches[j].Player2 || !dayMatches[j].Player4);
+
+            message += `${dayMatches[j].Location} מגרש ${dayMatches[j].Court} (${dayMatches[j].Hour}):\n`;
+
+
+            message += `${dayMatches[j].Player1.displayName} `;
+            if (missing) {
+                message += "\n";
+                if (dayMatches[j].Player2) {
+                    message += `${dayMatches[j].Player2.displayName}\n`;
+                }
+                if (dayMatches[j].Player3) {
+                    message += `${dayMatches[j].Player3.displayName}\n`;
+                }
+                if (dayMatches[j].Player4) {
+                    message += `${dayMatches[j].Player4.displayName}\n`;
+                }
+                message += "עדיין חסר/ים!";
+            } else {
+                if (couples) {
+                    message += `ו${dayMatches[j].Player2.displayName} `;
+                }
+                message += "vs ";
+                message += `${dayMatches[j].Player3.displayName} `;
+                if (couples) {
+                    message += `ו${dayMatches[j].Player4.displayName}`;
+                }
+            }
+
+            message += "\n\n"
+        }
+    }
+    return message;
 }
