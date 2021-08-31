@@ -56,7 +56,7 @@ export default function Admin(props) {
 
 
         }}>פתיחת רישום</Button>
-        <Spacer height={30} />
+        {/* <Spacer height={30} />
         <Button variant="contained" onClick={() => {
             props.notify.ask("פתיחת שבוע תעביר את השיבוצים הקיימים לגיבוי, תחשב לכל שחקן את חובו, ותכין המערכת לשיבוץ שבוע","פתיחת שבוע", [
                 {
@@ -71,7 +71,7 @@ export default function Admin(props) {
             ])
 
 
-        }}>סגירת ופתיחת שבוע</Button>
+        }}>סגירת ופתיחת שבוע</Button> */}
         </VBox>
         {loading ? <Loading msg="מעדכן..." /> : null}
 

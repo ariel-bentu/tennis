@@ -17,7 +17,7 @@ import { Toolbar, Text, Loading, HBox, Spacer, TabPanel } from './elem'
 
 import { AttachMoney, PlaylistAdd, SportsTennis, Menu } from '@material-ui/icons';
 
-import * as api from './api' 
+import * as api from './api'
 import Login from './login'
 import Admin from './admin';
 
@@ -33,7 +33,7 @@ import 'firebase/auth';
 //import { config } from "./config";
 
 //firebase.initializeApp(config);
-api.initAPI(); 
+api.initAPI();
 
 let App = props => {
 
@@ -45,19 +45,20 @@ let App = props => {
   const [msg, setMsg] = useState({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [tab, setTab] = React.useState(0);
+  const [adminTab, setAdminTab] = React.useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
   const anchorRef = React.useRef(null);
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
     firebase.auth().onAuthStateChanged(function (user) {
-        api.getUserObj(user).then(
-          uo=>setUserInfo(uo),
-          (err)=> {
-            setUserBlocked(true);
-            setMsg({ open: true, severity: "error", title:"", body:err.message, top:100 })
-          }
-        )
+      api.getUserObj(user).then(
+        uo => setUserInfo(uo),
+        (err) => {
+          setUserBlocked(true);
+          setMsg({ open: true, severity: "error", title: "", body: err.message, top: 100 })
+        }
+      )
     });
   }, []);
 
@@ -91,7 +92,7 @@ let App = props => {
   return (
     <div className="App" dir="rtl" >
 
-      <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left:0, right:0, fontSize: 15, zIndex: 1000 }} >
+      <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left: 0, right: 0, fontSize: 15, zIndex: 1000 }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
           <Text>{msg.body}</Text>
@@ -143,7 +144,7 @@ let App = props => {
               <PowerSettingsNew onClick={() => api.logout().then(() => setUserInfo(undefined))} />
               <Button onClick={() => setChangePwd(true)}>שנה סיסמא</Button>
             </HBox> */}
-            {userInfo?<Text fontSize={15}>{userInfo.displayName}</Text>:null}
+            {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
             {/* <Text>{window.innerWidth}</Text> */}
           </HBox>
         </Toolbar> : null}
@@ -159,8 +160,8 @@ let App = props => {
               <Switch>
                 <Route path="/admin">
                   <Tabs
-                    value={tab}
-                    onChange={(e, tab) => setTab(tab)}
+                    value={adminTab}
+                    onChange={(e, tab) => setAdminTab(tab)}
                     indicatorColor="primary"
                     textColor="primary"
                     scrollButtons="auto"
@@ -172,17 +173,17 @@ let App = props => {
                     <Tab label={"משתמשים"} />
                     <Tab label={"חובות"} />
                   </Tabs>
-                  <TabPanel value={tab} index={0} >
-                    <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                  <TabPanel value={adminTab} index={0} >
+                    {adminTab === 0 ? <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
                   </TabPanel>
-                  <TabPanel value={tab} index={1} >
+                  <TabPanel value={adminTab} index={1} >
                     <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                   </TabPanel>
-                  <TabPanel value={tab} index={2} >
-                    <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
+                  <TabPanel value={adminTab} index={2} >
+                    {adminTab === 2 ? <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
                   </TabPanel>
-                  <TabPanel value={tab} index={3} >
-                    <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
+                  <TabPanel value={adminTab} index={3} >
+                    {adminTab === 3 ? <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
                   </TabPanel>
 
                 </Route>
@@ -193,7 +194,7 @@ let App = props => {
                   <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
                 <Route path="/users">
-                  <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize}/>
+                  <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
                 <Route path="/">
                   <Tabs
@@ -216,7 +217,7 @@ let App = props => {
                     {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} /> : null}
                   </TabPanel>
                   <TabPanel value={tab} index={2} hidden={tab !== 2}>
-                  {tab === 2 ? <MyBill notify={notify} UserInfo={userInfo} />: null}
+                    {tab === 2 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
                   </TabPanel>
 
                 </Route>
@@ -226,19 +227,19 @@ let App = props => {
               </Switch>
             </Router> :
 
-            loading ? <Loading msg={"מאמת זהות"} /> : 
-            userBlocked?
-            null
-            :
-            <Login
-              onLogin={(userInfo) => {
-                //setUserInfo(userInfo)
-                //todo
-              }}
-              onError={(err) => notify.error(err.toString())}
-              onForgotPwd={() => setForgotPwd(true)}
-              notify={notify}
-            />}
+            loading ? <Loading msg={"מאמת זהות"} /> :
+              userBlocked ?
+                null
+                :
+                <Login
+                  onLogin={(userInfo) => {
+                    //setUserInfo(userInfo)
+                    //todo
+                  }}
+                  onError={(err) => notify.error(err.toString())}
+                  onForgotPwd={() => setForgotPwd(true)}
+                  notify={notify}
+                />}
       {/* <Button variant="contained" onClick={()=>api.test1().then(
         (ret)=>{
           notify.success(JSON.stringify(ret))
