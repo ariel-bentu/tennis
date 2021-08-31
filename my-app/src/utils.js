@@ -85,7 +85,7 @@ export function getMatchDate(match) {
     if (begin.day() === 6) {
         begin = begin.startOf('week').add(1, 'week');    
     } else {
-        begin = dayjs().add(7,'day').startOf('week');
+        begin = dayjs().startOf('week');
     }
     
     return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");

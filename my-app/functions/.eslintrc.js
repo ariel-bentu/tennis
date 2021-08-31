@@ -12,5 +12,7 @@ module.exports = {
     "object-curly-spacing": ["error", "always"],
     "quotes": ["error", "double"],
     "indent": "off",
+    "arrow-parens": 0,
+    "max-len": 0,
   },
 };
