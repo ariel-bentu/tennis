@@ -8,7 +8,7 @@ const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
 admin.initializeApp({
     credential: admin.credential.applicationDefault(),
     databaseAuthVariableOverride: {
-        token: { email: "noam.pinch@gmail.com" },
+        token: { email: functions.config().admin.email },
     },
 });
 
@@ -60,7 +60,7 @@ const getDeletedMsg = (name, day, date, location, hour, court) => {
     return `${name},
 הוסרת ממשחק הטניס ביום ${day}, ${getNiceDate(date)} ב- ${hour} ב${location} במגרש ${court}.
 לצפיה בשאר המשחקים שלך כנס לאפליקציה.
-https://atpenn-fe837.web.app
+https://tennis.atpenn.com
 טניס טוב!`;
 };
 
@@ -99,7 +99,7 @@ const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) =
 ${team}
 
 לצפיה במשחקים שלך כנס לאפליקציה.
-https://atpenn-fe837.web.app
+https://tennis.atpenn.com
 טניס טוב!`;
 };
 

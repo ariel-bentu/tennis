@@ -1,18 +1,24 @@
-
+# A project to manage a community of Tennis players
 
 ## project
 https://console.firebase.google.com/project/atpenn-fe837/hosting/sites
 
 
 ## commands
+- Deploy UI
 ```bash
-clasp push
+npm run build
+npm run deploy
 ```
 
+- Deploy functions
 ```bash
-clasp version [description]
+cd functions 
+firebase deploy --only functions
 ```
 
+- Set functions config
 ```bash
-clasp deploy [version] [description]
+firebase functions:config:set admin.email=<admin email>
+firebase functions:config:set sms.apikey=<api key>
 ```
