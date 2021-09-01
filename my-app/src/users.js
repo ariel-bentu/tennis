@@ -27,7 +27,22 @@ export default function Users(props) {
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [paymentComment, setPaymentComment] = useState("");
     const [sortByRank, setSortByRank] = useState(false);
+    const [refresh, setRefresh] = useState(1);
 
+    const getComparator = (byRank) => {
+        return byRank ?
+            (u1, u2) => u1.rank - u2.rank :
+            (u1, u2) => (u1.displayName > u2.displayName ? 1 : -1)
+    }
+
+    useEffect(() => {
+        setUsers(u=>{
+            u.sort(getComparator(sortByRank))
+            return u;
+        });
+
+        setRefresh(old=>old+1);
+    }, [sortByRank]);
 
     useEffect(() => {
         Promise.all([
@@ -51,13 +66,14 @@ export default function Users(props) {
                     }
                 }
             })
+            u.sort(getComparator(sortByRank));
             setUsers(u);
         });
 
     }, []);
 
     let updateUserValue = (email, fragment, ignoreDirty) => {
-        let dirtyObj = ignoreDirty?{}:{dirty:true};
+        let dirtyObj = ignoreDirty ? {} : { dirty: true };
         setUsers(oldUsers => oldUsers.map(item =>
             item.email === email
                 ? { ...item, ...fragment, ...dirtyObj }
@@ -75,7 +91,7 @@ export default function Users(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
-                <Search value={filter} onChange={val=>setFilter(val)}/>
+                <Search value={filter} onChange={val => setFilter(val)} />
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
@@ -125,7 +141,7 @@ export default function Users(props) {
                     <Grid item xs={12}>
                         <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
                     </Grid>
-                    {users.filter(u=>filter?u.displayName.includes(filter):true).sort((u1, u2) => sortByRank ? (u1.rank - u2.rank) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
+                    {users.filter(u => filter ? u.displayName.includes(filter) : true).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                             <InputBase
                                 style={{ backgroundColor: user._inactive ? 'red' : '#F3F3F3' }}
@@ -156,13 +172,13 @@ export default function Users(props) {
                         </Grid>
                         <Grid item xs={2}>
                             <VBox>
-                                
+
                                 <Button variant="contained"
                                     style={{ fontSize: 12, height: '1.5rem', width: 100 }}
                                     onClick={() => {
                                         let action = user._waitForApproval ? "לאשר שחקן" : user._inactive
-                                        ? "לבטל השהיית שחקן" :
-                                        "להשהות שחקן"  
+                                            ? "לבטל השהיית שחקן" :
+                                            "להשהות שחקן"
                                         props.notify.ask(`האם ${action} - ${user.displayName}?`, "", [
                                             {
                                                 caption: "בצע", callback: () => {
@@ -220,7 +236,10 @@ export default function Users(props) {
                             api.addUser(newUser).then(
                                 () => {
                                     props.notify.success("נשמר בהצלחה")
-                                    api.getCollection(api.Collections.USERS_COLLECTION).then(u => setUsers(u));
+                                    api.getCollection(api.Collections.USERS_COLLECTION).then(u => {
+                                        u.sort(getComparator(sortByRank));
+                                        setUsers(u);
+                                    });
                                     setAddMode(false);
                                 },
                                 (err) => props.notify.error(err.message, "שמירה נכשלה")

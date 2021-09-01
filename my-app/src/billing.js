@@ -30,6 +30,22 @@ export default function Billing(props) {
     const [paymentComment, setPaymentComment] = useState("");
     const [usersReload, setUsersReload] = useState(1);
 
+    const [refresh, setRefresh] = useState(1);
+
+    const getComparator = (byDebt) => {
+        return byDebt ?
+            (u1, u2) => u1.debt - u2.debt :
+            (u1, u2) => (u1.displayName > u2.displayName ? 1 : -1)
+    }
+
+    useEffect(() => {
+        setUsers(u=>{
+            u.sort(getComparator(sortByDebt))
+            return u;
+        });
+        setRefresh(old=>old+1);
+        
+    }, [sortByDebt]);
 
     useEffect(() => {
         Promise.all([
@@ -50,6 +66,7 @@ export default function Billing(props) {
                     oneUser.debt = userBilling.balance.toString();
                 }
             })
+            u.sort(getComparator(sortByDebt));
             setUsers(u);
         });
     }, [usersReload]);
@@ -104,7 +121,7 @@ export default function Billing(props) {
                     <Grid item xs={12}>
                         <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
                     </Grid>
-                    {users.filter(u => filter ? u.displayName.includes(filter) : true).sort((u1, u2) => sortByDebt ? (u1.debt > u2.debt ? 1 : -1) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (
+                    {users.filter(u => filter ? u.displayName.includes(filter) : true).map((user, i) => (
                         <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                             <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                                 <SmallText>{user.displayName}</SmallText>

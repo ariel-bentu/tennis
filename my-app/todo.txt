@@ -1,5 +1,3 @@
-- when changing a name, the sort is moving the lines all the time
-- 
 
 
 - who to play with
