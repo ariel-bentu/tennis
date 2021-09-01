@@ -691,6 +691,8 @@ export async function saveMatches(matches, isTest) {
 
 function cleanseMatch(m) {
     let newMatch = { ...m };
+    delete newMatch._collapse;
+    
     if (!newMatch.Player1)
         delete newMatch.Player1;
     else

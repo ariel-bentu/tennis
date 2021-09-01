@@ -12,7 +12,7 @@ import {
 import dayjs from 'dayjs'
 
 
-import { Spacer, Header, Loading, HBox, VBox, Text, SmallText} from './elem'
+import { Spacer, Header, Loading, HBox, VBox, Text, SmallText } from './elem'
 import { Dustbin } from './drop-box';
 import { Box } from './drag-box'
 import { DndProvider } from 'react-dnd'
@@ -20,7 +20,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 
 import { isMobile } from 'react-device-detect';
-import { Delete } from '@material-ui/icons';
+import { Delete, ExpandMore } from '@material-ui/icons';
 
 import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage } from './utils'
 
@@ -143,8 +143,10 @@ export default function Match(props) {
         });
     }
 
-    let updateMatchValue = (id, fragment) => {
-        setDirty(true);
+    let updateMatchValue = (id, fragment, ignoreDirty) => {
+        if (!ignoreDirty)
+            setDirty(true);
+
         setEditedMatches(oldEditedMatches => oldEditedMatches.map(item =>
             item.id === id
                 ? { ...item, ...fragment }
@@ -334,17 +336,23 @@ export default function Match(props) {
                                                     <Grid item xs={2} style={{ paddingRight: 2, paddingLeft: 2 }}>
                                                         <VBox>
                                                             <div dir="ltr">
-                                                                <InputBase
-                                                                    style={{ backgroundColor: '#F3F3F3' }}
-                                                                    fullWidth={true}
-                                                                    value={match.Hour}
-                                                                    onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })}
-                                                                />
+                                                                <HBox>
+
+                                                                    <InputBase
+                                                                        style={{ backgroundColor: '#F3F3F3' }}
+
+                                                                        value={match.Hour}
+                                                                        onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })}
+                                                                    />
+                                                                    <ExpandMore
+                                                                        style={match._collapse ? { transform: "rotate(90deg)" } : null}
+                                                                        onClick={() => updateMatchValue(match.id, { _collapse: !match._collapse }, true)} />
+                                                                </HBox>
                                                                 <Spacer />
-                                                                <KeyboardDatePicker
+                                                                {match._collapse ? null : <KeyboardDatePicker
                                                                     margin="normal"
                                                                     variant="inline"
-                                                                    style={{width:50}}
+                                                                    style={{ width: 50 }}
                                                                     autoOk
                                                                     //open={true}
                                                                     keyboardIcon={undefined}
@@ -357,8 +365,8 @@ export default function Match(props) {
                                                                         updateMatchValue(match.id, { date: dayjs(d).format("DD/MMM/YYYY") })
                                                                     }
                                                                     }
-                                                                />
-                                                                <SmallText fontSize={12}>{match.date}</SmallText>
+                                                                />}
+                                                                {match._collapse ? null : <SmallText fontSize={12}>{match.date}</SmallText>}
                                                                 {/* <InputBase
                                                                 style={{ backgroundColor: '#F3F3F3', fontSize: 12 }}
                                                                 fullWidth={true}
@@ -375,35 +383,33 @@ export default function Match(props) {
                                                             value={match.Location}
                                                             onChange={e => updateMatchValue(match.id, { Location: e.currentTarget.value })}
                                                         />
-                                                        {condense ? court : null}
+                                                        {condense && !match._collapse ? court : null}
                                                     </Grid>
                                                     {condense ? null : <Grid item xs={1}>{court}</Grid>}
-                                                    <Grid item xs={condense ? 5 : 3}>
+                                                    {match._collapse ? <Grid item xs={condense ? 5 : 3} /> :
+                                                        <Grid item xs={condense ? 5 : 3}>
 
-                                                        <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
-                                                            AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
-                                                            onRemove={() => updateMatch(match.id, undefined, 0, 1)}
-                                                            width={dragWidth}
-                                                        />
-                                                        <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2}
-                                                            AddPlayer={(user, source) => updateMatch(match.id, user, source, 2)}
-                                                            onRemove={() => updateMatch(match.id, undefined, 0, 2)}
-                                                            width={dragWidth}
-                                                        />
-                                                        {condense ? "vs" : null}
+                                                            <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
+                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
+                                                                onRemove={() => updateMatch(match.id, undefined, 0, 1)}
+                                                                width={dragWidth}
+                                                            />
+                                                            <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2}
+                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 2)}
+                                                                onRemove={() => updateMatch(match.id, undefined, 0, 2)}
+                                                                width={dragWidth}
+                                                            />
+                                                            {condense ? "vs" : null}
 
-                                                        {condense ? player3 : null}
-                                                        {condense ? player4 : null}
-
-
-                                                    </Grid>
-
-                                                    {condense ? null : <Grid item xs={3}>
-
+                                                            {condense ? player3 : null}
+                                                            {condense ? player4 : null}
+                                                        </Grid>}
+                                                    {match._collapse ? <Grid item xs={3} /> : null}
+                                                    {condense || match._collapse ? null : <Grid item xs={3}>
                                                         {player3}
                                                         {player4}
                                                     </Grid>}
-                                                    <Grid xs={1}>
+                                                    {match._collapse ? null : <Grid xs={1}>
                                                         <Delete onClick={() => {
                                                             props.notify.ask("האם למחוק משחקון זה?", "מחיקה", [
                                                                 {
@@ -414,7 +420,7 @@ export default function Match(props) {
                                                             ])
 
                                                         }} />
-                                                    </Grid>
+                                                    </Grid>}
                                                 </Grid>
                                             })
                                             : null}

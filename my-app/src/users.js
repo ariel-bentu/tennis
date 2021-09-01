@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    Header, Text, SmallText
+    Header, Text, SmallText, Search
 } from './elem'
 
 import { Sort } from '@material-ui/icons';
@@ -16,6 +16,7 @@ import * as api from './api'
 export default function Users(props) {
 
     const [users, setUsers] = useState([]);
+    const [filter, setFilter] = useState(undefined);
     const [usersInfo, setUsersInfo] = useState(undefined);
     const [submitInProcess, setSubmitInProcess] = useState(false);
     const [addMode, setAddMode] = useState(false);
@@ -74,6 +75,7 @@ export default function Users(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
+                <Search value={filter} onChange={val=>setFilter(val)}/>
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
@@ -123,7 +125,7 @@ export default function Users(props) {
                     <Grid item xs={12}>
                         <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
                     </Grid>
-                    {users.sort((u1, u2) => sortByRank ? (u1.rank - u2.rank) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
+                    {users.filter(u=>filter?u.displayName.includes(filter):true).sort((u1, u2) => sortByRank ? (u1.rank - u2.rank) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                             <InputBase
                                 style={{ backgroundColor: user._inactive ? 'red' : '#F3F3F3' }}

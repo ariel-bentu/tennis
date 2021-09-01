@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    Header, Text, SmallText
+    Header, Text, SmallText, Search
 } from './elem'
 
 import { Sort } from '@material-ui/icons';
@@ -16,6 +16,8 @@ import * as api from './api'
 export default function Billing(props) {
 
     const [users, setUsers] = useState([]);
+    const [filter, setFilter] = useState(undefined);
+
     const [userDetails, setUserDetails] = useState(undefined);
     const [userPayments, setUserPayments] = useState(undefined);
     const [userDebts, setUserDebts] = useState(undefined);
@@ -70,7 +72,7 @@ export default function Billing(props) {
         }
     }, [userDetails]);
 
-    
+
 
     let width = props.windowSize.w;
     let condense = width < 600;
@@ -78,6 +80,8 @@ export default function Billing(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!userDetails && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
+                <Search value={filter} onChange={val => setFilter(val)} />
+
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
@@ -100,7 +104,7 @@ export default function Billing(props) {
                     <Grid item xs={12}>
                         <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
                     </Grid>
-                    {users.sort((u1, u2) => sortByDebt ? (u1.debt > u2.debt ? 1 : -1) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (
+                    {users.filter(u => filter ? u.displayName.includes(filter) : true).sort((u1, u2) => sortByDebt ? (u1.debt > u2.debt ? 1 : -1) : (u1.displayName > u2.displayName ? 1 : -1)).map((user, i) => (
                         <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                             <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                                 <SmallText>{user.displayName}</SmallText>
@@ -128,7 +132,7 @@ export default function Billing(props) {
                 </Grid>
             </VBox>
             : userDetails ?
-                <VBox style={{width:'100%'}}>
+                <VBox style={{ width: '100%' }}>
                     <Text>תשלומים</Text>
                     <Grid container spacing={2} >
                         <Grid container item xs={12} spacing={2} >
@@ -142,9 +146,9 @@ export default function Billing(props) {
                                 <SmallText>הערה</SmallText>
                             </Grid>
                         </Grid>
-                        {userPayments ? userPayments.map((up,i) => (
+                        {userPayments ? userPayments.map((up, i) => (
                             <Grid key={i} container item xs={12} spacing={2} >
-                                
+
                                 <Grid item xs={3}>
                                     <SmallText><div dir="ltr">{up.date}</div></SmallText>
                                 </Grid>
@@ -157,7 +161,7 @@ export default function Billing(props) {
                             </Grid>
                         )) : null}
                     </Grid>
-                    <Spacer height={25}/>
+                    <Spacer height={25} />
                     <Text>חובות</Text>
                     <Grid container spacing={2} >
                         <Grid container item xs={12} spacing={2} >
@@ -167,11 +171,11 @@ export default function Billing(props) {
                             <Grid item xs={3}>
                                 <SmallText>סכום</SmallText>
                             </Grid>
-                           
+
                         </Grid>
-                        {userDebts ? userDebts.map((up,i) => (
+                        {userDebts ? userDebts.map((up, i) => (
                             <Grid key={i} container item xs={12} spacing={2} >
-                                
+
                                 <Grid item xs={3}>
                                     <SmallText><div dir="ltr">{up.date}</div></SmallText>
                                 </Grid>
@@ -195,7 +199,7 @@ export default function Billing(props) {
                         <Button variant="contained" onClick={() => {
                             api.addPayment(paymentUser.email, paymentAmount, paymentComment).then(
                                 () => {
-                                    setUsersReload(old=>old+1);
+                                    setUsersReload(old => old + 1);
                                     props.notify.success("תשלום נשמר בהצלחה")
                                     setPaymentUser(undefined);
                                 },

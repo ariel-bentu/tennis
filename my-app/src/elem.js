@@ -1,6 +1,8 @@
 import * as React from 'react';
-import { CircularProgress, TableCell, Box, Paper, InputBase,
-     Switch, Typography } from '@material-ui/core';
+import {
+    CircularProgress, TableCell, Box, Paper, InputBase,
+    Switch, Typography, TextField
+} from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 
 export function Spacer(props) {
@@ -70,6 +72,15 @@ export function HBox(props) {
     return <Box style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', ...props.style }}>
         {props.children}
     </Box>
+}
+
+export function Search(props) {
+    return (
+        <div dir="rtl" >
+            <TextField label="חפש" type="search" variant="outlined"  size="small" style={{width:200}}
+                onChange={(e) => props.onChange ? props.onChange(e.currentTarget.value) : {}}
+            />
+        </div>)
 }
 
 export const ItemTypes = {
@@ -158,10 +169,10 @@ export function TabPanel(props) {
             hidden={value !== index}
             id={`scrollable-auto-tabpanel-${index}`}
             {...other}
-            style={{padding:0}}
+            style={{ padding: 0 }}
         >
             {props.title ? <h1 align="center">{props.title}</h1> : null}
-            <Box style={{padding:2}} p={3}>{children}</Box>
+            <Box style={{ padding: 2 }} p={3}>{children}</Box>
         </Typography>
     );
 }
