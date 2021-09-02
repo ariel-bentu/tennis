@@ -11,7 +11,7 @@ const style = {
     fontSize: 12,
     margin: 2
 };
-export const Box = function Box({ user, height, width, onRemove, source, sourcePair, backgroundColor }) {
+export const Box = function Box({ user, height, width, onRemove, source, sourcePair, backgroundColor, additionalInfo }) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: ItemTypes.BOX,
         item: { user },
@@ -35,8 +35,9 @@ export const Box = function Box({ user, height, width, onRemove, source, sourceP
             ×
         </div> : null}
         {onRemove ? <Spacer width={15} /> : null}
-        <div style={{  display:'flex', width:onRemove?'70%':'70%',  verticalAlign: 'text-top' }}>
+        <div style={{  display:'flex', width:onRemove?'70%':'70%',  verticalAlign: 'text-top' }} title={additionalInfo?additionalInfo:undefined}>
         {            user.displayName        }
+        {additionalInfo?"*":""}
         </div>
         {user.rank ? <div style={{ display:'flex', width:'23%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
             {user.rank}
@@ -44,5 +45,6 @@ export const Box = function Box({ user, height, width, onRemove, source, sourceP
         {user._order ? <div style={{ display:'flex', width:'15%', verticalAlign: 'text-bottom', backgroundColor: 'white' }}>
             {user._order}
         </div> : null}
+        
     </div>);
 };

@@ -77,6 +77,7 @@ export default function Match(props) {
                 return us;
             }),
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
+                games.sort((g1, g2) => g1.id - g2.id);
                 setGames(games);
                 if (games && games.length > 0) {
                     setCurrentGame(games[0].id)
@@ -91,11 +92,21 @@ export default function Match(props) {
                 if (!user) {
                     reg.displayName = reg.email;
                 }
+
+                // Add indication which other registration this user has
+                let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID);
+                if (otherRegs && otherRegs.length > 0) {
+                    reg._otherRegistrations = otherRegs.map(or => 
+                        all[2].find(g => g.id == or.GameID).Day).join(",");
+                }
+
                 return user ? { ...reg, ...user } : reg;
             });
+            regs.sort((a, b) => a._order - b._order);
+
             //make order local to game
             all[2].forEach(game => {
-                regs.filter(r => r.GameID === game.id).sort((a, b) => a._order - b._order).forEach((orderedReg, i) => (orderedReg._order = i + 1))
+                regs.filter(r => r.GameID === game.id).forEach((orderedReg, i) => (orderedReg._order = i + 1))
             })
 
             setRegistrations(regs);
@@ -161,7 +172,7 @@ export default function Match(props) {
     let currentMatches = editedMatches ? editedMatches.filter(em => em.GameID === currentGame && !em.deleted) : [];
     let currentRegistrations = registrations ? registrations.filter(em => em.GameID === currentGame) : [];
 
-    currentRegistrations = currentRegistrations.sort((cr1, cr2) => cr1._order - cr2._order);
+    //currentRegistrations = currentRegistrations.sort((cr1, cr2) => cr1._order - cr2._order);
 
     let width = props.windowSize.w;
     let condense = width < 760;
@@ -283,7 +294,7 @@ export default function Match(props) {
                         <Grid container spacing={3} >
                             <Grid item xs={condense ? 3 : 2}  >
                                 <List style={{ margin: 5, height: '30%' }}>
-                                    {games.sort((g1, g2) => g1.id - g2.id).map((game) => (
+                                    {games.map((game) => (
                                         <ListItem key={game.id}
                                             style={{ width: '100%' }}
                                             button
@@ -437,7 +448,10 @@ export default function Match(props) {
                                         <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
 
                                             {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
-                                                <Box key={reg.email} user={reg} sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} width={dragWidth} />
+                                                <Box key={reg.email} user={reg}
+                                                    sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} width={dragWidth}
+                                                    additionalInfo={reg._otherRegistrations}
+                                                />
                                             )}
                                         </HBox>
                                         <Text fontSize={15}>כל שאר השחקנים</Text>

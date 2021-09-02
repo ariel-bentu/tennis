@@ -39,6 +39,7 @@ export const Dustbin = (props) => {
         <VBox>
             {props.Player ? <Box source={props.source} sourcePair={props.sourcePair} user={props.Player}
                 backgroundColor={props.Player._order ? 'lightblue' : 'yellow'} width={props.width}
+                additionalInfo={props.Player._otherRegistrations}
             onRemove={props.onRemove}/> : null}
         </VBox>
     </div>);
