@@ -74,12 +74,12 @@ export default function Billing(props) {
 
     useEffect(() => {
         if (userDetails) {
-            api.getUserPayments(userDetails).then(
+            api.getUserPayments(userDetails.email).then(
                 (p) => setUserPayments(p),
                 (err) => props.notify.error(err.message)
             )
 
-            api.getUserDebts(userDetails).then(
+            api.getUserDebts(userDetails.email).then(
                 (p) => setUserDebts(p),
                 (err) => props.notify.error(err.message)
             )
@@ -141,7 +141,7 @@ export default function Billing(props) {
                                     <Spacer width={5} />
                                     <Button variant="contained"
                                         style={{ fontSize: 12, height: '1.5rem', width: 100 }}
-                                        onClick={() => setUserDetails(user.email)}>פרטים...</Button>
+                                        onClick={() => setUserDetails(user)}>פרטים...</Button>
                                     <Spacer />
                                 </HBox>
                             </Grid>
@@ -150,6 +150,10 @@ export default function Billing(props) {
             </VBox>
             : userDetails ?
                 <VBox style={{ width: '100%' }}>
+                    <Text fontSize={35}>{userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
+                            userDetails.debt === 0 ? "0 - אין חוב" :
+                                -userDetails.debt + ' ש״ח בחובה'
+                        }</Text>
                     <Text>תשלומים</Text>
                     <Grid container spacing={2} >
                         <Grid container item xs={12} spacing={2} >

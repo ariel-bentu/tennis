@@ -5,6 +5,7 @@ import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core
 import { Spacer, Loading, MyTableCell, IOSSwitch } from './elem'
 
 import * as api from './api'
+import dayjs from 'dayjs'
 
 
 export default function Register(props) {
@@ -17,14 +18,28 @@ export default function Register(props) {
   const [timer, setTimer] = useState(undefined);
   const [registrationOpen, setRegistrationOpen] = useState(false);
 
+  const [lastReloaded, setLastReloaded] = useState(dayjs());
+  const [reload, setReload] = useState(1);
+
+  useEffect(() => {
+    window.addEventListener('focus', () => {
+      setLastReloaded(lr => {
+        if (lr.diff(dayjs(), 'minute') < -10) {
+          setReload(old=>old+1);
+          return dayjs();
+        }
+        return lr;
+      });
+    })
+  }, []);
 
   useEffect(() => {
     if (props.UserInfo)
       api.getPlannedGames(props.UserInfo.email).then(games => games ? setPlannedGames(games) : {})
     api.getRegistrationOpen().then(val => setRegistrationOpen(val));
 
-    
-  }, [props.UserInfo]);
+
+  }, [props.UserInfo, reload]);
 
   const isDirty = useCallback(() => {
     //console.log(JSON.stringify(editRegistration))
@@ -60,12 +75,12 @@ export default function Register(props) {
     return game.Registered === true;
   }
 
-  
+
 
   let nowDirty = isDirty();
   return (
     <div style={{ height: '65vh', width: '100%' }}>
-      <Spacer height={20}/>
+      <Spacer height={20} />
       <Table >
         <TableHead>
           <TableRow>

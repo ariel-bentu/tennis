@@ -102,7 +102,7 @@ export default function Match(props) {
                 let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID);
                 if (otherRegs && otherRegs.length > 0) {
                     const days = otherRegs.map(or => {
-                        let game = all[2].find(g => g.id == or.GameID)
+                        let game = all[2].find(g => g.id === or.GameID)
 
                         return {
                             id: game.id,

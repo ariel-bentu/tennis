@@ -1,5 +1,7 @@
 
+- refresh registeration after a while
+- remember password for long time
+
+
 
 - who to play with
-- if you play twice, and someone is once - get precedence?
--
