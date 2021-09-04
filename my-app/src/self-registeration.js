@@ -133,12 +133,15 @@ export default function SelfRegistration(props) {
                                 return;
                             }
                                 setDisableReg(true)
-                                api.registerUser({
+                                api.addUser({
                                     displayName: name,
                                     email,
-                                    phone
-                                }, pwd).then(
+                                    phone,
+                                    password: pwd
+                                }).then(
                                     ()=> {
+                                        
+                                        props.notify.success("רישום עבר בהצלחה");
                                         props.onCancel();
                                     },
                                     (err)=> {

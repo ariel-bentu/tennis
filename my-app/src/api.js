@@ -88,7 +88,7 @@ export async function getUserObj(user) {
                 }
                 return { displayName: data.displayName, email: user.email, _user: user };
             },
-            (err)=>{
+            (err) => {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
             });
     }
@@ -123,7 +123,9 @@ export async function getPlannedGames(currentUser) {
         db.collection(Collections.PLANNED_GAMES_COLLECTION).get().then((planned) => {
             let results = []
             planned.forEach((doc) => {
-                results.push(doc.data());
+                if (!doc.data().disabled) {
+                    results.push(doc.data());
+                }
             });
             results.sort((a, b) => a.id - b.id);
 
@@ -149,6 +151,15 @@ export async function getPlannedGames(currentUser) {
         })
     });
 
+}
+
+export async function setPlannedGameActive(id, active) {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.PLANNED_GAMES_COLLECTION).doc(id);
+    if (docRef) {
+        return docRef.update({ disabled: !active });
+    }
+    throw new Error("Invalid ID");
 }
 
 
@@ -255,7 +266,7 @@ export async function openWeekForMatch() {
             //move to archive
             srcData.forEach(({ _ref, ...item }) => {
                 let docRef = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION).doc(_ref.id);
-                let newItem = { ...item};
+                let newItem = { ...item };
                 batch.set(docRef, newItem);
                 batch.delete(_ref);
             })
@@ -679,7 +690,7 @@ export async function saveMatches(matches, isTest) {
             //new match
             var docRef = db.collection(Collections.MATCHES_COLLECTION).doc();
             let newMatch = cleanseMatch(m);
-            
+
             batch.set(docRef, newMatch);
         }
     })
@@ -692,7 +703,7 @@ export async function saveMatches(matches, isTest) {
 function cleanseMatch(m) {
     let newMatch = { ...m };
     delete newMatch._collapse;
-    
+
     if (!newMatch.Player1)
         delete newMatch.Player1;
     else
@@ -761,26 +772,10 @@ export async function initGames() {
 }
 
 
-export function addUser(user, pwd) {
-    return new Promise((resolve, reject) => firebase.auth().createUserWithEmailAndPassword(user.email, pwd || user.phone)
-        .then(
-            (userCredential) => {
-                var db = firebase.firestore();
-                db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).then(
-                    () => resolve(),
-                    (err) => {
-                        //retry in 2 seconds
-                        setTimeout(() => {
-                            db.collection(Collections.USERS_COLLECTION).doc(user.email).set(user).then(
-                                () => resolve(),
-                                (err2) => reject(err2.message));
-                        }
-                            , 2000)
+export async function addUser(user) {
+    const registerUser = app.functions('europe-west1').httpsCallable('registerUser');
 
-                    })
-            },
-            (err) => reject(err.message)
-        ));
+    return registerUser(user);
 }
 
 export async function deleteUser(user) {
@@ -826,10 +821,6 @@ export async function saveUsers(users) {
             (err) => reject(err)
         );
     })
-}
-
-export async function registerUser(user, pwd) {
-    return addUser(user, pwd);
 }
 
 export async function getRegistrationOpen() {

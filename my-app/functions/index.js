@@ -127,6 +127,46 @@ const sendSMS = (msg, numbers) => {
         });
 };
 
+exports.registerUser = functions.region("europe-west1").https.onCall((data, context) => {
+    functions.logger.info("register user", data);
+    // context.auth.token.email
+    let phone = data.phone;
+    if (phone && phone.startsWith("0")) {
+        phone = "+972" + phone.substr(1);
+    }
+
+    return admin.auth()
+        .createUser({
+            uid: data.email,
+            email: data.email,
+            emailVerified: false,
+            phoneNumber: phone,
+            password: data.password || data.phone,
+            displayName: data.displayName,
+            disabled: false,
+        })
+        .then(
+            () => {
+                return db.collection("users").doc(data.email).set({
+                    email: data.email,
+                    phone: data.phone,
+                    displayName: data.displayName,
+                }).then(() => {
+                    const msg = `מנהל מערכת טניס יקר.
+הרגע נרשם למערכת שחקן חדש.
+שמו: ${data.displayName}.
+מספר הטלפון: ${data.phone}
+יש לאשר אותו לפני שיוכל להשתתף.
+בברכה,
+מערכת הטניס הממוחשבת!`;
+                    return sendSMS(msg, [functions.config().admin.phone]);
+                });
+            },
+            (err) => {
+                throw new functions.https.HttpsError("failed-precondition", err.message, err.details);
+            });
+});
+
 
 exports.matchUpdated = functions.region("europe-west1").firestore
     .document("matches/{matchID}")

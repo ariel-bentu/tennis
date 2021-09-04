@@ -22,7 +22,7 @@ import { TouchBackend } from 'react-dnd-touch-backend'
 import { isMobile } from 'react-device-detect';
 import { Delete, ExpandMore } from '@material-ui/icons';
 
-import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage } from './utils'
+import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay } from './utils'
 
 import * as api from './api'
 
@@ -72,10 +72,7 @@ export default function Match(props) {
                 setRegistrations(regs)
                 return regs;
             }),
-            getCollection(api.Collections.USERS_COLLECTION).then(us => {
-                setUsers(us)
-                return us;
-            }),
+            getCollection(api.Collections.USERS_COLLECTION),
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
                 games.sort((g1, g2) => g1.id - g2.id);
                 setGames(games);
@@ -83,12 +80,20 @@ export default function Match(props) {
                     setCurrentGame(games[0].id)
                 }
                 return games;
-            })
+            }),
+            getCollection(api.Collections.USERS_INFO_COLLECTION)
 
         ]).then(all => {
+            let _users = all[1];
+            _users = _users.filter(u => {
+                let uInfo = all[3].find(u1 => u1.email === u.email);
+                return uInfo && uInfo.inactive === false
+            })
+            setUsers(_users)
+
             //add user displayNames names
             let regs = all[0].map(reg => {
-                let user = all[1].find(u => u.email === reg.email);
+                let user = _users.find(u => u.email === reg.email);
                 if (!user) {
                     reg.displayName = reg.email;
                 }
@@ -96,8 +101,21 @@ export default function Match(props) {
                 // Add indication which other registration this user has
                 let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID);
                 if (otherRegs && otherRegs.length > 0) {
-                    reg._otherRegistrations = otherRegs.map(or => 
-                        all[2].find(g => g.id == or.GameID).Day).join(",");
+                    const days = otherRegs.map(or => {
+                        let game = all[2].find(g => g.id == or.GameID)
+
+                        return {
+                            id: game.id,
+                            Day: game.Day
+                        };
+                    }
+                    );
+                    days.sort((d1, d2) => d1.id - d2.id);
+                    reg._otherRegistrations = {
+
+                        long: days.map(d => d.Day).join(","),
+                        short: "[" + days.map(d => getShortDay(d.Day)).join(",") + "]"
+                    }
                 }
 
                 return user ? { ...reg, ...user } : reg;
@@ -296,7 +314,7 @@ export default function Match(props) {
                                 <List style={{ margin: 5, height: '30%' }}>
                                     {games.map((game) => (
                                         <ListItem key={game.id}
-                                            style={{ width: '100%' }}
+                                            style={{ display:'flex', width: '100%', textAlign:'right', textDecorationLine: game.disabled? 'line-through':'none' }}
                                             button
                                             selected={currentGame === game.id}
                                             onClick={() => setCurrentGame(game.id)}

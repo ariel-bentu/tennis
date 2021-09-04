@@ -80,6 +80,27 @@ const offset = {
         6
 }
 
+const daysMap = {
+    "ראשון":
+        "א",
+    "שני":
+        "ב",
+    "שלישי":
+        "ג",
+    "רביעי":
+        "ד",
+    "חמישי":
+        "ה",
+    "שישי":
+        "ו",
+    "שבת":
+        "ש"
+}
+
+export function getShortDay(day) {
+    return daysMap[day];
+}
+
 export function getMatchDate(match) {
     let begin = dayjs()
     if (begin.day() === 6) {
@@ -92,7 +113,7 @@ export function getMatchDate(match) {
 }
 
 export function getTodayMatchMessage(plannedGames, gameID, matches) {
-    let message = "שיבוץ טניס!ֿ\n\n";
+    let message = "שיבוץ טניס!\n\n";
     let i = plannedGames.findIndex(pg=>pg.id === gameID);
     if (i >= 0) 
         message += getOneDayMsg(plannedGames, i, matches)
@@ -101,7 +122,7 @@ export function getTodayMatchMessage(plannedGames, gameID, matches) {
 }
 
 export function getMatchMessage(plannedGames, matches) {
-    let message = "שיבוץ טניס!ֿ\n\n";
+    let message = "שיבוץ טניס!\n\n";
     for (let i = 0; i < plannedGames.length; i++) {
         message += getOneDayMsg(plannedGames, i, matches)
     }

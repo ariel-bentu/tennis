@@ -36,12 +36,12 @@ export default function Users(props) {
     }
 
     useEffect(() => {
-        setUsers(u=>{
+        setUsers(u => {
             u.sort(getComparator(sortByRank))
             return u;
         });
 
-        setRefresh(old=>old+1);
+        setRefresh(old => old + 1);
     }, [sortByRank]);
 
     useEffect(() => {
@@ -91,7 +91,12 @@ export default function Users(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
-                <Search value={filter} onChange={val => setFilter(val)} />
+                <HBox style={{ width:'100%', justifyContent: 'space-between' }}>
+                    <Search value={filter} onChange={val => setFilter(val)} />
+                    <Button variant="contained" 
+                        onClick={() => setAddMode(true)}
+                        style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button>
+                </HBox>
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
@@ -110,8 +115,7 @@ export default function Users(props) {
                         </Grid>
                         <Grid item xs={2}>
                             <VBox style={{ justifyContent: 'center' }}>
-                                {/* <Button variant="contained" onClick={() => setAddMode(true)}
-                                    style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button> */}
+
 
                                 <Spacer />
                                 <Button
@@ -144,7 +148,7 @@ export default function Users(props) {
                     {users.filter(u => filter ? u.displayName.includes(filter) : true).map((user, i) => (<Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3} style={{ paddingRight: 2, paddingLeft: 2 }}>
                             <InputBase
-                                style={{ backgroundColor: user._inactive ? 'red' : '#F3F3F3' }}
+                                style={{ backgroundColor: user._inactive || user._waitForApproval ? 'red' : '#F3F3F3' }}
                                 fullWidth={true}
                                 value={user.displayName}
                                 onChange={e => updateUserValue(user.email, { displayName: e.currentTarget.value })}
