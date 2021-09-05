@@ -264,7 +264,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
 
 exports.archiveMatches = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
-    .schedule("0 18 * * *")
+    .schedule("00 21 * * *")
     .timeZone("Asia/Jerusalem")
     .onRun((context) => {
         let msg = "Billing: ";
@@ -274,7 +274,7 @@ exports.archiveMatches = functions.region("europe-west1").pubsub
                 const batch = db.batch();
                 const debtUpdateMap = {};
 
-                const matches = allMatches.docs.filter((m) => inThePast(m.data().date), 2);
+                const matches = allMatches.docs.filter((m) => inThePast(m.data().date, 1) || m.data().Day === "שבת" && inThePast(m.data().date, -1));
 
                 msg += "Number of Matches to process: " + matches.length + "\n";
                 return db.collection(BILLING_COLLECTION).get().then((billing) => {
