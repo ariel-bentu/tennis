@@ -22,7 +22,7 @@ import { TouchBackend } from 'react-dnd-touch-backend'
 import { isMobile } from 'react-device-detect';
 import { Delete, ExpandMore } from '@material-ui/icons';
 
-import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay } from './utils'
+import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay, sortByDays } from './utils'
 
 import * as api from './api'
 
@@ -74,7 +74,7 @@ export default function Match(props) {
             }),
             getCollection(api.Collections.USERS_COLLECTION),
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
-                games.sort((g1, g2) => g1.id - g2.id);
+                games.sort((g1, g2) => sortByDays(g1.Day, g2.Day));
                 setGames(games);
                 if (games && games.length > 0) {
                     setCurrentGame(games[0].id)
@@ -110,7 +110,7 @@ export default function Match(props) {
                         };
                     }
                     );
-                    days.sort((d1, d2) => d1.id - d2.id);
+                    days.sort((d1, d2) => sortByDays(d1.Day, d2.Day));
                     reg._otherRegistrations = {
 
                         long: days.map(d => d.Day).join(","),
@@ -320,7 +320,8 @@ export default function Match(props) {
                                             onClick={() => setCurrentGame(game.id)}
                                             onDoubleClick={() => { }}
                                         >
-                                            <ListItemText primary={game.Day + " " + game.Hour} />
+                                            {/* <ListItemText primary={game.Day + " " + game.Hour} /> */}
+                                            <ListItemText primary={game.Day} />
                                         </ListItem>
                                     ))}
                                 </List>

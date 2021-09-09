@@ -63,7 +63,7 @@ export function newMatch(game) {
     }
 }
 
-const offset = {
+const DaysMap = {
     "ראשון":
         0,
     "שני":
@@ -78,7 +78,9 @@ const offset = {
         5,
     "שבת":
         6
-}
+};
+
+export const sortByDays=(d1,d2)=>DaysMap[d1]-DaysMap[d2];
 
 const daysMap = {
     "ראשון":
@@ -109,7 +111,7 @@ export function getMatchDate(match) {
         begin = dayjs().startOf('week');
     }
     
-    return begin.add(offset[match.Day], 'day').format("DD/MMM/YYYY");
+    return begin.add(DaysMap[match.Day], 'day').format("DD/MMM/YYYY");
 }
 
 export function getTodayMatchMessage(plannedGames, gameID, matches) {

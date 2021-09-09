@@ -6,7 +6,7 @@ import 'firebase/functions';
 
 
 import { config } from './config';
-import { cleansePlayer } from './utils';
+import { cleansePlayer, sortByDays } from './utils';
 import dayjs from 'dayjs'
 
 export const Collections = {
@@ -77,7 +77,7 @@ export async function forgotPwd(email) {
 export async function getUserObj(user) {
     var db = firebase.firestore();
     if (user && user.email) {
-        let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+        let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email.toLowerCase());
         return docRef.get().then(
             u => {
                 let data = u.data();
@@ -86,7 +86,7 @@ export async function getUserObj(user) {
                 } else if (data.inactive) {
                     throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
                 }
-                return { displayName: data.displayName, email: user.email, _user: user };
+                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: user };
             },
             (err) => {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
@@ -127,7 +127,7 @@ export async function getPlannedGames(currentUser) {
                     results.push(doc.data());
                 }
             });
-            results.sort((a, b) => a.id - b.id);
+            results.sort((a, b) => sortByDays(a.Day, b.Day));
 
             db.collection(Collections.REGISTRATION_COLLECTION).get().then(
                 regs => {

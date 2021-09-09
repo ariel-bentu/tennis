@@ -44,8 +44,6 @@ let App = props => {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
-  const [tab, setTab] = React.useState(0);
-  const [adminTab, setAdminTab] = React.useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
   const anchorRef = React.useRef(null);
 
@@ -158,35 +156,39 @@ let App = props => {
           userInfo ?
             <Router>
               <Switch>
-                <Route path="/admin">
-                  <Tabs
-                    value={adminTab}
-                    onChange={(e, tab) => setAdminTab(tab)}
-                    indicatorColor="primary"
-                    textColor="primary"
-                    scrollButtons="auto"
-                    centered
-                    style={{ marginTop: 5 }}
-                  >
-                    <Tab label={"ניהול"} />
-                    <Tab label={"שיבוץ"} />
-                    <Tab label={"משתמשים"} />
-                    <Tab label={"חובות"} />
-                  </Tabs>
-                  <TabPanel value={adminTab} index={0} >
-                    {adminTab === 0 ? <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
-                  </TabPanel>
-                  <TabPanel value={adminTab} index={1} >
-                    <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
-                  </TabPanel>
-                  <TabPanel value={adminTab} index={2} >
-                    {adminTab === 2 ? <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
-                  </TabPanel>
-                  <TabPanel value={adminTab} index={3} >
-                    {adminTab === 3 ? <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
-                  </TabPanel>
-
-                </Route>
+                <Route
+                  path="/admin"
+                  children={(props) => {
+                    let adminTab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 1;
+                    return [<Tabs key={"100"}
+                      value={adminTab}
+                      onChange={(e, tab) => props.history.push("/admin#" + tab)}
+                      indicatorColor="primary"
+                      textColor="primary"
+                      scrollButtons="auto"
+                      centered
+                      style={{ marginTop: 5 }}
+                    >
+                      <Tab label={"ניהול"} />
+                      <Tab label={"שיבוץ"} />
+                      <Tab label={"משתמשים"} />
+                      <Tab label={"חובות"} />
+                    </Tabs>,
+                    <TabPanel key={"0"} value={adminTab} index={0} >
+                      {adminTab === 0 ? <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                    </TabPanel>,
+                    <TabPanel key={"1"} value={adminTab} index={1} >
+                      <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                    </TabPanel>,
+                    <TabPanel key={"2"} value={adminTab} index={2} >
+                      {adminTab === 2 ? <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                    </TabPanel>,
+                    <TabPanel key={"3"} value={adminTab} index={3} >
+                      {adminTab === 3 ? <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                    </TabPanel>
+                    ]
+                  }}
+                />
                 <Route path="/match-test">
                   <Match notify={notify} test={true} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
@@ -196,34 +198,36 @@ let App = props => {
                 <Route path="/users">
                   <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
                 </Route>
-                <Route path="/">
-                  <Tabs
-                    value={tab}
-                    onChange={(e, tab) => setTab(tab)}
-                    indicatorColor="primary"
-                    textColor="primary"
-                    scrollButtons="auto"
-                    variant="fullWidth"
+                <Route path="/"
+                  children={(props) => {
+                    let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 0;
+                    return [
+                      <Tabs
+                        key="100"
+                        value={tab}
+                        onChange={(e, tab) => props.history.push("/#" + tab)}
+                        indicatorColor="primary"
+                        textColor="primary"
+                        scrollButtons="auto"
+                        variant="fullWidth"
 
-                  >
-                    <Tab label={"רישום"} icon={<PlaylistAdd />} />
-                    <Tab label={"המשחקים שלי"} icon={<SportsTennis />} />
-                    <Tab label={"חוב"} icon={<AttachMoney />} />
-                  </Tabs>
-                  <TabPanel value={tab} index={0} >
-                    <Register notify={notify} UserInfo={userInfo} />
-                  </TabPanel>
-                  <TabPanel value={tab} index={1} >
-                    {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} /> : null}
-                  </TabPanel>
-                  <TabPanel value={tab} index={2} hidden={tab !== 2}>
-                    {tab === 2 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
-                  </TabPanel>
-
-                </Route>
-
-
-
+                      >
+                        <Tab label={"רישום"} icon={<PlaylistAdd />} />
+                        <Tab label={"המשחקים שלי"} icon={<SportsTennis />} />
+                        <Tab label={"חוב"} icon={<AttachMoney />} />
+                      </Tabs>,
+                      <TabPanel key="0" value={tab} index={0} >
+                        <Register notify={notify} UserInfo={userInfo} />
+                      </TabPanel>,
+                      <TabPanel key="1" value={tab} index={1} >
+                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} /> : null}
+                      </TabPanel>,
+                      <TabPanel key="2" value={tab} index={2} hidden={tab !== 2}>
+                        {tab === 2 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
+                      </TabPanel>
+                    ]
+                  }}
+                />
               </Switch>
             </Router> :
 

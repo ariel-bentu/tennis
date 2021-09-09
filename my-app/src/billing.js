@@ -11,7 +11,9 @@ import {
 
 import { Sort } from '@material-ui/icons';
 import * as api from './api'
+import dayjs from 'dayjs';
 
+const sortByDate = (o1, o2) => dayjs(o1.date) - dayjs(o2.date);
 
 export default function Billing(props) {
 
@@ -39,12 +41,12 @@ export default function Billing(props) {
     }
 
     useEffect(() => {
-        setUsers(u=>{
+        setUsers(u => {
             u.sort(getComparator(sortByDebt))
             return u;
         });
-        setRefresh(old=>old+1);
-        
+        setRefresh(old => old + 1);
+
     }, [sortByDebt]);
 
     useEffect(() => {
@@ -75,12 +77,18 @@ export default function Billing(props) {
     useEffect(() => {
         if (userDetails) {
             api.getUserPayments(userDetails.email).then(
-                (p) => setUserPayments(p),
+                (p) => {
+                    p.sort(sortByDate);
+                    setUserPayments(p)
+                },
                 (err) => props.notify.error(err.message)
             )
 
             api.getUserDebts(userDetails.email).then(
-                (p) => setUserDebts(p),
+                (p) => {
+                    p.sort(sortByDate);
+                    setUserDebts(p)
+                },
                 (err) => props.notify.error(err.message)
             )
         } else {
@@ -150,10 +158,11 @@ export default function Billing(props) {
             </VBox>
             : userDetails ?
                 <VBox style={{ width: '100%' }}>
-                    <Text fontSize={35}>{userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
+                    <Text fontSize={35}>{userDetails.debt === "חסר" ? "חסר" :
+                        userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
                             userDetails.debt === 0 ? "0 - אין חוב" :
                                 -userDetails.debt + ' ש״ח בחובה'
-                        }</Text>
+                    }</Text>
                     <Text>תשלומים</Text>
                     <Grid container spacing={2} >
                         <Grid container item xs={12} spacing={2} >
