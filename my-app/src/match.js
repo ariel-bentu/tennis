@@ -243,7 +243,7 @@ export default function Match(props) {
 
         variant="contained"
         disabled={submitInProcess} onClick={() => {
-            let msg = getMatchMessage(games, editedMatches);
+            let msg = getMatchMessage(games.filter(g=>!g.disabled), editedMatches);
             setMatchText(msg);
         }}
     >הודעה</Button>
@@ -253,7 +253,7 @@ export default function Match(props) {
 
         variant="contained"
         disabled={submitInProcess} onClick={() => {
-            let msg = getTodayMatchMessage(games, currentGame, editedMatches);
+            let msg = getTodayMatchMessage(games.filter(g=>!g.disabled), currentGame, editedMatches);
             setMatchText(msg);
         }}
     >הודעה היום</Button>

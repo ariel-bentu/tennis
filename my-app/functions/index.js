@@ -64,7 +64,7 @@ https://tennis.atpenn.com
 טניס טוב!`;
 };
 
-const inThePast = (d, afterBy) => dayjs().subtract(afterBy || 1, "day").isAfter(dayjs(d));
+const inThePast = (d, afterBy) => dayjs().subtract(afterBy === undefined ? 1 : afterBy, "day").isAfter(dayjs(d));
 
 const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) => {
     const missing = !p1 || !p2 || !p3 || !p4;
@@ -167,6 +167,59 @@ exports.registerUser = functions.region("europe-west1").https.onCall((data, cont
             });
 });
 
+const isMovedToArchive = (change, matchID)=> {
+    return new Promise((resolve, reject)=> {
+        if (change.after.exist) {
+            resolve(false);
+            return;
+        }
+
+        // check if the deleted record is now in archive
+        db.collection("matches-archive").doc(matchID).get().then(value=>{
+            if (value.exists) {
+                resolve(true);
+            } else {
+                resolve(false);
+            }
+        }).catch(err=>reject(err));
+    });
+};
+
+exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
+    // TODO check auth
+    const batch = db.batch();
+
+    return db.collection("registrations").get().then(regs => {
+        // Move to archive
+        regs.forEach((match) => {
+            const docRef = db.collection("registrations-archive").doc(regs.ref.id);
+            batch.set(docRef, regs.data());
+            batch.delete(match.ref);
+        });
+
+        return batch.commit().then(() => {
+            return Promise.all([
+                db.collection("users").get(),
+                db.collection("users-info").get(),
+            ]).then(all => {
+                const phones = [];
+                all[0].docs.forEach(user => {
+                    const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
+                    if (userInfo && !userInfo.data().inactive && user.data().phone.length > 0) {
+                        // Send SMS to active users only
+                        phones.push(user.data().phone);
+                    }
+                });
+
+                // Send SMS
+                return sendSMS(`שיבוצי טניס נפתחו להשבוע:
+
+https://tennis.atpenn.com
+טניס טוב!`, phones);
+            });
+        });
+    });
+});
 
 exports.matchUpdated = functions.region("europe-west1").firestore
     .document("matches/{matchID}")
@@ -178,87 +231,88 @@ exports.matchUpdated = functions.region("europe-west1").firestore
             change.after.data() &&
             change.after.data().date;
 
-        if (!inThePast(matchDate)) {
-            if (change.after.exists) {
-                // all players receive a change notification
-                for (let i = 1; i <= 4; i++) {
-                    const p = change.after.data()["Player" + i];
-                    if (p) {
-                        addedOrChanged[p.email] = 1;
-                    }
-                }
-
-                if (change.before.exists) {
-                    // update - need to also notify players
-                    // who are removed from the match
+        return isMovedToArchive(change, context.params.matchID).then(movedToArchive => {
+            if (!movedToArchive && !inThePast(matchDate)) {
+                if (change.after.exists) {
+                    // all players receive a change notification
                     for (let i = 1; i <= 4; i++) {
-                        const p = change.before.data()["Player" + i];
+                        const p = change.after.data()["Player" + i];
                         if (p) {
-                            if (!addedOrChanged[p.email]) {
-                                // this player is no longer part of the match
-                                deleted[p.email] = 1;
+                            addedOrChanged[p.email] = 1;
+                        }
+                    }
+
+                    if (change.before.exists) {
+                        // update - need to also notify players
+                        // who are removed from the match
+                        for (let i = 1; i <= 4; i++) {
+                            const p = change.before.data()["Player" + i];
+                            if (p) {
+                                if (!addedOrChanged[p.email]) {
+                                    // this player is no longer part of the match
+                                    deleted[p.email] = 1;
+                                }
                             }
                         }
                     }
-                }
-            } else {
-                // delete
-                for (let i = 1; i <= 4; i++) {
-                    const p = change.before.data()["Player" + i];
-                    if (p) {
-                        deleted[p.email] = 1;
+                } else {
+                    // delete
+                    for (let i = 1; i <= 4; i++) {
+                        const p = change.before.data()["Player" + i];
+                        if (p) {
+                            deleted[p.email] = 1;
+                        }
                     }
                 }
+
+                // read users phones:
+                return db.collection("users").get().then(
+                    (u) => {
+                        const users = u.docs.map((oneUser) => ({
+                            email: oneUser.data().email,
+                            phone: oneUser.data().phone,
+                            displayName: oneUser.data().displayName,
+                        }));
+                        // functions.logger.info(...)
+
+                        const sendSMSArray = [];
+
+                        for (const [player] of Object.entries(addedOrChanged)) {
+                            const dataAfter = change.after.data();
+
+                            const user = users.find((u) => u.email === player);
+
+                            if (user && user.phone != "") {
+                                const ret = sendSMS(
+                                    getUpdatedMsg(user.displayName, dataAfter.Day,
+                                        dataAfter.date, dataAfter.Location, dataAfter.Hour,
+                                        dataAfter.Court,
+                                        dataAfter.Player1, dataAfter.Player2,
+                                        dataAfter.Player3, dataAfter.Player4),
+                                    [user.phone]);
+                                sendSMSArray.push(ret);
+                            }
+                        }
+
+                        for (const [player] of Object.entries(deleted)) {
+                            const dataBefore = change.before.data();
+                            const user = users.find((u) => u.email === player);
+                            if (user && user.phone != "") {
+                                const ret = sendSMS(
+                                    getDeletedMsg(user.displayName, dataBefore.Day,
+                                        dataBefore.date, dataBefore.Location, dataBefore.Hour,
+                                        dataBefore.Court),
+                                    [user.phone]);
+                                sendSMSArray.push(ret);
+                            }
+                        }
+
+                        return Promise.all(sendSMSArray);
+                    },
+                    (err) => functions.logger.error("Users read error:", err)
+                );
             }
-
-
-            // read users phones:
-            return db.collection("users").get().then(
-                (u) => {
-                    const users = u.docs.map((oneUser) => ({
-                        email: oneUser.data().email,
-                        phone: oneUser.data().phone,
-                        displayName: oneUser.data().displayName,
-                    }));
-                    // functions.logger.info(...)
-
-                    const sendSMSArray = [];
-
-                    for (const [player] of Object.entries(addedOrChanged)) {
-                        const dataAfter = change.after.data();
-
-                        const user = users.find((u) => u.email === player);
-
-                        if (user && user.phone != "") {
-                            const ret = sendSMS(
-                                getUpdatedMsg(user.displayName, dataAfter.Day,
-                                    dataAfter.date, dataAfter.Location, dataAfter.Hour,
-                                    dataAfter.Court,
-                                    dataAfter.Player1, dataAfter.Player2,
-                                    dataAfter.Player3, dataAfter.Player4),
-                                [user.phone]);
-                            sendSMSArray.push(ret);
-                        }
-                    }
-
-                    for (const [player] of Object.entries(deleted)) {
-                        const dataBefore = change.before.data();
-                        const user = users.find((u) => u.email === player);
-                        if (user && user.phone != "") {
-                            const ret = sendSMS(
-                                getDeletedMsg(user.displayName, dataBefore.Day,
-                                    dataBefore.date, dataBefore.Location, dataBefore.Hour,
-                                    dataBefore.Court),
-                                [user.phone]);
-                            sendSMSArray.push(ret);
-                        }
-                    }
-
-                    return Promise.all(sendSMSArray);
-                },
-                (err) => functions.logger.error("Users read error:", err)
-            );
-        }
+        });
     });
 
 
@@ -274,7 +328,7 @@ exports.archiveMatches = functions.region("europe-west1").pubsub
                 const batch = db.batch();
                 const debtUpdateMap = {};
 
-                const matches = allMatches.docs.filter((m) => inThePast(m.data().date, 1) || m.data().Day === "שבת" && inThePast(m.data().date, -1));
+                const matches = allMatches.docs.filter((m) => inThePast(m.data().date, 1) || m.data().Day === "שבת" && inThePast(m.data().date, 0));
 
                 msg += "Number of Matches to process: " + matches.length + "\n";
                 return db.collection(BILLING_COLLECTION).get().then((billing) => {

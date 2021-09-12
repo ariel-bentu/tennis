@@ -213,18 +213,13 @@ function getTimestamp() {
 
 
 export async function openWeekForRegistration() {
-    var db = firebase.firestore();
-    var batch = db.batch();
-    return moveCollectionData(db, batch, Collections.REGISTRATION_COLLECTION, Collections.REGISTRATION_ARCHIVE_COLLECTION)
-        .then(() => batch.commit());
+    const openWeek = app.functions('europe-west1').httpsCallable('openWeek');
+
+    return openWeek();
 }
 
 export async function openWeekForMatch() {
-    // var db = firebase.firestore();
-    //     var batch = db.batch();
-    // return moveCollectionData(db, batch, Collections.MATCHES_ARCHIVE_COLLECTION, Collections.MATCHES_COLLECTION, false).then(()=>batch.commit());
-
-    let gameTarif = await getGameTarif();
+  let gameTarif = await getGameTarif();
 
     return getCollection(Collections.MATCHES_COLLECTION).then(srcData => {
         var db = firebase.firestore();

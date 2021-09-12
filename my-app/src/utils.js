@@ -136,7 +136,7 @@ function getOneDayMsg(plannedGames, i, matches) {
     let message = `***** ${plannedGames[i].Day} *****\n`;
     let dayMatches = matches.filter(m => m.GameID === plannedGames[i].id && !m.deleted);
     if (!dayMatches || dayMatches.length === 0) {
-        message += "טרם"
+        message += "טרם" + "\n\n"
     } else {
         for (let j = 0; j < dayMatches.length; j++) {
             if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {
