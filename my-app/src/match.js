@@ -388,11 +388,11 @@ export default function Match(props) {
                                                                     keyboardIcon={undefined}
 
 
-                                                                    format={"dd/MMM/yyyy"}
+                                                                    format={"yyyy-mm-dd"}
 
                                                                     inputValue={match.date}
                                                                     onChange={d => {
-                                                                        updateMatchValue(match.id, { date: dayjs(d).format("DD/MMM/YYYY") })
+                                                                        updateMatchValue(match.id, { date: dayjs(d).format("YYYY-MM-DD") })
                                                                     }
                                                                     }
                                                                 />}

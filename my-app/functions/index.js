@@ -1,14 +1,24 @@
 const functions = require("firebase-functions");
+const {
+    FieldPath,
+    v1,
+} = require("@google-cloud/firestore");
+// Replace BUCKET_NAME
+const bucket = "gs://atpenn-backup";
+
 const admin = require("firebase-admin");
 const axios = require("axios");
 const dayjs = require("dayjs");
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
+
 admin.initializeApp({
     credential: admin.credential.applicationDefault(),
     databaseAuthVariableOverride: {
-        token: { email: functions.config().admin.email },
+        token: {
+            email: functions.config().admin.email,
+        },
     },
 });
 
@@ -114,18 +124,53 @@ const sendSMS = (msg, numbers) => {
         scheduling: {
             "send_now": true,
         },
-        mobiles: numbers.map((n) => ({ phone_number: n })),
+        mobiles: numbers.map((n) => ({
+            phone_number: n,
+        })),
     };
 
     const headers = {
         "Authorization": functions.config().sms.apikey,
     };
 
-    return axios.post("https://webapi.mymarketing.co.il/api/smscampaign/OperationalMessage", postData,
-        { headers }).then((response) => {
-            return { data: response.data, status: response.status };
-        });
+    return axios.post("https://webapi.mymarketing.co.il/api/smscampaign/OperationalMessage", postData, {
+        headers,
+    }).then((response) => {
+        return {
+            data: response.data,
+            status: response.status,
+        };
+    });
 };
+
+const isAdmin = (context) => {
+    return new Promise((resolve, reject) => {
+        if (!context.auth) {
+            reject(new Error("NotAuthenticated"));
+            return;
+        }
+
+
+        db.collection("admins").doc(context.auth.token.email).get().then(doc => {
+            if (doc.exists) {
+                resolve();
+            } else {
+                reject(new Error("NotAnAdmin"));
+            }
+        });
+    });
+};
+
+const isMatchEventsOn = () => {
+    return db.collection("systemInfo").doc("Events").get().then(doc => {
+        if (doc.data().matchEvents === true) {
+            return true;
+        } else {
+            return false;
+        }
+    });
+};
+
 
 exports.registerUser = functions.region("europe-west1").https.onCall((data, context) => {
     functions.logger.info("register user", data);
@@ -167,59 +212,290 @@ exports.registerUser = functions.region("europe-west1").https.onCall((data, cont
             });
 });
 
-const isMovedToArchive = (change, matchID)=> {
-    return new Promise((resolve, reject)=> {
+const isMovedToArchive = (change, matchID) => {
+    return new Promise((resolve, reject) => {
         if (change.after.exist) {
             resolve(false);
             return;
         }
 
         // check if the deleted record is now in archive
-        db.collection("matches-archive").doc(matchID).get().then(value=>{
+        db.collection("matches-archive").doc(matchID).get().then(value => {
             if (value.exists) {
                 resolve(true);
             } else {
                 resolve(false);
             }
-        }).catch(err=>reject(err));
+        }).catch(err => reject(err));
     });
 };
 
 exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
-    // TODO check auth
     const batch = db.batch();
 
-    return db.collection("registrations").get().then(regs => {
-        // Move to archive
-        regs.forEach((match) => {
-            const docRef = db.collection("registrations-archive").doc(regs.ref.id);
-            batch.set(docRef, regs.data());
-            batch.delete(match.ref);
-        });
+    return isAdmin(context).then(() => {
+        return db.collection("registrations").get().then(regs => {
+            // Move to archive
+            regs.docs.forEach((reg) => {
+                const docRef = db.collection("registrations-archive").doc(reg.ref.id);
+                batch.set(docRef, reg.data());
+                batch.delete(reg.ref);
+            });
 
-        return batch.commit().then(() => {
-            return Promise.all([
-                db.collection("users").get(),
-                db.collection("users-info").get(),
-            ]).then(all => {
-                const phones = [];
-                all[0].docs.forEach(user => {
-                    const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
-                    if (userInfo && !userInfo.data().inactive && user.data().phone.length > 0) {
-                        // Send SMS to active users only
-                        phones.push(user.data().phone);
-                    }
-                });
+            return batch.commit().then(() => {
+                return Promise.all([
+                    db.collection("users").get(),
+                    db.collection("users-info").get(),
+                ]).then(all => {
+                    const phones = [];
+                    all[0].docs.forEach(user => {
+                        const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
+                        if (userInfo && !userInfo.data().inactive && user.data().phone.length > 0) {
+                            // Send SMS to active users only
+                            phones.push(user.data().phone);
+                        }
+                    });
 
-                // Send SMS
-                return sendSMS(`שיבוצי טניס נפתחו להשבוע:
+                    // functions.logger.info("Send sms to: ", phones);
+                    // Send SMS
+                    return sendSMS(`שיבוצי טניס נפתחו להשבוע:
 
 https://tennis.atpenn.com
 טניס טוב!`, phones);
+                });
             });
         });
+    }).catch(err => {
+        throw new functions.https.HttpsError("permission-denied", "AdminRequired", err.message);
     });
 });
+
+const isMatchModified = (change) => {
+    if (!change.before.exists || !change.after.exists) {
+        return true;
+    }
+
+    const dataBefore = change.before.data();
+    const dataAfter = change.after.data();
+
+    let modified = false;
+    for (let i = 1; i <= 4; i++) {
+        if (dataBefore["Player" + i] === undefined && dataAfter["Player" + i] === undefined) {
+            continue;
+        }
+
+        modified = modified ||
+            (dataBefore["Player" + i] === undefined && dataAfter["Player" + i] !== undefined) ||
+            (dataBefore["Player" + i] !== undefined && dataAfter["Player" + i] === undefined) ||
+            dataBefore["Player" + i].email !== dataAfter["Player" + i].email;
+    }
+
+    modified = modified || dataBefore.date !== dataAfter.date;
+    modified = modified || dataBefore.Day !== dataAfter.Day;
+    modified = modified || dataBefore.Court !== dataAfter.Court;
+    modified = modified || dataBefore.Hour !== dataAfter.Hour;
+    modified = modified || dataBefore.Location !== dataAfter.Location;
+
+    return modified;
+};
+
+const handleMatchResultsChange = (change) => {
+    return new Promise((resolve, reject) => {
+        // Only handle change
+        if (!change.before.exists || !change.after.exists) {
+            resolve();
+            return;
+        }
+
+        const dataBefore = change.before.data();
+        const dataAfter = change.after.data();
+
+        if (dataAfter.sets == undefined) {
+            // No sets data (assume they are not deleted - todo?)
+            resolve();
+            return;
+        }
+
+        const calcWinner = (sets) => {
+            const wonSets1 = sets.reduce((prev, curr) => prev + (curr.pair1 > curr.pair2 ? 1 : 0), 0);
+            const wonSets2 = sets.reduce((prev, curr) => prev + (curr.pair1 < curr.pair2 ? 1 : 0), 0);
+
+            if (wonSets1 > wonSets2) {
+                return 1;
+            } else if (wonSets1 < wonSets2) {
+                return 2;
+            } else {
+                const wonGames1 = sets.reduce((prev, curr) => prev + curr.pair1, 0);
+                const wonGames2 = sets.reduce((prev, curr) => prev + curr.pair2, 0);
+                if (wonGames1 > wonGames2) {
+                    return 1;
+                } else if (wonGames1 < wonGames2) {
+                    return 2;
+                } else {
+                    // Tie...
+                    return 0;
+                }
+            }
+        };
+
+        const updates = [];
+
+        /*
+        {
+            sets: [
+                { pair1: 1, pair2: 6 },
+                { pair1: 1, pair2: 6 },
+                { pair1: 1, pair2: 6 },
+                { pair1: 1, pair2: 6 },
+                { pair1: 1, pair2: 6 }
+            ]
+        }
+        */
+
+        if (dataBefore.sets !== undefined) {
+            // Sets existed before - find changes, calculate and update players stats
+            const winnerBefore = calcWinner(dataBefore.sets);
+            const winnerAfter = calcWinner(dataAfter.sets);
+            if (winnerBefore === winnerAfter) {
+                // No update is needed
+                resolve();
+                return;
+            }
+
+            // Pair1
+            //   winBefore  | winAfter
+            // ------------------------------
+            //      0       |    1          | wins:1, loses:0, tie:-1,
+            //      0       |    2          | wins:0, loses:1, tie:-1,
+            //      1       |    0          | wins:-1, loses:0, tie:1,
+            //      1       |    2          | wins:-1, loses:1, tie:0,
+            //      2       |    0          | wins:0, loses:-1, tie:1,
+            //      2       |    1          | wins:1, loses:-1, tie:0,
+
+            let tieVal = 0;
+            let winVal = 0;
+            let loseVal = 0;
+            if (winnerBefore == 0) {
+                tieVal = -1; // subtract a tie to all players
+            } else if (winnerAfter == 0) {
+                tieVal = 1;
+            }
+
+            if (winnerAfter === 1) {
+                winVal = 1;
+            } else if (winnerBefore == 1) {
+                winVal = -1;
+            }
+
+            if (winnerAfter == 2) {
+                loseVal = 1;
+            } else if (winnerBefore == 2) {
+                loseVal = -1;
+            }
+
+
+            if (dataAfter.Player1) {
+                updates.push({
+                    email: dataAfter.Player1.email,
+                    win: winVal,
+                    lose: loseVal,
+                    tie: tieVal,
+                });
+            }
+            if (dataAfter.Player2) {
+                updates.push({
+                    email: dataAfter.Player2.email,
+                    win: winVal,
+                    lose: loseVal,
+                    tie: tieVal,
+                });
+            }
+            if (dataAfter.Player3) {
+                updates.push({
+                    email: dataAfter.Player3.email,
+                    win: loseVal,
+                    lose: winVal,
+                    tie: tieVal,
+                });
+            }
+            if (dataAfter.Player4) {
+                updates.push({
+                    email: dataAfter.Player4.email,
+                    win: loseVal,
+                    lose: winVal,
+                    tie: tieVal,
+                });
+            }
+        } else {
+            // Sets now added - calculate and save players stats
+            const winner = calcWinner(dataAfter.sets);
+            if (dataAfter.Player1) {
+                updates.push({
+                    email: dataAfter.Player1.email,
+                    win: winner === 1 ? 1 : 0,
+                    lose: winner === 2 ? 1 : 0,
+                    tie: winner === 0 ? 1 : 0,
+                });
+            }
+            if (dataAfter.Player2) {
+                updates.push({
+                    email: dataAfter.Player2.email,
+                    win: winner === 1 ? 1 : 0,
+                    lose: winner === 2 ? 1 : 0,
+                    tie: winner === 0 ? 1 : 0,
+                });
+            }
+            if (dataAfter.Player3) {
+                updates.push({
+                    email: dataAfter.Player3.email,
+                    win: winner === 2 ? 1 : 0,
+                    lose: winner === 1 ? 1 : 0,
+                    tie: winner === 0 ? 1 : 0,
+                });
+            }
+            if (dataAfter.Player4) {
+                updates.push({
+                    email: dataAfter.Player4.email,
+                    win: winner === 2 ? 1 : 0,
+                    lose: winner === 1 ? 1 : 0,
+                    tie: winner === 0 ? 1 : 0,
+                });
+            }
+        }
+        // console.log(JSON.stringify(updates));
+
+
+        if (updates.length > 0) {
+            const statsRef = db.collection("stats");
+            statsRef.where(FieldPath.documentId(), "in", updates.map(u => u.email)).get().then(items => {
+                const batch = db.batch();
+                updates.forEach(update => {
+                    const statDoc = items.docs.find(doc => doc.ref.id === update.email);
+                    if (!statDoc || !statDoc.exists) {
+                        const docRef = db.collection("stats").doc(update.email);
+                        batch.set(docRef, {
+                            wins: update.win,
+                            loses: update.lose,
+                            ties: update.tie,
+                        });
+                    } else {
+                        const data = statDoc.data();
+                        batch.update(statDoc.ref, {
+                            wins: data.wins + update.win,
+                            loses: data.loses + update.lose,
+                            ties: data.ties + update.tie,
+                        });
+                    }
+                });
+                return batch.commit().then(() => resolve());
+            }).catch(err => reject(err));
+            return;
+        }
+
+        resolve();
+    });
+};
+
 
 exports.matchUpdated = functions.region("europe-west1").firestore
     .document("matches/{matchID}")
@@ -231,156 +507,236 @@ exports.matchUpdated = functions.region("europe-west1").firestore
             change.after.data() &&
             change.after.data().date;
 
-        return isMovedToArchive(change, context.params.matchID).then(movedToArchive => {
-            if (!movedToArchive && !inThePast(matchDate)) {
-                if (change.after.exists) {
-                    // all players receive a change notification
-                    for (let i = 1; i <= 4; i++) {
-                        const p = change.after.data()["Player" + i];
-                        if (p) {
-                            addedOrChanged[p.email] = 1;
-                        }
-                    }
+        return isMatchEventsOn().then(eventsOn => {
+            if (!eventsOn) {
+                functions.logger.info("matchUpdated: Events are off - skipping event");
+                return;
+            }
 
-                    if (change.before.exists) {
-                        // update - need to also notify players
-                        // who are removed from the match
-                        for (let i = 1; i <= 4; i++) {
-                            const p = change.before.data()["Player" + i];
-                            if (p) {
-                                if (!addedOrChanged[p.email]) {
-                                    // this player is no longer part of the match
+
+            return isMovedToArchive(change, context.params.matchID).then(movedToArchive => {
+                const waitFor = [];
+
+                if (!movedToArchive) {
+                    // Send SMS on match changes
+                    if (!inThePast(matchDate) && isMatchModified(change)) {
+                        if (change.after.exists) {
+                            // all players receive a change notification
+                            for (let i = 1; i <= 4; i++) {
+                                const p = change.after.data()["Player" + i];
+                                if (p) {
+                                    addedOrChanged[p.email] = 1;
+                                }
+                            }
+
+                            if (change.before.exists) {
+                                // update - need to also notify players
+                                // who are removed from the match
+                                for (let i = 1; i <= 4; i++) {
+                                    const p = change.before.data()["Player" + i];
+                                    if (p) {
+                                        if (!addedOrChanged[p.email]) {
+                                            // this player is no longer part of the match
+                                            deleted[p.email] = 1;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // delete
+                            for (let i = 1; i <= 4; i++) {
+                                const p = change.before.data()["Player" + i];
+                                if (p) {
                                     deleted[p.email] = 1;
                                 }
                             }
                         }
-                    }
-                } else {
-                    // delete
-                    for (let i = 1; i <= 4; i++) {
-                        const p = change.before.data()["Player" + i];
-                        if (p) {
-                            deleted[p.email] = 1;
-                        }
+
+                        // read users phones:
+                        waitFor.push(
+                            db.collection("users").get().then(
+                                (u) => {
+                                    const users = u.docs.map((oneUser) => ({
+                                        email: oneUser.data().email,
+                                        phone: oneUser.data().phone,
+                                        displayName: oneUser.data().displayName,
+                                    }));
+                                    // functions.logger.info(...)
+
+                                    const sendSMSArray = [];
+
+                                    for (const [player] of Object.entries(addedOrChanged)) {
+                                        const dataAfter = change.after.data();
+
+                                        const user = users.find((u) => u.email === player);
+
+                                        if (user && user.phone != "") {
+                                            const ret = sendSMS(
+                                                getUpdatedMsg(user.displayName, dataAfter.Day,
+                                                    dataAfter.date, dataAfter.Location, dataAfter.Hour,
+                                                    dataAfter.Court,
+                                                    dataAfter.Player1, dataAfter.Player2,
+                                                    dataAfter.Player3, dataAfter.Player4),
+                                                [user.phone]);
+                                            sendSMSArray.push(ret);
+                                        }
+                                    }
+
+                                    for (const [player] of Object.entries(deleted)) {
+                                        const dataBefore = change.before.data();
+                                        const user = users.find((u) => u.email === player);
+                                        if (user && user.phone != "") {
+                                            const ret = sendSMS(
+                                                getDeletedMsg(user.displayName, dataBefore.Day,
+                                                    dataBefore.date, dataBefore.Location, dataBefore.Hour,
+                                                    dataBefore.Court),
+                                                [user.phone]);
+                                            sendSMSArray.push(ret);
+                                        }
+                                    }
+
+                                    return Promise.all(sendSMSArray);
+                                },
+                                (err) => functions.logger.error("Users read error:", err)
+                            ));
                     }
                 }
 
-                // read users phones:
-                return db.collection("users").get().then(
-                    (u) => {
-                        const users = u.docs.map((oneUser) => ({
-                            email: oneUser.data().email,
-                            phone: oneUser.data().phone,
-                            displayName: oneUser.data().displayName,
-                        }));
-                        // functions.logger.info(...)
-
-                        const sendSMSArray = [];
-
-                        for (const [player] of Object.entries(addedOrChanged)) {
-                            const dataAfter = change.after.data();
-
-                            const user = users.find((u) => u.email === player);
-
-                            if (user && user.phone != "") {
-                                const ret = sendSMS(
-                                    getUpdatedMsg(user.displayName, dataAfter.Day,
-                                        dataAfter.date, dataAfter.Location, dataAfter.Hour,
-                                        dataAfter.Court,
-                                        dataAfter.Player1, dataAfter.Player2,
-                                        dataAfter.Player3, dataAfter.Player4),
-                                    [user.phone]);
-                                sendSMSArray.push(ret);
-                            }
+                // handle match results:
+                waitFor.push(
+                    handleMatchResultsChange(change).then(() => {
+                        // if results exist - move to archive immediately
+                        if (change.before.exists && change.after.exists &&
+                            change.after.data().sets &&
+                            change.after.data().sets.length > 0) {
+                            functions.logger.info("match results: 2");
+                            return archiveMatchesImpl(context.params.matchID);
                         }
-
-                        for (const [player] of Object.entries(deleted)) {
-                            const dataBefore = change.before.data();
-                            const user = users.find((u) => u.email === player);
-                            if (user && user.phone != "") {
-                                const ret = sendSMS(
-                                    getDeletedMsg(user.displayName, dataBefore.Day,
-                                        dataBefore.date, dataBefore.Location, dataBefore.Hour,
-                                        dataBefore.Court),
-                                    [user.phone]);
-                                sendSMSArray.push(ret);
-                            }
-                        }
-
-                        return Promise.all(sendSMSArray);
-                    },
-                    (err) => functions.logger.error("Users read error:", err)
+                    })
                 );
-            }
+
+                return Promise.all(waitFor);
+            });
         });
     });
 
+exports.matchArchiveUpdated = functions.region("europe-west1").firestore
+    .document("matches-archive/{matchID}")
+    .onWrite((change, context) => {
+        return isMatchEventsOn().then(eventsOn => {
+            if (!eventsOn) {
+                functions.logger.info("matchArchiveUpdated: Events are off - skipping event");
+                return;
+            }
+            return handleMatchResultsChange(change);
+        });
+    });
 
 exports.archiveMatches = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
     .schedule("00 21 * * *")
     .timeZone("Asia/Jerusalem")
     .onRun((context) => {
-        let msg = "Billing: ";
+        return archiveMatchesImpl();
+    });
 
-        return getGameTariff().then((tariff) => {
-            return db.collection("matches").get().then((allMatches) => {
-                const batch = db.batch();
-                const debtUpdateMap = {};
+const archiveMatchesImpl = (matchID) => {
+    let msg = "Billing: ";
 
-                const matches = allMatches.docs.filter((m) => inThePast(m.data().date, 1) || m.data().Day === "שבת" && inThePast(m.data().date, 0));
+    return getGameTariff().then((tariff) => {
+        return db.collection("matches").get().then((allMatches) => {
+            const batch = db.batch();
+            const debtUpdateMap = {};
 
-                msg += "Number of Matches to process: " + matches.length + "\n";
-                return db.collection(BILLING_COLLECTION).get().then((billing) => {
-                    // Add Debt for each player
-                    matches.forEach((match) => {
-                        const matchData = match.data();
-                        const isSingles = !matchData.Player2 && !matchData.Player4;
-                        for (let i = 1; i <= 4; i++) {
-                            if (matchData["Player" + i]) {
-                                const email = matchData["Player" + i].email;
-                                addOneGameDebt(db, batch, tariff, email,
-                                    match.ref.id,
-                                    isSingles, matchData.date);
-                                msg += "- " + email + "\n";
+            functions.logger.info("archiveMatchesImpl", matchID);
+            const matches = matchID ?
+                allMatches.docs.filter((m) => m.ref.id === matchID) :
+                allMatches.docs.filter((m) => inThePast(m.data().date, 1) || m.data().Day === "שבת" && inThePast(m.data().date, 0));
 
-                                if (!debtUpdateMap[email]) {
-                                    debtUpdateMap[email] = 0;
-                                }
-                                debtUpdateMap[email] += tariff;
+            msg += "Number of Matches to process: " + matches.length + "\n";
+            return db.collection(BILLING_COLLECTION).get().then((billing) => {
+                // Add Debt for each player
+                matches.forEach((match) => {
+                    const matchData = match.data();
+                    const isSingles = !matchData.Player2 && !matchData.Player4;
+                    for (let i = 1; i <= 4; i++) {
+                        if (matchData["Player" + i]) {
+                            const email = matchData["Player" + i].email;
+                            addOneGameDebt(db, batch, tariff, email,
+                                match.ref.id,
+                                isSingles, matchData.date);
+                            msg += "- " + email + "\n";
+
+                            if (!debtUpdateMap[email]) {
+                                debtUpdateMap[email] = 0;
                             }
-                        }
-                    });
-
-                    msg += "---\n";
-
-                    // Update the balance field
-                    for (const [email, addToBalance] of Object.entries(debtUpdateMap)) {
-                        const billingRecord = billing.docs.find(b => b.ref.id === email);
-
-                        if (billingRecord && billingRecord.data()) {
-                            batch.update(billingRecord.ref, { balance: billingRecord.data().balance - addToBalance });
-                            msg += email + ": " + (billingRecord.data().balance - addToBalance) + "\n";
-                        } else {
-                            const newBillingRecord = db.collection(BILLING_COLLECTION).doc(email);
-                            batch.set(newBillingRecord, { balance: -addToBalance });
-                            msg += email + "(new): " + (- addToBalance) + "\n";
+                            debtUpdateMap[email] += tariff;
                         }
                     }
-
-                    // Move to archive
-                    matches.forEach((match) => {
-                        const docRef = db.collection(MATCHES_ARCHIVE_COLLECTION).doc(match.ref.id);
-                        const newItem = match.data();
-                        batch.set(docRef, newItem);
-                        batch.delete(match.ref);
-                    });
-
-
-                    functions.logger.info("Billing Summary: ", msg);
-
-                    return batch.commit();
                 });
+
+                msg += "---\n";
+
+                // Update the balance field
+                for (const [email, addToBalance] of Object.entries(debtUpdateMap)) {
+                    const billingRecord = billing.docs.find(b => b.ref.id === email);
+
+                    if (billingRecord && billingRecord.data()) {
+                        batch.update(billingRecord.ref, {
+                            balance: billingRecord.data().balance - addToBalance,
+                        });
+                        msg += email + ": " + (billingRecord.data().balance - addToBalance) + "\n";
+                    } else {
+                        const newBillingRecord = db.collection(BILLING_COLLECTION).doc(email);
+                        batch.set(newBillingRecord, {
+                            balance: -addToBalance,
+                        });
+                        msg += email + "(new): " + (-addToBalance) + "\n";
+                    }
+                }
+
+                // Move to archive
+                matches.forEach((match) => {
+                    const docRef = db.collection(MATCHES_ARCHIVE_COLLECTION).doc(match.ref.id);
+                    const newItem = match.data();
+                    batch.set(docRef, newItem);
+                    batch.delete(match.ref);
+                });
+
+
+                functions.logger.info("Billing Summary: ", msg);
+
+                return batch.commit();
             });
         });
+    });
+};
+
+
+exports.scheduledFirestoreExport = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("00 23 * * 5") // Every Friday at 23:00
+    .timeZone("Asia/Jerusalem")
+    .onRun((context) => {
+        const client = new v1.FirestoreAdminClient();
+        const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
+        const databaseName =
+            client.databasePath(projectId, "(default)");
+
+        return client.exportDocuments({
+                name: databaseName,
+                outputUriPrefix: bucket,
+                // Leave collectionIds empty to export all collections
+                // or set to a list of collection IDs to export,
+                // collectionIds: ['users', 'posts']
+                collectionIds: [],
+            })
+            .then(responses => {
+                const response = responses[0];
+                functions.logger.info(`Backup Operation Name succeeded: ${response["name"]}`);
+            })
+            .catch(err => {
+                functions.logger.error(err);
+                throw new Error("Backup operation failed");
+            });
     });

@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Grid } from '@material-ui/core';
+import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, Text, SmallText } from './elem'
+import { Spacer, Loading, VBox, Text, SmallText, HSeparator } from './elem'
+import SetResults from './set-results';
 
 import * as api from './api'
 
@@ -15,6 +16,8 @@ export default function MyMatches({ UserInfo, notify }) {
 
     const [matches, setMatches] = useState(undefined);
     const [myMatches, setMyMatches] = useState(undefined);
+    const [edit, setEdit] = useState(undefined);
+    const [reload, setReload] = useState(1);
 
     useEffect(() => {
         if (UserInfo) {
@@ -31,68 +34,83 @@ export default function MyMatches({ UserInfo, notify }) {
                     })
                     setMyMatches(myM);
                 },
-                (err)=>{
+                (err) => {
                     notify.error(err.message);
                     setMatches([]);
                     setMyMatches([]);
                 })
         }
-    }, [UserInfo])
+    }, [UserInfo, reload])
 
 
     return (
         <div style={{ height: '65vh', width: '100%' }}>
             <Spacer height={20} />
-            {myMatches ?
-                (myMatches.length === 0 ?
-                    (matches.length === 0 ?
-                        <VBox><Text>אין משחקים עדיין</Text></VBox> :
-                        <VBox><Text>אינך משובץ השבוע</Text></VBox>)
-                    :
-                    <Grid container spacing={2}>
+            {edit ?
+                <SetResults match={edit} notify={notify} onCancel={() => setEdit(undefined)}
+                    onDone={(editedSet => {
+                        setReload(r=>r+1);
+                        setEdit(undefined);
+                    })} isArchived={false} /> :
 
-                        <Grid container item xs={12} spacing={3} style={{ textAlign: "right" }}>
-                            <Grid item xs={2}>מתי</Grid>
-                            <Grid item xs={4}>איפה</Grid>
-                            <Grid item xs={5}>מי נגד מי</Grid>
-                        </Grid>
-                        {myMatches.map((match, i) => {
+                myMatches ?
+                    (myMatches.length === 0 ?
+                        (matches.length === 0 ?
+                            <VBox><Text>אין משחקים עדיין</Text></VBox> :
+                            <VBox><Text>אין משחקים מתוכננים</Text></VBox>)
+                        :
+                        <Grid container spacing={2}>
 
-                            return <Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}  >
-                                <Grid item xs={2}>
-                                    <SmallText> {match.Day}</SmallText>
-                                    <SmallText> {match.Hour}</SmallText>
-                                </Grid>
-                                <Grid item xs={4}>
-                                    <SmallText> {match.Location}</SmallText>
-                                    <SmallText> {match.Court}</SmallText>
-                                </Grid>
-
-                                <Grid item xs={5} >
-                                    <VBox>
-                                        <SmallText>
-                                            {match.Player1 ? match.Player1.displayName : ""}
-                                            {" ו"}
-                                            {match.Player2 ? match.Player2.displayName : ""}
-                                        </SmallText>
-                                        <SmallText>vs</SmallText>
-                                        <SmallText>
-                                            {match.Player3 ? match.Player3.displayName : ""}
-                                            {" ו"}
-                                            {match.Player4 ? match.Player4.displayName : ""}
-                                        </SmallText>
-                                    </VBox>
-                                </Grid>
-
+                            <Grid container item xs={12} spacing={3} style={{ textAlign: "right" }}>
+                                <Grid item xs={2}>מתי</Grid>
+                                <Grid item xs={4}>איפה</Grid>
+                                <Grid item xs={5}>מי נגד מי</Grid>
                             </Grid>
-                        })
-                        }
+                            <HSeparator />
+                            {myMatches.map((match, i) => {
 
+                                return (
+                                [<Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}  >
+                                    <Grid item xs={2}>
+                                        <SmallText> {match.Day}</SmallText>
+                                        <SmallText> {match.Hour}</SmallText>
+                                    </Grid>
+                                    <Grid item xs={3}>
+                                        <SmallText> {match.Location}</SmallText>
+                                        <SmallText> {match.Court}</SmallText>
+                                    </Grid>
 
-                    </Grid>)
-                : <Loading msg="טוען משחקים" />
+                                    <Grid item xs={5} >
+                                        <VBox>
+                                            <SmallText>
+                                                {match.Player1 ? match.Player1.displayName : ""}
+                                                {" ו"}
+                                                {match.Player2 ? match.Player2.displayName : ""}
+                                            </SmallText>
+                                            <SmallText>vs</SmallText>
+                                            <SmallText>
+                                                {match.Player3 ? match.Player3.displayName : ""}
+                                                {" ו"}
+                                                {match.Player4 ? match.Player4.displayName : ""}
+                                            </SmallText>
+                                        </VBox>
+                                    </Grid>
+                                    <Grid item xs={2} >
+                                        <Button variant="contained" onClick={() => setEdit(match)} 
+                                        style={{width:'1.2rem', height:'4rem'}}>
+                                            <VBox>
+                                                <SmallText>הזנת</SmallText>
+                                                <SmallText>תוצאות</SmallText>
+                                            </VBox>
+                                        </Button>
+                                    </Grid>
+                                </Grid>,
+                                <HSeparator />])
+                            })
+                            }
+                        </Grid>)
+                    : <Loading msg="טוען משחקים" />
             }
-
         </div >
     );
 }

@@ -28,3 +28,8 @@
 .App-link {
   color: #61dafb;
 }
+
+.Sunken {
+  box-shadow: 1px 1px 5px #555 inset;
+  border-radius:5px;
+}

@@ -17,7 +17,7 @@ export function suggestMatch(plannedGames, matches, registrations) {
 
     for (let i = 0; i < plannedGames.length; i++) {
         let plannedGame = plannedGames[i];
-        let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id).sort((r1,r2)=>r1._order - r2._order);
+        let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id).sort((r1, r2) => r1._order - r2._order);
         let matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
 
         let unassignedRegsForGame = regsForGame.filter(r => isNotInMatches(matchesForGame, r.email));
@@ -25,14 +25,14 @@ export function suggestMatch(plannedGames, matches, registrations) {
         //take only multiple of 4
         let numOfMatches = Math.floor(unassignedRegsForGame.length / 4);
 
-        let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches*4).sort((r1,r2)=>r1.rank - r2.rank)
+        let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches * 4).sort((r1, r2) => r1.rank - r2.rank)
 
-        for (let j=0;j<numOfMatches*4;j+=4) {
+        for (let j = 0; j < numOfMatches * 4; j += 4) {
             let newM = newMatch(plannedGame);
             newM.Player1 = unassignedRegsByRank[j];
-            newM.Player2 = unassignedRegsByRank[j+3];
-            newM.Player3 = unassignedRegsByRank[j+1];
-            newM.Player4 = unassignedRegsByRank[j+2];
+            newM.Player2 = unassignedRegsByRank[j + 3];
+            newM.Player3 = unassignedRegsByRank[j + 1];
+            newM.Player4 = unassignedRegsByRank[j + 2];
 
             newMatches.push(newM);
         }
@@ -44,7 +44,7 @@ export function cleansePlayer(user) {
     if (!user)
         return user;
 
-    let cPlayer =  { displayName: user.displayName, email: user.email};
+    let cPlayer = { displayName: user.displayName, email: user.email };
     if (user._order)
         cPlayer._order = user._order;
 
@@ -80,7 +80,7 @@ const DaysMap = {
         6
 };
 
-export const sortByDays=(d1,d2)=>DaysMap[d1]-DaysMap[d2];
+export const sortByDays = (d1, d2) => DaysMap[d1] - DaysMap[d2];
 
 const daysMap = {
     "ראשון":
@@ -106,18 +106,18 @@ export function getShortDay(day) {
 export function getMatchDate(match) {
     let begin = dayjs()
     if (begin.day() === 6) {
-        begin = begin.startOf('week').add(1, 'week');    
+        begin = begin.startOf('week').add(1, 'week');
     } else {
         begin = dayjs().startOf('week');
     }
-    
-    return begin.add(DaysMap[match.Day], 'day').format("DD/MMM/YYYY");
+
+    return begin.add(DaysMap[match.Day], 'day').format("YYYY-MM-DD");
 }
 
 export function getTodayMatchMessage(plannedGames, gameID, matches) {
     let message = "שיבוץ טניס!\n\n";
-    let i = plannedGames.findIndex(pg=>pg.id === gameID);
-    if (i >= 0) 
+    let i = plannedGames.findIndex(pg => pg.id === gameID);
+    if (i >= 0)
         message += getOneDayMsg(plannedGames, i, matches)
 
     return message;
@@ -136,7 +136,8 @@ function getOneDayMsg(plannedGames, i, matches) {
     let message = `***** ${plannedGames[i].Day} *****\n`;
     let dayMatches = matches.filter(m => m.GameID === plannedGames[i].id && !m.deleted);
     if (!dayMatches || dayMatches.length === 0) {
-        message += "טרם" + "\n\n"
+        message += "טרם";
+        message += "\n\n";
     } else {
         for (let j = 0; j < dayMatches.length; j++) {
             if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {
@@ -180,4 +181,24 @@ function getOneDayMsg(plannedGames, i, matches) {
         }
     }
     return message;
+}
+
+const MonthMap = {
+    Jan: "ינו",
+    Feb: "פבר",
+    Mar: "מרץ",
+    Apr: "אפר",
+    May: "מאי",
+    Jun: "יוני",
+    Jul: "יולי",
+    Aug: "אוג",
+    Sep: "ספט",
+    Oct: "אוק",
+    Nov: "נוב",
+    Dec: "דצמ",
+};
+
+export function getNiceDate(d) {
+    const djs = dayjs(d);
+    return MonthMap[djs.format("MMM")] + "-" + djs.format("DD");
 }

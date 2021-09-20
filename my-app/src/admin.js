@@ -80,6 +80,8 @@ export default function Admin(props) {
                     : null}
             </Table>
 
+            
+
             <Button variant="contained" onClick={() => {
                 props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת רישום", [
                     {

@@ -1,3 +1,5 @@
+import './App.css';
+
 import * as React from 'react';
 import {
     CircularProgress, TableCell, Box, Paper, InputBase,
@@ -54,8 +56,43 @@ export function Text(props) {
     return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 25, padding: 10 }}>{props.children}</div>
 }
 
+export function BoxInput(props) {
+    return <div className="Sunken" style={{
+        backgroundColor: props.backgroundColor,
+        justifyItem: 'center',
+        width: 40, height: 50, margin: 5
+    }}>
+        <InputBase
+            onChange={(e) => props.onChange(e.currentTarget.value)}
+            value={props.value} fullwidth={true}
+            inputProps={{ style: { textAlign: 'center' } }}
+            style={{ height: '100%' }} />
+    </div>
+}
+
+export function HSeparator() {
+    return <div style={{ height:4, width:'100%', borderTop:"2px solid lightgray " }}></div>
+}
+export function CircledValue(props) {
+    return <div style={{ 
+        display:'flex',
+        borderRadius:'50%', 
+        width:props.size, 
+        height:props.size, 
+        textAlign: 'center',
+        alignItems:'center',
+        alignContent:'center',
+        backgroundColor: props.backgroundColor || 'black',
+        color: props.color || 'white'
+    }}><SmallText2 textAlign={'center'} fontSize={props.size*.55}>{props.children}</SmallText2></div>
+}
+
 export function SmallText(props) {
     return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 15, padding: 2 }}>{props.children}</div>
+}
+
+export function SmallText2(props) {
+    return <div style={{ width: '100%', textAlign: props.textAlign || 'right', fontSize: props.fontSize || 12, padding: 0, backgroundColor: props.backgroundColor }}>{props.children}</div>
 }
 
 export function ltr(props) {
@@ -77,7 +114,7 @@ export function HBox(props) {
 export function Search(props) {
     return (
         <div dir="rtl" >
-            <TextField label="חפש" type="search" variant="outlined"  size="small" style={{width:200}}
+            <TextField label="חפש" type="search" variant="outlined" size="small" style={{ width: 200 }}
                 onChange={(e) => props.onChange ? props.onChange(e.currentTarget.value) : {}}
             />
         </div>)

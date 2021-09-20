@@ -11,9 +11,8 @@ import {
 
 import { Sort } from '@material-ui/icons';
 import * as api from './api'
-import dayjs from 'dayjs';
-
-const sortByDate = (o1, o2) => dayjs(o1.date) - dayjs(o2.date);
+//import dayjs from 'dayjs';
+//const sortByDate = (o1, o2) => dayjs(o1.date) - dayjs(o2.date);
 
 export default function Billing(props) {
 
@@ -78,7 +77,7 @@ export default function Billing(props) {
         if (userDetails) {
             api.getUserPayments(userDetails.email).then(
                 (p) => {
-                    p.sort(sortByDate);
+                    // p.sort(sortByDate);
                     setUserPayments(p)
                 },
                 (err) => props.notify.error(err.message)
@@ -86,7 +85,7 @@ export default function Billing(props) {
 
             api.getUserDebts(userDetails.email).then(
                 (p) => {
-                    p.sort(sortByDate);
+                    // p.sort(sortByDate);
                     setUserDebts(p)
                 },
                 (err) => props.notify.error(err.message)

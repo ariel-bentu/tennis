@@ -7,15 +7,17 @@ import { Collapse, Button, Tabs, Tab, Paper, Popper, MenuItem, MenuList, Grow, C
 import Register from './register';
 import MyMatches from './myMatches'
 import MyBill from './myBill';
+import Matches from './matches';
 import Match from './match'
 import Users from './users'
 import Billing from './billing';
 import ChangePwd from './change-pwd';
 import ForgotPwd from './forgot-pwd'
+import Board from './board';
 
 import { Toolbar, Text, Loading, HBox, Spacer, TabPanel } from './elem'
 
-import { AttachMoney, PlaylistAdd, SportsTennis, Menu } from '@material-ui/icons';
+import { AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart } from '@material-ui/icons';
 
 import * as api from './api'
 import Login from './login'
@@ -45,6 +47,8 @@ let App = props => {
   const [msg, setMsg] = useState({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [allGamesReload, setAllGamesReload] = useState(1);
+
   const anchorRef = React.useRef(null);
 
   useEffect(() => {
@@ -213,17 +217,27 @@ let App = props => {
 
                       >
                         <Tab label={"רישום"} icon={<PlaylistAdd />} />
-                        <Tab label={"המשחקים שלי"} icon={<SportsTennis />} />
+                        <Tab label={"מתוכנן"} icon={<CalendarToday />} />
+                        <Tab label={"משחקים"} icon={<SportsTennis />} />
+                        <Tab label={"לוח"} icon={<BarChart />} />
                         <Tab label={"חוב"} icon={<AttachMoney />} />
                       </Tabs>,
                       <TabPanel key="0" value={tab} index={0} >
                         <Register notify={notify} UserInfo={userInfo} />
                       </TabPanel>,
                       <TabPanel key="1" value={tab} index={1} >
-                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} /> : null}
+                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} reloadMatches={()=>{
+                          setAllGamesReload(i=>i+1);
+                        }}/> : null}
                       </TabPanel>,
-                      <TabPanel key="2" value={tab} index={2} hidden={tab !== 2}>
-                        {tab === 2 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
+                      <TabPanel key="2" value={tab} index={2} >
+                      {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} reload={allGamesReload}/> : null}
+                    </TabPanel>,
+                     <TabPanel key="3" value={tab} index={3} >
+                     {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
+                   </TabPanel>,
+                      <TabPanel key="4" value={tab} index={4}>
+                        {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
                       </TabPanel>
                     ]
                   }}

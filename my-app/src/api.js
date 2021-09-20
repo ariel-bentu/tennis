@@ -16,6 +16,7 @@ export const Collections = {
     BILLING_COLLECTION: "billing",
     DEBTS_SUB_COLLECTION: "debts",
     PAYMENTS_SUB_COLLECTION: "payments",
+    STATS_COLLECTION: "stats",
 
     USERS_COLLECTION: "users",
     USERS_INFO_COLLECTION: "users-info",
@@ -27,7 +28,6 @@ export const Collections = {
 
 
 const SYSTEM_RECORD_REGISTRATION = "registration"
-const SYSTEM_RECORD_BILLING = "Billing"
 
 let app = undefined;
 //let functions = undefined;
@@ -39,16 +39,40 @@ export function initAPI() {
     }
 }
 
-export async function test1() {
-    const openWeek = app.functions('europe-west1').httpsCallable('openWeek');
+export async function migrateDate() {
 
-    //firebase.functions().httpsCallable('openWeek');
+    var db = firebase.firestore();
+    let batch = db.batch();
 
-    return openWeek()
-        .then((result) => {
-            const data = result.data;
-            return data;
-        });
+
+    return getCollection("matches-archive").then(ma=>getCollection("billing").then(srcData => {
+        let waitFor = []
+        srcData.forEach((srcItem) => {
+            // waitFor.push(
+            //     srcItem._ref.collection("payments").get().then(pmts=>{
+            //         pmts.forEach(p=>{
+            //             let d = dayjs(p.date);
+            //             batch.update(p.ref, {date: d.format("YYYY-MM-DD")});
+            //         })
+            //     })
+            // )
+            waitFor.push(
+                srcItem._ref.collection("debts").get().then(dts=>{
+                    dts.forEach(p=>{
+                        //find date:
+                        let match = ma.find(m=>m._ref.id === p.data().matchID)
+                        if (match) {
+                            //console.log(match.date)
+                            let d = dayjs(match.date);
+                            batch.update(p.ref, {date: d.format("YYYY-MM-DD")});    
+                        }
+                    })
+                })
+            )
+            
+        })
+        return Promise.all(waitFor).then(()=>batch.commit());
+    }))
 }
 
 export async function getUserInfo(user, pwd) {
@@ -218,6 +242,7 @@ export async function openWeekForRegistration() {
     return openWeek();
 }
 
+/*
 export async function openWeekForMatch() {
   let gameTarif = await getGameTarif();
 
@@ -283,6 +308,18 @@ async function getGameTarif() {
     }
     throw new Error("Cannot obtain price per game");
 }
+*/
+
+export async function saveMatchResults(match, isArchived) {
+    var db = firebase.firestore();
+    let update = { sets: match.sets }
+    if (!match.sets || match.sets.length === 0 || match.sets[0].pair1 === "") {
+        //remove set Results
+        update = { sets: [] };
+    }
+    return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
+        .doc(match._ref.id).update(update);
+}
 
 export async function getUserBalance(email) {
     var db = firebase.firestore();
@@ -302,7 +339,7 @@ export async function getUserBalance(email) {
 
 export async function getUserPayments(email) {
     var db = firebase.firestore();
-    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION);
+    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION).orderBy('date', 'desc');
     if (subColRef) {
         return subColRef.get().then((payments) => {
             return payments.docs.map(docObj => docObj.data());
@@ -313,7 +350,7 @@ export async function getUserPayments(email) {
 
 export async function getUserDebts(email) {
     var db = firebase.firestore();
-    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION);
+    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION).orderBy('date', 'desc');
     if (subColRef) {
         return subColRef.get().then((dents) => {
             return dents.docs.map(docObj => docObj.data());
@@ -343,7 +380,7 @@ export async function addPayment(email, amountStr, comment) {
         //insert record in payments
         let paymentRec = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION).doc();
         batch.set(paymentRec, {
-            date: dayjs().format("DD/MMM/YYYY"),
+            date: dayjs().format("YYYY-MM-DD"),
             amount,
             comment
         })
@@ -351,6 +388,7 @@ export async function addPayment(email, amountStr, comment) {
     })
 }
 
+/*
 function addOneGameDebt(db, batch, gameTarif, email, matchID, isSingles, date) {
     let newBillingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION).doc();
     batch.set(newBillingRecord, {
@@ -360,21 +398,9 @@ function addOneGameDebt(db, batch, gameTarif, email, matchID, isSingles, date) {
         singles: isSingles
     });
 }
+*/
 
-export async function moveCollectionData(db, batch, fromCollName, toCollName, addDate) {
-    //throw new Error("Not Implemented Yet");
-    let date = dayjs().format("DD/MMM/YYYY");
 
-    return getCollection(fromCollName).then(srcData => {
-
-        srcData.forEach(({ _ref, ...item }) => {
-            let docRef = db.collection(toCollName).doc(_ref.id);
-            let newItem = addDate ? { ...item, date } : item;
-            batch.set(docRef, newItem);
-            batch.delete(_ref);
-        })
-    })
-}
 
 export async function getCollectionTest(collName, orderBy, noObjRef) {
     if (collName === Collections.REGISTRATION_COLLECTION) {
@@ -644,11 +670,11 @@ export async function getCollectionTest(collName, orderBy, noObjRef) {
     return getCollection(collName, orderBy, noObjRef);
 }
 
-export async function getCollection(collName, orderBy, noObjRef) {
+export async function getCollection(collName, orderBy, orderDesc) {
     var db = firebase.firestore();
     let colRef = db.collection(collName);
     if (orderBy) {
-        colRef = colRef.orderBy(orderBy);
+        colRef = orderDesc? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
     }
     let i = 1;
     return colRef.get().then((items) => {
@@ -657,8 +683,8 @@ export async function getCollection(collName, orderBy, noObjRef) {
             if (orderBy)
                 obj._order = i++;
 
-            if (!noObjRef)
-                obj._ref = docObj.ref;
+            
+            obj._ref = docObj.ref;
 
             return obj;
         })
