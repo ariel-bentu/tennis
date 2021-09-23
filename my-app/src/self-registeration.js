@@ -134,7 +134,7 @@ export default function SelfRegistration(props) {
                             }
                                 setDisableReg(true)
                                 api.addUser({
-                                    displayName: name,
+                                    displayName: name.trim(),
                                     email: email.toLowerCase(),
                                     phone,
                                     password: pwd

@@ -830,6 +830,7 @@ export async function saveUsers(users) {
 
         users.forEach(({ dirty, _ref, _inactive, _waitForApproval, _origDisplayName, ...user }) => {
             if (dirty) {
+                user.displayName = user.displayName.trim();
                 batch.set(_ref, user);
                 if (user.displayName !== _origDisplayName && !_waitForApproval) {
                     let userInfo = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);

@@ -6,11 +6,9 @@ import { Spacer, Loading, VBox, HBox, SmallText, SmallText2, HSeparator } from '
 import { getNiceDate } from './utils'
 
 import * as api from './api'
-import dayjs from 'dayjs';
 import { Edit, EmojiEvents } from '@material-ui/icons';
 import SetResults from './set-results';
 
-//const sortByDateDesc = (o1, o2) => dayjs(o2.date) - dayjs(o1.date);
 
 
 

@@ -24,7 +24,7 @@ export default function MyMatches({ UserInfo, notify }) {
             api.getCollection(api.Collections.MATCHES_COLLECTION).then(
                 mtchs => {
                     setMatches(mtchs);
-                    //enrich with registration info
+                    
                     let myM = mtchs.filter(m => {
                         for (let i = 1; i <= 4; i++) {
                             if (m["Player" + i] && m["Player" + i].email === UserInfo.email)
@@ -49,7 +49,7 @@ export default function MyMatches({ UserInfo, notify }) {
             {edit ?
                 <SetResults match={edit} notify={notify} onCancel={() => setEdit(undefined)}
                     onDone={(editedSet => {
-                        setReload(r=>r+1);
+                        setTimeout(()=>setReload(r=>r+1), 4000);
                         setEdit(undefined);
                     })} isArchived={false} /> :
 

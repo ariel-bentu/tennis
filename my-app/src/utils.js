@@ -138,6 +138,9 @@ function getOneDayMsg(plannedGames, i, matches) {
     if (!dayMatches || dayMatches.length === 0) {
         message += "טרם";
         message += "\n\n";
+        if (plannedGames[i].disabled) {
+            return "";
+        }
     } else {
         for (let j = 0; j < dayMatches.length; j++) {
             if (!dayMatches[j].Player1 || !dayMatches[j].Player3) {

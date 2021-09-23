@@ -145,7 +145,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         match.sets = editedSets.filter(s=>s.pair1 !== "");
                         api.saveMatchResults(match, isArchived).then(
                             ()=>{
-                                notify.success("נשמר בהצלחה");
+                                if (!isArchived) {
+                                    notify.success("תוצאות נשמרו בהצלחה. המשחק יוסר מלשונית ׳מתוכנן׳ ויופיע בלשונית ׳משחקים׳");
+                                } else {
+                                    notify.success("תוצאות נשמרו בהצלחה");
+                                }
                                 onDone(match.sets);
                             },
                             (err)=>notify.error(err.message)
