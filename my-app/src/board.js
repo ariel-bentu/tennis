@@ -57,8 +57,6 @@ export default function Board({ UserInfo, notify }) {
     return (
         stats ?
             <VBox style={{ margin: 10 }}>
-                <Text>--- בהקמה ----</Text>
-                <SmallText2 textAlign='center'>נתונים אינם נכונים</SmallText2>
                 <Spacer />
                 <Grid container spacing={1} >
                     <Grid key={0} container spacing={1} style={{ fontSize: 12 }}>

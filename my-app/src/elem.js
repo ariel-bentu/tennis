@@ -63,28 +63,38 @@ export function BoxInput(props) {
         width: 40, height: 50, margin: 5
     }}>
         <InputBase
-            onChange={(e) => props.onChange(e.currentTarget.value)}
+            inputRef={ref => props && props.focus ? (ref && ref.focus ? ref.focus() : {}) : {}}
+            onChange={(e) => {
+                props.onChange(e.currentTarget.value)
+
+                if (e.currentTarget.value !== "" && props.onNextFocus)
+                    props.onNextFocus();
+            }}
+            onFocus={() => props.onFocus ? props.onFocus() : {}}
             value={props.value} fullwidth={true}
-            inputProps={{ style: { textAlign: 'center' } }}
+            inputProps={{ pattern: "[0-9]*", style: { textAlign: 'center' } }}
             style={{ height: '100%' }} />
     </div>
-}
+};
+
+
+
 
 export function HSeparator() {
-    return <div style={{ height:4, width:'100%', borderTop:"2px solid lightgray " }}></div>
+    return <div style={{ height: 4, width: '100%', borderTop: "2px solid lightgray " }}></div>
 }
 export function CircledValue(props) {
-    return <div style={{ 
-        display:'flex',
-        borderRadius:'50%', 
-        width:props.size, 
-        height:props.size, 
+    return <div style={{
+        display: 'flex',
+        borderRadius: '50%',
+        width: props.size,
+        height: props.size,
         textAlign: 'center',
-        alignItems:'center',
-        alignContent:'center',
+        alignItems: 'center',
+        alignContent: 'center',
         backgroundColor: props.backgroundColor || 'black',
         color: props.color || 'white'
-    }}><SmallText2 textAlign={'center'} fontSize={props.size*.55}>{props.children}</SmallText2></div>
+    }}><SmallText2 textAlign={'center'} fontSize={props.size * .55}>{props.children}</SmallText2></div>
 }
 
 export function SmallText(props) {

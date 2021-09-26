@@ -11,6 +11,7 @@ import {
 
 import { Sort } from '@material-ui/icons';
 import * as api from './api'
+import { validate } from 'uuid';
 //import dayjs from 'dayjs';
 //const sortByDate = (o1, o2) => dayjs(o1.date) - dayjs(o2.date);
 
@@ -142,7 +143,7 @@ export default function Billing(props) {
                                         style={{ fontSize: 12, height: '1.5rem', width: 100 }}
                                         onClick={() => {
                                             setPaymentUser(user);
-                                            setPaymentAmount(0);
+                                            setPaymentAmount("");
                                             setPaymentComment("");
                                         }}>תשלום</Button>
                                     <Spacer width={5} />
@@ -221,7 +222,23 @@ export default function Billing(props) {
                 <VBox style={{ width: '100%' }}>
                     <Header>הזנת תשלום</Header>
                     <Text>{"עבור " + paymentUser.displayName}</Text>
-                    <TextField required label="סכום" onChange={(e) => setPaymentAmount(e.currentTarget.value)} />
+                    <div dir="ltr" >
+                    <TextField required label="סכום"  value={paymentAmount} onChange={(e) => {
+                        const val = Number(e.currentTarget.value);
+                        if (isNaN(val) && 
+                            e.currentTarget.value !== "-" && 
+                            e.currentTarget.value !== "" &&
+                            e.currentTarget.value !== ".") {
+                            props.notify.error("סכום לא חוקי");
+                            
+                        } else {
+                            props.notify.clear();
+                        }
+                        setPaymentAmount(e.currentTarget.value)} 
+                    }
+                    inputProps={{ style: { textAlign: 'center' }}} 
+                    />
+                    </div>
                     <TextField required label="הערה" onChange={(e) => setPaymentComment(e.currentTarget.value)} />
                     <Spacer height={20} />
                     <HBox>

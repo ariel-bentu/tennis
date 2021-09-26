@@ -12,31 +12,28 @@ export function isNotInMatch(match, email) {
 }
 
 
-export function suggestMatch(plannedGames, matches, registrations) {
+export function suggestMatch(plannedGame, matches, registrations) {
     let newMatches = [...matches];
 
-    for (let i = 0; i < plannedGames.length; i++) {
-        let plannedGame = plannedGames[i];
-        let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id).sort((r1, r2) => r1._order - r2._order);
-        let matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
+    let regsForGame = registrations.filter(reg => reg.GameID === plannedGame.id).sort((r1, r2) => r1._order - r2._order);
+    let matchesForGame = newMatches.filter(m => m.GameID === plannedGame.id);
 
-        let unassignedRegsForGame = regsForGame.filter(r => isNotInMatches(matchesForGame, r.email));
+    let unassignedRegsForGame = regsForGame.filter(r => isNotInMatches(matchesForGame, r.email));
 
-        //take only multiple of 4
-        let numOfMatches = Math.floor(unassignedRegsForGame.length / 4);
+    //take only multiple of 4
+    let numOfMatches = Math.floor(unassignedRegsForGame.length / 4);
 
-        let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches * 4).sort((r1, r2) => r1.rank - r2.rank)
+    let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches * 4).sort((r1, r2) => r1.rank - r2.rank)
 
-        for (let j = 0; j < numOfMatches * 4; j += 4) {
-            let newM = newMatch(plannedGame);
-            newM.Player1 = unassignedRegsByRank[j];
-            newM.Player2 = unassignedRegsByRank[j + 3];
-            newM.Player3 = unassignedRegsByRank[j + 1];
-            newM.Player4 = unassignedRegsByRank[j + 2];
+    for (let j = 0; j < numOfMatches * 4; j += 4) {
+        let newM = newMatch(plannedGame);
+        newM.Player1 = unassignedRegsByRank[j];
+        newM.Player2 = unassignedRegsByRank[j + 3];
+        newM.Player3 = unassignedRegsByRank[j + 1];
+        newM.Player4 = unassignedRegsByRank[j + 2];
 
-            newMatches.push(newM);
-        }
-    };
+        newMatches.push(newM);
+    }
     return newMatches;
 }
 

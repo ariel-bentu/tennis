@@ -242,6 +242,17 @@ export async function openWeekForRegistration() {
     return openWeek();
 }
 
+export async function isAdmin() {
+    const isAdmin = app.functions('europe-west1').httpsCallable('isAdmin');
+
+    return isAdmin().then(
+        ()=>{
+            return true;
+        }, 
+        (err)=>false
+    );
+}
+
 /*
 export async function openWeekForMatch() {
   let gameTarif = await getGameTarif();
@@ -364,7 +375,10 @@ export async function getUserDebts(email) {
 
 export async function addPayment(email, amountStr, comment) {
     var db = firebase.firestore();
-    let amount = parseFloat(amountStr);
+    const amount = Number(amountStr);
+    if (isNaN(amount)) {
+        throw new Error("ערך תשלום לא חוקי");
+    }
     if (!comment) {
         comment = "";
     }

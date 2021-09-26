@@ -9,34 +9,22 @@ import * as api from './api'
 import { Edit, EmojiEvents } from '@material-ui/icons';
 import SetResults from './set-results';
 
+const Val=(v)=>parseInt(v);
 
 
-
-export default function Matches({ UserInfo, notify, reload }) {
+export default function Matches({ UserInfo, notify, reload, admin }) {
     const [matches, setMatches] = useState(undefined);
     const [edit, setEdit] = useState(undefined);
 
     useEffect(() => {
         if (UserInfo) {
             api.getCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true).then(matches => {
-                //matches.sort(sortByDateDesc);
                 setMatches(matches)
             })
         }
     }, [UserInfo, reload])
 
-    const results = {
-        sets: [
-            { pair1: 1, pair2: 6 },
-            { pair1: 1, pair2: 6 },
-            { pair1: 1, pair2: 6 },
-            { pair1: 1, pair2: 6 },
-            { pair1: 1, pair2: 6 }
-        ],
-    }
-
-
-
+    
     return (
         <div style={{ height: '100%', width: '100%' }}>
             <Spacer width={10} />
@@ -50,7 +38,7 @@ export default function Matches({ UserInfo, notify, reload }) {
                     <HSeparator/>
                     {matches ?
                         matches.map(match => (
-                            <GetMatch match={match} results={results} UserInfo={UserInfo} setEdit={setEdit} />
+                            <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin}/>
                         ))
                         :
                         <Loading msg="טוען משחקים" />
@@ -63,11 +51,11 @@ export default function Matches({ UserInfo, notify, reload }) {
     );
 }
 
-function GetMatch({ match, UserInfo, setEdit }) {
+function GetMatch({ match, UserInfo, setEdit, admin }) {
 
     //calculate winner
-    const wonSets1 = match.sets ? match.sets.reduce((prev, curr) => prev + (curr.pair1 > curr.pair2 ? 1 : 0), 0) : -1;
-    const wonSets2 = match.sets ? match.sets.reduce((prev, curr) => prev + (curr.pair1 < curr.pair2 ? 1 : 0), 0) : -1;
+    const wonSets1 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) > Val(curr.pair2) ? 1 : 0), 0) : -1;
+    const wonSets2 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) < Val(curr.pair2) ? 1 : 0), 0) : -1;
     let winner = 0;
 
     if (wonSets1 > wonSets2) {
@@ -75,8 +63,8 @@ function GetMatch({ match, UserInfo, setEdit }) {
     } else if (wonSets1 < wonSets2) {
         winner = 2;
     } else if (match.sets) {
-        const wonGames1 = match.sets.reduce((prev, curr) => prev + curr.pair1, 0);
-        const wonGames2 = match.sets.reduce((prev, curr) => prev + curr.pair2, 0);
+        const wonGames1 = match.sets.reduce((prev, curr) => prev + Val(curr.pair1), 0);
+        const wonGames2 = match.sets.reduce((prev, curr) => prev + Val(curr.pair2), 0);
         if (wonGames1 > wonGames2) {
             winner = 1;
         } else if (wonGames1 < wonGames2) {
@@ -100,12 +88,12 @@ function GetMatch({ match, UserInfo, setEdit }) {
         <Spacer />
 
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
-            firstPair={true} wonSets={wonSets1} wins={winner === 1}
-            button={userInMatch(match, UserInfo) ?
+            firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner == 0}
+            button={admin || (userInMatch(match, UserInfo) && !match.sets)?
                 <Edit onClick={() => setEdit(match)} />
                 : undefined} />
         <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
-            wins={winner === 2}
+            wins={winner === 2} tie={winner == 0}
             UserInfo={UserInfo}
         />
         <HSeparator/>
@@ -160,7 +148,7 @@ function GetOneLine(props) {
                 <HBox style={{ width: '100%', height: '100%' }}>
                     <VBox style={{ backgroundColor: 'black', width: '4%', height: 35 }} />
                     <VBox style={{
-                        backgroundColor: (props.wins ? 'lightgreen' : (props.wonSets === -1 ? 'white' : 'lightpink')),
+                        backgroundColor: (props.wins ? 'lightgreen' : (props.wonSets === -1 ? 'white' : props.tie? 'lightgray': 'lightpink')),
                         width: 22, height: 35, justifyContent: 'center'
                     }}>
                         <SmallText2 textAlign='center'>{props.wonSets >= 0 ? props.wonSets : "-"}</SmallText2>

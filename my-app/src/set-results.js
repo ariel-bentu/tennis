@@ -69,6 +69,7 @@ const isDirty = (setsOrig, setsEdited) => {
 export default function SetResults({ UserInfo, match, notify, onCancel, onDone, isArchived }) {
 
     const [editedSets, setEditedSets] = useState([]);
+    const [nextFocus, setNextFocus] = useState(0);
 
     useEffect(() => {
         let sets = match.sets ? [...match.sets] : [];
@@ -81,6 +82,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
         }
         setEditedSets(sets)
     }, [match])
+
+    const myRef = React.useRef(null);
 
 
 
@@ -108,7 +111,14 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 <Spacer width={15} />
                 {editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
-                        onChange={newVal => setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair1: newVal } : s))}
+                        focus={i * 2 === nextFocus}
+
+                        onNextFocus={() => setNextFocus(n => n + 1)}
+                        onFocus={() => nextFocus !== i * 2 ? setNextFocus(i * 2 ) : {}}
+                        onChange={newVal => {
+                            setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair1: newVal } : s))
+                        }
+                        }
                     />
                 )
                 )}
@@ -124,7 +134,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 </VBox>
                 <Spacer width={15} />
                 {editedSets.map((set, i) => (
-                    <BoxInput value={set.pair2}
+                    <BoxInput
+                        value={set.pair2}
+                        focus={i * 2 + 1 === nextFocus}
+                        onFocus={() => nextFocus !== i * 2 + 1 ? setNextFocus(i * 2 + 1) : {}}
+                        onNextFocus={() => setNextFocus(n => n + 1)}
                         onChange={newVal => setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair2: newVal } : s))}
                     />
                 )
@@ -142,9 +156,9 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                             return;
                         }
                         //save changes
-                        match.sets = editedSets.filter(s=>s.pair1 !== "");
+                        match.sets = editedSets.filter(s => s.pair1 !== "");
                         api.saveMatchResults(match, isArchived).then(
-                            ()=>{
+                            () => {
                                 if (!isArchived) {
                                     notify.success("תוצאות נשמרו בהצלחה. המשחק יוסר מלשונית ׳מתוכנן׳ ויופיע בלשונית ׳משחקים׳");
                                 } else {
@@ -152,7 +166,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                                 }
                                 onDone(match.sets);
                             },
-                            (err)=>notify.error(err.message)
+                            (err) => notify.error(err.message)
                         );
                     }
 

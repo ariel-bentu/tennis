@@ -232,7 +232,7 @@ export default function Match(props) {
 
         variant="contained"
         disabled={submitInProcess} onClick={() => {
-            setEditedMatches(suggestMatch(games, editedMatches, registrations))
+            setEditedMatches(suggestMatch(currentGameObj(), editedMatches, registrations))
             setDirty(true);
         }}
     >שבץ</Button>

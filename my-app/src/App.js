@@ -38,6 +38,7 @@ import 'firebase/auth';
 api.initAPI();
 
 let App = props => {
+  const [admin, setAdmin] = useState(false);
 
   const [userInfo, setUserInfo] = useState(undefined);
   const [userBlocked, setUserBlocked] = useState(false);
@@ -55,7 +56,10 @@ let App = props => {
     setTimeout(() => setLoading(false), 1000);
     firebase.auth().onAuthStateChanged(function (user) {
       api.getUserObj(user).then(
-        uo => setUserInfo(uo),
+        uo => {
+          setUserInfo(uo);
+          api.isAdmin().then(setAdmin);
+        },
         (err) => {
           setUserBlocked(true);
           setMsg({ open: true, severity: "error", title: "", body: err.message, top: 100 })
@@ -85,6 +89,9 @@ let App = props => {
     ask: (body, title, buttons) => {
       setMsg({ open: true, severity: "info", title, body, buttons });
     },
+    clear: () => {
+      setMsg({});
+    }
 
   }
   const { isLandscape } = props;
@@ -226,12 +233,12 @@ let App = props => {
                         <Register notify={notify} UserInfo={userInfo} />
                       </TabPanel>,
                       <TabPanel key="1" value={tab} index={1} >
-                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} reloadMatches={()=>{
+                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={()=>{
                           setAllGamesReload(i=>i+1);
                         }}/> : null}
                       </TabPanel>,
                       <TabPanel key="2" value={tab} index={2} >
-                      {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} reload={allGamesReload}/> : null}
+                      {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} admin={admin} reload={allGamesReload}/> : null}
                     </TabPanel>,
                      <TabPanel key="3" value={tab} index={3} >
                      {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}

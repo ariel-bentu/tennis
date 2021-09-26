@@ -230,6 +230,13 @@ const isMovedToArchive = (change, matchID) => {
     });
 };
 
+exports.isAdmin = functions.region("europe-west1").https.onCall((data, context) => {
+    return isAdmin(context).catch(err => {
+        throw new functions.https.HttpsError("permission-denied", "AdminRequired", err.message);
+    });
+});
+
+
 exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
     const batch = db.batch();
 
@@ -299,11 +306,13 @@ const isMatchModified = (change) => {
     return modified;
 };
 
+const toNum = (v) => parseInt(v);
+
 const handleMatchResultsChange = (change) => {
     return new Promise((resolve, reject) => {
         // Only handle change
         if (!change.before.exists || !change.after.exists) {
-            resolve();
+            resolve(false);
             return;
         }
 
@@ -311,22 +320,22 @@ const handleMatchResultsChange = (change) => {
         const dataAfter = change.after.data();
 
         if (dataAfter.sets == undefined) {
-            // No sets data (assume they are not deleted - todo?)
-            resolve();
+            // No sets data (assume they are not deleted - when deleted, it will be empty array)
+            resolve(false);
             return;
         }
 
         const calcWinner = (sets) => {
-            const wonSets1 = sets.reduce((prev, curr) => prev + (curr.pair1 > curr.pair2 ? 1 : 0), 0);
-            const wonSets2 = sets.reduce((prev, curr) => prev + (curr.pair1 < curr.pair2 ? 1 : 0), 0);
+            const wonSets1 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) > toNum(curr.pair2) ? 1 : 0), 0);
+            const wonSets2 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) < toNum(curr.pair2) ? 1 : 0), 0);
 
             if (wonSets1 > wonSets2) {
                 return 1;
             } else if (wonSets1 < wonSets2) {
                 return 2;
             } else {
-                const wonGames1 = sets.reduce((prev, curr) => prev + curr.pair1, 0);
-                const wonGames2 = sets.reduce((prev, curr) => prev + curr.pair2, 0);
+                const wonGames1 = sets.reduce((prev, curr) => prev + toNum(curr.pair1), 0);
+                const wonGames2 = sets.reduce((prev, curr) => prev + toNum(curr.pair2), 0);
                 if (wonGames1 > wonGames2) {
                     return 1;
                 } else if (wonGames1 < wonGames2) {
@@ -487,12 +496,11 @@ const handleMatchResultsChange = (change) => {
                         });
                     }
                 });
-                return batch.commit().then(() => resolve());
+                return batch.commit().then(() => resolve(true));
             }).catch(err => reject(err));
-            return;
+        } else {
+            resolve(false);
         }
-
-        resolve();
     });
 };
 
@@ -515,9 +523,8 @@ exports.matchUpdated = functions.region("europe-west1").firestore
 
 
             return isMovedToArchive(change, context.params.matchID).then(movedToArchive => {
-                const waitFor = [];
-
                 if (!movedToArchive) {
+                    const waitFor = [];
                     // Send SMS on match changes
                     if (!inThePast(matchDate) && isMatchModified(change)) {
                         if (change.after.exists) {
@@ -600,22 +607,20 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                 (err) => functions.logger.error("Users read error:", err)
                             ));
                     }
+
+
+                    // handle match results:
+                    waitFor.push(
+                        handleMatchResultsChange(change).then((resultsDetected) => {
+                            if (resultsDetected) {
+                                functions.logger.info("Results detected - move to archive immediately");
+                                return archiveMatchesImpl(context.params.matchID);
+                            }
+                        })
+                    );
+
+                    return Promise.all(waitFor);
                 }
-
-                // handle match results:
-                waitFor.push(
-                    handleMatchResultsChange(change).then(() => {
-                        // if results exist - move to archive immediately
-                        if (change.before.exists && change.after.exists &&
-                            change.after.data().sets &&
-                            change.after.data().sets.length > 0) {
-                            functions.logger.info("match results: 2");
-                            return archiveMatchesImpl(context.params.matchID);
-                        }
-                    })
-                );
-
-                return Promise.all(waitFor);
             });
         });
     });
@@ -724,13 +729,13 @@ exports.scheduledFirestoreExport = functions.region("europe-west1").pubsub
             client.databasePath(projectId, "(default)");
 
         return client.exportDocuments({
-                name: databaseName,
-                outputUriPrefix: bucket,
-                // Leave collectionIds empty to export all collections
-                // or set to a list of collection IDs to export,
-                // collectionIds: ['users', 'posts']
-                collectionIds: [],
-            })
+            name: databaseName,
+            outputUriPrefix: bucket,
+            // Leave collectionIds empty to export all collections
+            // or set to a list of collection IDs to export,
+            // collectionIds: ['users', 'posts']
+            collectionIds: [],
+        })
             .then(responses => {
                 const response = responses[0];
                 functions.logger.info(`Backup Operation Name succeeded: ${response["name"]}`);
