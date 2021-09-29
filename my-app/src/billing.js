@@ -158,11 +158,14 @@ export default function Billing(props) {
             </VBox>
             : userDetails ?
                 <VBox style={{ width: '100%' }}>
+                    <HBox>
+                    <Text fontSize={35}>{userDetails.displayName + " - "}</Text>
                     <Text fontSize={35}>{userDetails.debt === "חסר" ? "חסר" :
                         userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
                             userDetails.debt === 0 ? "0 - אין חוב" :
                                 -userDetails.debt + ' ש״ח בחובה'
                     }</Text>
+                    </HBox>
                     <Text>תשלומים</Text>
                     <Grid container spacing={2} >
                         <Grid container item xs={12} spacing={2} >
@@ -223,21 +226,22 @@ export default function Billing(props) {
                     <Header>הזנת תשלום</Header>
                     <Text>{"עבור " + paymentUser.displayName}</Text>
                     <div dir="ltr" >
-                    <TextField required label="סכום"  value={paymentAmount} onChange={(e) => {
-                        const val = Number(e.currentTarget.value);
-                        if (isNaN(val) && 
-                            e.currentTarget.value !== "-" && 
-                            e.currentTarget.value !== "" &&
-                            e.currentTarget.value !== ".") {
-                            props.notify.error("סכום לא חוקי");
-                            
-                        } else {
-                            props.notify.clear();
+                        <TextField required label="סכום" value={paymentAmount} onChange={(e) => {
+                            const val = Number(e.currentTarget.value);
+                            if (isNaN(val) &&
+                                e.currentTarget.value !== "-" &&
+                                e.currentTarget.value !== "" &&
+                                e.currentTarget.value !== ".") {
+                                props.notify.error("סכום לא חוקי");
+
+                            } else {
+                                props.notify.clear();
+                            }
+                            setPaymentAmount(e.currentTarget.value)
                         }
-                        setPaymentAmount(e.currentTarget.value)} 
-                    }
-                    inputProps={{ style: { textAlign: 'center' }}} 
-                    />
+                        }
+                            inputProps={{ style: { textAlign: 'center' } }}
+                        />
                     </div>
                     <TextField required label="הערה" onChange={(e) => setPaymentComment(e.currentTarget.value)} />
                     <Spacer height={20} />

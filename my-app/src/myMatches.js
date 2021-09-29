@@ -4,7 +4,7 @@ import { Grid, Button } from '@material-ui/core';
 
 import { Spacer, Loading, VBox, Text, SmallText, HSeparator } from './elem'
 import SetResults from './set-results';
-
+import {getNiceDate} from './utils'
 import * as api from './api'
 
 
@@ -21,7 +21,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 
     useEffect(() => {
         if (UserInfo) {
-            api.getCollection(api.Collections.MATCHES_COLLECTION).then(
+            api.getCollection(api.Collections.MATCHES_COLLECTION,  "date").then(
                 mtchs => {
                     setMatches(mtchs);
 
@@ -82,7 +82,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 function OneGame({ match, setEdit }) {
     return [<Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}  >
         <Grid item xs={2}>
-            <SmallText> {match.Day}</SmallText>
+            <SmallText> {getNiceDate(match.date) + ", "+ match.Day}</SmallText>
             <SmallText> {match.Hour}</SmallText>
         </Grid>
         <Grid item xs={3}>
