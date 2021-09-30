@@ -62,6 +62,7 @@ export function BoxInput(props) {
         justifyItem: 'center',
         width: 40, height: 50, margin: 5
     }}>
+        {props.tieBreak?<SmallText2 textAlign={'center'} fontSize={8}>שובר שוויון</SmallText2>:null}
         <InputBase
             inputRef={ref => props && props.focus ? (ref && ref.focus ? ref.focus() : {}) : {}}
             onChange={(e) => {
@@ -102,7 +103,14 @@ export function SmallText(props) {
 }
 
 export function SmallText2(props) {
-    return <div style={{ width: '100%', textAlign: props.textAlign || 'right', fontSize: props.fontSize || 12, padding: 0, backgroundColor: props.backgroundColor }}>{props.children}</div>
+    return <div style={{
+        width: '100%',
+        textAlign: props.textAlign || 'right',
+        fontSize: props.fontSize || 12,
+        padding: 0,
+        backgroundColor: props.backgroundColor,
+        transform: props.transform || undefined
+    }}>{props.children}</div>
 }
 
 export function ltr(props) {

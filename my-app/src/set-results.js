@@ -5,6 +5,12 @@ import { getNiceDate } from './utils';
 import * as api from './api'
 import { Paper1 } from './elem';
 
+const isTieBreakSet = (set) => {
+    const p1IntVal = parseInt(set.pair1);
+    const p2IntVal = parseInt(set.pair2);
+    return !isNaN(p1IntVal) && p1IntVal === 7 || !isNaN(p2IntVal) && p2IntVal === 7;
+}
+
 const validate = (sets) => {
     let seenEmpty = false;
     for (let i = 0; i < 5; i++) {
@@ -39,9 +45,40 @@ const validate = (sets) => {
                 return `סט ${i + 1} אינו חוקי - יש להזין סט רק אם שוחק עד הכרעה`;
             }
 
-            if (Math.abs(p1 - p2) === 1 && p1 < 7 && p2 < 7) {
+            if ((Math.abs(p1 - p2) === 1 && p1 < 7 && p2 < 7) ||
+                (p1 == 7 && p2 != 6 || p2 == 7 && p1 != 6)) {
                 return `סט ${i + 1} אינו חוקי - הכרעה בסט זה אינה חוקית`;
             }
+
+            if (p1 === 7 || p2 === 7) {
+                const p1TieBreak = parseInt(sets[i].tbPair1)
+                const p2TieBreak = parseInt(sets[i].tbPair2)
+
+                if ((sets[i].tbPair1 !== "" && isNaN(p1TieBreak)) ||
+                    (sets[i].tbPair2 !== "" && isNaN(p2TieBreak))) {
+                    return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון - יש להזין ספרות בלבד`;
+                }
+                if ((sets[i].tbPair1 !== "" && sets[i].tbPair2 === "") ||
+                    (sets[i].tbPair1 === "" && sets[i].tbPair2 !== "")) {
+                    return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון חלקית`;
+                }
+
+                if (!isNaN(p1TieBreak) && !isNaN(p2TieBreak)) {
+                    if (p1TieBreak < 7 && p2TieBreak < 7) {
+                        return `סט ${i + 1} אינו חוקי - תוצאות שובר שוויון ללא הכרעה`;
+                    }
+
+                    if (Math.abs(p1TieBreak - p2TieBreak) <= 1) {
+                        return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון - הפרש לא חוקי`;
+                    }
+
+                    if (p1TieBreak > p2TieBreak && p1 < p2 ||
+                        p1TieBreak < p2TieBreak && p1 > p2) {
+                        return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון הפוכה לתוצאת הסט `;
+                    }
+                }
+            }
+
         }
 
     }
@@ -57,7 +94,9 @@ const isDirty = (setsOrig, setsEdited) => {
             return setsEdited[i].pair1 !== "";
         } else {
             if (setsEdited[i].pair1 !== setsOrig[i].pair1 ||
-                setsEdited[i].pair2 !== setsOrig[i].pair2) {
+                setsEdited[i].pair2 !== setsOrig[i].pair2 ||
+                setsEdited[i].tbPair1 !== setsOrig[i].tbPair1 ||
+                setsEdited[i].tbPair2 !== setsOrig[i].tbPair2) {
                 return true;
             }
 
@@ -83,10 +122,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
         setEditedSets(sets)
     }, [match])
 
-    const myRef = React.useRef(null);
-
-
-
+    const tieBreak = editedSets.some(set => isTieBreakSet(set))
     return (
         <Paper1 style={{ width: '100%', height: '70vh', justifyContent: 'center' }}>
             <Spacer height={20} />
@@ -100,21 +136,25 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     </HBox>
                 )
                 )}
-
             </HBox>
+
+            {tieBreak ?
+                <TieBreakLine editedSets={editedSets} pairIndex={1} setEditedSets={setEditedSets} />
+                : null}
 
             <HBox style={{ width: '100%', alignItems: 'center' }}>
                 <VBox style={{ backgroundColor: 'gold', width: 75 }}>
-                    {match.Player1 ? <SmallText>{match.Player1.displayName}</SmallText> : null}
-                    {match.Player2 ? <SmallText>{match.Player2.displayName}</SmallText> : null}
+                    {match.Player1 ? <SmallText textAlign='center'>{match.Player1.displayName}</SmallText> : null}
+                    {match.Player2 ? <SmallText textAlign='center'>{match.Player2.displayName}</SmallText> : null}
                 </VBox>
                 <Spacer width={15} />
+
                 {editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
                         focus={i * 2 === nextFocus}
 
                         onNextFocus={() => setNextFocus(n => n + 1)}
-                        onFocus={() => nextFocus !== i * 2 ? setNextFocus(i * 2 ) : {}}
+                        onFocus={() => nextFocus !== i * 2 ? setNextFocus(i * 2) : {}}
                         onChange={newVal => {
                             setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair1: newVal } : s))
                         }
@@ -129,8 +169,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
             </HBox>
             <HBox style={{ width: '100%', alignItems: 'center' }}>
                 <VBox style={{ width: 75 }}>
-                    {match.Player3 ? <SmallText>{match.Player3.displayName}</SmallText> : null}
-                    {match.Player4 ? <SmallText>{match.Player4.displayName}</SmallText> : null}
+                    {match.Player3 ? <SmallText textAlign='center'>{match.Player3.displayName}</SmallText> : null}
+                    {match.Player4 ? <SmallText textAlign='center'>{match.Player4.displayName}</SmallText> : null}
                 </VBox>
                 <Spacer width={15} />
                 {editedSets.map((set, i) => (
@@ -144,6 +184,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 )
                 )}
             </HBox>
+
+            {tieBreak ?
+                <TieBreakLine editedSets={editedSets} pairIndex={2} setEditedSets={setEditedSets} />
+                : null}
+
 
             <Spacer height={40} />
             <HBox style={{ width: '100%', justifyContent: 'center' }}>
@@ -176,4 +221,26 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 <Button variant="contained" onClick={() => onCancel()}>בטל</Button>
             </HBox>
         </Paper1 >);
+}
+
+function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
+    return (
+        <HBox>
+            <Spacer width={90} />
+            {editedSets.map((set, i) => (
+                isTieBreakSet(set) ?
+                    <BoxInput
+                        backgroundColor={pairIndex === 1 ? 'gold' : 'transparent'}
+                        tieBreak={true}
+                        value={set["tbPair" + pairIndex]}
+                        onChange={newVal => {
+                            setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, ["tbPair" + pairIndex]: newVal } : s))
+                        }
+                        }
+                    />
+                    : <Spacer width={50} height={50} />
+            ))
+            }
+        </HBox>
+    )
 }

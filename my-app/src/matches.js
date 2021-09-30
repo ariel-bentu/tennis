@@ -127,21 +127,36 @@ function GetOneLine(props) {
                 {props.wins ? <EmojiEvents style={{ color: 'gold' }} /> : null}
             </Grid>
             {
-                props.sets.map(result => (
-                    <Grid item xs={1} style={{ padding: 2 }}>
-                        <VBox style={{
+                props.sets.map(result => {
+                    const setValue = props.firstPair ? result.pair1 : result.pair2;
+                    const p1IntVal = parseInt(result.pair1);
+                    const p2IntVal = parseInt(result.pair2);
+                    const tbIntValue = parseInt(props.firstPair ? result.tbPair1 : result.tbPair2);
+                    let tbValue = undefined;
+
+                    if ((!isNaN(p1IntVal) && p1IntVal === 7 ||
+                    !isNaN(p2IntVal) && p2IntVal === 7) && !isNaN(tbIntValue)) {
+                        tbValue = tbIntValue;
+                    }
+
+                    return <Grid item xs={1} style={{ padding: 2 }}>
+                        <HBox style={{
                             backgroundColor: (props.firstPair && result.pair1 > result.pair2) ||
                                 (!props.firstPair && result.pair1 < result.pair2) ?
                                 'lightgreen' : result.pair1 === "-" ? 'white' :
                                     result.pair1 === result.pair2 ? 'lightblue' :
                                         'lightpink'
                             ,
-                            width: 22, height: 35, justifyContent: 'center'
+                            width: 22, height: 35, 
+                            justifyContent: 'center',
+                            alignItems: 'center'
                         }}>
-                            <SmallText2 textAlign='center'>{props.firstPair ? result.pair1 : result.pair2}</SmallText2>
-                        </VBox>
+                            <SmallText2 lineHeight={30} textAlign='center'>{setValue}</SmallText2>
+                            {tbValue? <SmallText2 transform="translateY(-8px)" fontSize={8} textAlign='center'>{tbValue}</SmallText2>:null}
+
+                        </HBox>
                     </Grid>
-                ))
+                })
             }
 
             <Grid item xs={1} style={{ padding: 2 }}>

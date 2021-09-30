@@ -92,13 +92,13 @@ function OneGame({ match, setEdit }) {
 
         <Grid item xs={5} >
             <VBox>
-                <SmallText>
+                <SmallText textAlign='center'>
                     {match.Player1 ? match.Player1.displayName : ""}
                     {" ו"}
                     {match.Player2 ? match.Player2.displayName : ""}
                 </SmallText>
                 <SmallText>vs</SmallText>
-                <SmallText>
+                <SmallText textAlign='center'>
                     {match.Player3 ? match.Player3.displayName : ""}
                     {" ו"}
                     {match.Player4 ? match.Player4.displayName : ""}

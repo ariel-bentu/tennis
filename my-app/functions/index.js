@@ -9,6 +9,7 @@ const bucket = "gs://atpenn-backup";
 const admin = require("firebase-admin");
 const axios = require("axios");
 const dayjs = require("dayjs");
+// const elo = require("elo-rating");
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
@@ -471,21 +472,42 @@ const handleMatchResultsChange = (change) => {
                 });
             }
         }
-        // console.log(JSON.stringify(updates));
-
 
         if (updates.length > 0) {
             const statsRef = db.collection("stats");
-            statsRef.where(FieldPath.documentId(), "in", updates.map(u => u.email)).get().then(items => {
+            statsRef.where(FieldPath.documentId(), "in", updates.map(u => u.email)).get().then(stats => {
+                // Elo Rating
+
+                // const pair1EloAvg = getEloAvg(stats, dataAfter.Player1.email) + getElo(stats, dataAfter.Player2.email);
+                // const pair2EloAvg = getEloAvg(stats, dataAfter.Player3.email) + getElo(stats, dataAfter.Player4.email);
+
+                // const newEloRating = elo.calculate(pair1EloAvg, pair2EloAvg, true, 32);
+                // const eloDiff = Math.abs(newEloRating.playerRating - pair1EloAvg);
+
+
                 const batch = db.batch();
                 updates.forEach(update => {
-                    const statDoc = items.docs.find(doc => doc.ref.id === update.email);
+                    // const isPair1 = (update.email === dataAfter.Player1.email || update.email === dataAfter.Player2.email);
+                    // let tieFactor = 0;
+                    // if (pair1EloAvg !== pair2EloAvg && update.tie !== 0) {
+                    //     if (pair1EloAvg < pair2EloAvg) {
+                    //         tieFactor = isPair1 ? .5 : -.5;
+                    //     } else {
+                    //         tieFactor = isPair1 ? -.5 : .5;
+                    //     }
+                    // }
+                    // let eloUpdate = update.win * eloDiff;
+                    // eloUpdate += update.lose * (-eloDiff);
+                    // eloUpdate += update.tie * tieFactor * (-eloDiff);
+
+                    const statDoc = stats.docs.find(doc => doc.ref.id === update.email);
                     if (!statDoc || !statDoc.exists) {
                         const docRef = db.collection("stats").doc(update.email);
                         batch.set(docRef, {
                             wins: update.win,
                             loses: update.lose,
                             ties: update.tie,
+                            // elo: 1500 + eloUpdate,
                         });
                     } else {
                         const data = statDoc.data();
@@ -493,6 +515,7 @@ const handleMatchResultsChange = (change) => {
                             wins: data.wins + update.win,
                             loses: data.loses + update.lose,
                             ties: data.ties + update.tie,
+                            // elo: data.elo === undefined ? 1500 + eloUpdate : data.elo + eloUpdate,
                         });
                     }
                 });
@@ -527,7 +550,13 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                     const waitFor = [];
                     // Send SMS on match changes
                     if (!inThePast(matchDate) && isMatchModified(change)) {
+                        let adminMsg = "מנהל קבוצה יקר,\n";
                         if (change.after.exists) {
+                            if (change.before.exists) {
+                                adminMsg += "משחק התעדכן:\n";
+                            } else {
+                                adminMsg += "משחק חדש:\n";
+                            }
                             // all players receive a change notification
                             for (let i = 1; i <= 4; i++) {
                                 const p = change.after.data()["Player" + i];
@@ -550,6 +579,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                 }
                             }
                         } else {
+                            adminMsg += "משחק בוטל:\n";
                             // delete
                             for (let i = 1; i <= 4; i++) {
                                 const p = change.before.data()["Player" + i];
@@ -563,46 +593,74 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                         waitFor.push(
                             db.collection("users").get().then(
                                 (u) => {
-                                    const users = u.docs.map((oneUser) => ({
-                                        email: oneUser.data().email,
-                                        phone: oneUser.data().phone,
-                                        displayName: oneUser.data().displayName,
-                                    }));
-                                    // functions.logger.info(...)
+                                    // load admins to notify too
+                                    return db.collection("admins").where("notifyChanges", "==", true).get().then((adminsToNotify) => {
+                                        const users = u.docs.map((oneUser) => ({
+                                            email: oneUser.data().email,
+                                            phone: oneUser.data().phone,
+                                            displayName: oneUser.data().displayName,
+                                        }));
+                                        const relevantData = change.after.exists ? change.after.data() : change.before.data();
 
-                                    const sendSMSArray = [];
+                                        // functions.logger.info(...)
+                                        adminMsg += `ביום ${relevantData.Day}, ${getNiceDate(relevantData.date)} ב- ${relevantData.Hour} ב${relevantData.Location} במגרש ${relevantData.Court}.`;
 
-                                    for (const [player] of Object.entries(addedOrChanged)) {
-                                        const dataAfter = change.after.data();
+                                        const sendSMSArray = [];
+                                        adminMsg += "\nקיבלו הודעת עדכון: ";
+                                        for (const [player] of Object.entries(addedOrChanged)) {
+                                            const dataAfter = change.after.data();
 
-                                        const user = users.find((u) => u.email === player);
+                                            const user = users.find((u) => u.email === player);
 
-                                        if (user && user.phone != "") {
-                                            const ret = sendSMS(
-                                                getUpdatedMsg(user.displayName, dataAfter.Day,
-                                                    dataAfter.date, dataAfter.Location, dataAfter.Hour,
-                                                    dataAfter.Court,
-                                                    dataAfter.Player1, dataAfter.Player2,
-                                                    dataAfter.Player3, dataAfter.Player4),
-                                                [user.phone]);
+                                            if (user && user.phone != "") {
+                                                const ret = sendSMS(
+                                                    getUpdatedMsg(user.displayName, dataAfter.Day,
+                                                        dataAfter.date, dataAfter.Location, dataAfter.Hour,
+                                                        dataAfter.Court,
+                                                        dataAfter.Player1, dataAfter.Player2,
+                                                        dataAfter.Player3, dataAfter.Player4),
+                                                    [user.phone]);
+                                                sendSMSArray.push(ret);
+                                                adminMsg += user.displayName + ", ";
+                                            }
+                                        }
+
+                                        adminMsg += "\nקיבלו הודעת ביטול: ";
+
+                                        for (const [player] of Object.entries(deleted)) {
+                                            const dataBefore = change.before.data();
+                                            const user = users.find((u) => u.email === player);
+                                            if (user && user.phone != "") {
+                                                const ret = sendSMS(
+                                                    getDeletedMsg(user.displayName, dataBefore.Day,
+                                                        dataBefore.date, dataBefore.Location, dataBefore.Hour,
+                                                        dataBefore.Court),
+                                                    [user.phone]);
+                                                sendSMSArray.push(ret);
+                                                adminMsg += user.displayName + ", ";
+                                            }
+                                        }
+
+                                        adminMsg += "\nלצפיה במשחקים: ";
+                                        adminMsg += " https://tennis.atpenn.com/#1";
+                                        adminMsg += "\nטניס טוב";
+
+                                        const adminPhones = [];
+
+                                        adminsToNotify.docs.forEach(adminDoc => {
+                                            const user = users.find((u) => u.email === adminDoc.ref.id);
+                                            if (user && user.phone != "") {
+                                                adminPhones.push(user.phone);
+                                            }
+                                        });
+
+                                        if (adminPhones.length > 0) {
+                                            const ret = sendSMS(adminMsg, adminPhones);
                                             sendSMSArray.push(ret);
                                         }
-                                    }
 
-                                    for (const [player] of Object.entries(deleted)) {
-                                        const dataBefore = change.before.data();
-                                        const user = users.find((u) => u.email === player);
-                                        if (user && user.phone != "") {
-                                            const ret = sendSMS(
-                                                getDeletedMsg(user.displayName, dataBefore.Day,
-                                                    dataBefore.date, dataBefore.Location, dataBefore.Hour,
-                                                    dataBefore.Court),
-                                                [user.phone]);
-                                            sendSMSArray.push(ret);
-                                        }
-                                    }
-
-                                    return Promise.all(sendSMSArray);
+                                        return Promise.all(sendSMSArray);
+                                    });
                                 },
                                 (err) => functions.logger.error("Users read error:", err)
                             ));
