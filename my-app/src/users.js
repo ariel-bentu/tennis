@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    Header, Text, SmallText, Search
+    Header, Text, SmallText, Search, SmallText2
 } from './elem'
 
 import { Sort } from '@material-ui/icons';
@@ -53,17 +53,24 @@ export default function Users(props) {
             api.getCollection(api.Collections.USERS_INFO_COLLECTION).then(ui => {
                 setUsersInfo(ui)
                 return ui;
-            })
+            }), 
+            api.getCollection(api.Collections.STATS_COLLECTION)
         ]).then(all => {
             let u = all[0];
             u.forEach(oneUser => {
                 let userInfo = all[1].find(ui => ui.email === oneUser.email);
+                let userStats = all[2].find(us => us._ref.id === oneUser.email);
                 if (!userInfo) {
                     oneUser._waitForApproval = true;
                 } else {
                     if (userInfo.inactive) {
                         oneUser._inactive = true;
                     }
+                }
+
+                if (userStats) {
+                    oneUser._elo1 = userStats.elo1;
+                    oneUser._elo2 = userStats.elo2;
                 }
             })
             u.sort(getComparator(sortByRank));
@@ -167,12 +174,19 @@ export default function Users(props) {
                             />
                         </Grid>
                         <Grid item xs={condense ? 2 : 1} style={{ paddingRight: 2, paddingLeft: 2 }}>
+                            <VBox>
                             <InputBase
                                 style={{ backgroundColor: '#F3F3F3' }}
                                 fullWidth={true}
                                 value={user.rank}
                                 onChange={e => updateUserValue(user.email, { rank: e.currentTarget.value })}
                             />
+                            <HBox>
+                                <SmallText2 textAlign={'center'} fontSize={12}>{user._elo1}n</SmallText2>
+                                <Spacer width={15}/>
+                                <SmallText2 textAlign={'center'} fontSize={12}>{user._elo2}</SmallText2>
+                                </HBox>
+                            </VBox>
                         </Grid>
                         <Grid item xs={2}>
                             <VBox>

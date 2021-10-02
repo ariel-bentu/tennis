@@ -9,7 +9,7 @@ const bucket = "gs://atpenn-backup";
 const admin = require("firebase-admin");
 const axios = require("axios");
 const dayjs = require("dayjs");
-// const elo = require("elo-rating");
+const elo = require("elo-rating");
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
@@ -258,7 +258,7 @@ exports.openWeek = functions.region("europe-west1").https.onCall((data, context)
                     const phones = [];
                     all[0].docs.forEach(user => {
                         const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
-                        if (userInfo && !userInfo.data().inactive && user.data().phone.length > 0) {
+                        if (userInfo && !userInfo.data().inactive && user.data().phone && user.data().phone.length > 0) {
                             // Send SMS to active users only
                             phones.push(user.data().phone);
                         }
@@ -476,29 +476,64 @@ const handleMatchResultsChange = (change) => {
         if (updates.length > 0) {
             const statsRef = db.collection("stats");
             statsRef.where(FieldPath.documentId(), "in", updates.map(u => u.email)).get().then(stats => {
+                const getEloAvg = (p1, p2) => {
+                    if (!p1) {
+                        return 0;
+                    }
+                    const p1StatDoc = stats.docs.find(s => s.ref.id === p1.email);
+                    let p1Stat;
+                    if (!p1StatDoc) {
+                        p1Stat = {
+                            elo1: 1500,
+                            elo2: 1500,
+                        };
+                    } else {
+                        p1Stat = {
+                            elo1: p1StatDoc.data().elo1,
+                            elo2: p1StatDoc.data().elo2,
+                        };
+                    }
+
+                    if (!p2) {
+                        return p1Stat;
+                    }
+                    const p2StatDoc = stats.docs.find(s => s.ref.id === p2.email);
+                    let p2Stat;
+                    if (!p2StatDoc) {
+                        p2Stat = {
+                            elo1: 1500,
+                            elo2: 1500,
+                        };
+                    } else {
+                        p2Stat = {
+                            elo1: p2StatDoc.data().elo1,
+                            elo2: p2StatDoc.data().elo2,
+                        };
+                    }
+                    return {
+                        elo1: (p1Stat.elo1 + p2Stat.elo1) / 2,
+                        elo2: (p1Stat.elo2 + p2Stat.elo2) / 2,
+                    };
+                };
+
                 // Elo Rating
+                const pair1EloAvg = getEloAvg(dataAfter.Player1, dataAfter.Player2);
+                const pair2EloAvg = getEloAvg(dataAfter.Player3, dataAfter.Player4);
 
-                // const pair1EloAvg = getEloAvg(stats, dataAfter.Player1.email) + getElo(stats, dataAfter.Player2.email);
-                // const pair2EloAvg = getEloAvg(stats, dataAfter.Player3.email) + getElo(stats, dataAfter.Player4.email);
-
-                // const newEloRating = elo.calculate(pair1EloAvg, pair2EloAvg, true, 32);
-                // const eloDiff = Math.abs(newEloRating.playerRating - pair1EloAvg);
+                const newElo1Rating = elo.calculate(pair1EloAvg.elo1, pair2EloAvg.elo1, true, 32);
+                const newElo2Rating = elo.calculate(pair1EloAvg.elo2, pair2EloAvg.elo2, true, 32);
+                const eloDiff1 = Math.abs(newElo1Rating.playerRating - pair1EloAvg.elo1);
+                const eloDiff2 = Math.abs(newElo2Rating.playerRating - pair1EloAvg.elo2);
 
 
                 const batch = db.batch();
                 updates.forEach(update => {
-                    // const isPair1 = (update.email === dataAfter.Player1.email || update.email === dataAfter.Player2.email);
-                    // let tieFactor = 0;
-                    // if (pair1EloAvg !== pair2EloAvg && update.tie !== 0) {
-                    //     if (pair1EloAvg < pair2EloAvg) {
-                    //         tieFactor = isPair1 ? .5 : -.5;
-                    //     } else {
-                    //         tieFactor = isPair1 ? -.5 : .5;
-                    //     }
-                    // }
-                    // let eloUpdate = update.win * eloDiff;
-                    // eloUpdate += update.lose * (-eloDiff);
-                    // eloUpdate += update.tie * tieFactor * (-eloDiff);
+                    let elo1Update = update.win * eloDiff1;
+                    elo1Update += update.lose * (-eloDiff1);
+
+                    let elo2Update = update.win * eloDiff2;
+                    elo2Update += update.lose * (-eloDiff2);
+
 
                     const statDoc = stats.docs.find(doc => doc.ref.id === update.email);
                     if (!statDoc || !statDoc.exists) {
@@ -507,7 +542,8 @@ const handleMatchResultsChange = (change) => {
                             wins: update.win,
                             loses: update.lose,
                             ties: update.tie,
-                            // elo: 1500 + eloUpdate,
+                            elo1: 1500 + elo1Update,
+                            elo2: 1500 + elo2Update,
                         });
                     } else {
                         const data = statDoc.data();
@@ -515,7 +551,8 @@ const handleMatchResultsChange = (change) => {
                             wins: data.wins + update.win,
                             loses: data.loses + update.lose,
                             ties: data.ties + update.tie,
-                            // elo: data.elo === undefined ? 1500 + eloUpdate : data.elo + eloUpdate,
+                            elo1: data.elo1 === undefined ? 1500 + elo1Update : data.elo1 + elo1Update,
+                            elo2: data.elo2 === undefined ? 1500 + elo2Update : data.elo2 + elo2Update,
                         });
                     }
                 });

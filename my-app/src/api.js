@@ -45,7 +45,7 @@ export async function migrateDate() {
     let batch = db.batch();
 
 
-    return getCollection("matches-archive").then(ma=>getCollection("billing").then(srcData => {
+    return getCollection("matches-archive").then(ma => getCollection("billing").then(srcData => {
         let waitFor = []
         srcData.forEach((srcItem) => {
             // waitFor.push(
@@ -57,21 +57,21 @@ export async function migrateDate() {
             //     })
             // )
             waitFor.push(
-                srcItem._ref.collection("debts").get().then(dts=>{
-                    dts.forEach(p=>{
+                srcItem._ref.collection("debts").get().then(dts => {
+                    dts.forEach(p => {
                         //find date:
-                        let match = ma.find(m=>m._ref.id === p.data().matchID)
+                        let match = ma.find(m => m._ref.id === p.data().matchID)
                         if (match) {
                             //console.log(match.date)
                             let d = dayjs(match.date);
-                            batch.update(p.ref, {date: d.format("YYYY-MM-DD")});    
+                            batch.update(p.ref, { date: d.format("YYYY-MM-DD") });
                         }
                     })
                 })
             )
-            
+
         })
-        return Promise.all(waitFor).then(()=>batch.commit());
+        return Promise.all(waitFor).then(() => batch.commit());
     }))
 }
 
@@ -246,10 +246,10 @@ export async function isAdmin() {
     const isAdmin = app.functions('europe-west1').httpsCallable('isAdmin');
 
     return isAdmin().then(
-        ()=>{
+        () => {
             return true;
-        }, 
-        (err)=>false
+        },
+        (err) => false
     );
 }
 
@@ -688,7 +688,7 @@ export async function getCollection(collName, orderBy, orderDesc) {
     var db = firebase.firestore();
     let colRef = db.collection(collName);
     if (orderBy) {
-        colRef = orderDesc? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
     }
     let i = 1;
     return colRef.get().then((items) => {
@@ -697,7 +697,7 @@ export async function getCollection(collName, orderBy, orderDesc) {
             if (orderBy)
                 obj._order = i++;
 
-            
+
             obj._ref = docObj.ref;
 
             return obj;
@@ -842,7 +842,7 @@ export async function saveUsers(users) {
 
         let batch = db.batch();
 
-        users.forEach(({ dirty, _ref, _inactive, _waitForApproval, _origDisplayName, ...user }) => {
+        users.forEach(({ dirty, _ref, _inactive, _waitForApproval, _origDisplayName, _elo1, _elo2, ...user }) => {
             if (dirty) {
                 user.displayName = user.displayName.trim();
                 batch.set(_ref, user);
