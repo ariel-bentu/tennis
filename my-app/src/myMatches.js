@@ -63,8 +63,9 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 
                                 <Grid container item xs={12} spacing={3} style={{ textAlign: "right" }}>
                                     <Grid item xs={2}>מתי</Grid>
-                                    <Grid item xs={4}>איפה</Grid>
-                                    <Grid item xs={5}>מי נגד מי</Grid>
+                                    <Grid item xs={3}>איפה</Grid>
+                                    <Grid item xs={5}><SmallText fontSize={16} textAlign='center'>מי נגד מי</SmallText></Grid>
+                                    <Grid item xs={2}></Grid>
                                 </Grid>
                                 <HSeparator />
                                 {myMatches? myMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} />):null}

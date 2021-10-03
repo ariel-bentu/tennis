@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Grid } from '@material-ui/core';
+import { Grid, Button } from '@material-ui/core';
 
 import { Spacer, Loading, VBox, HBox, SmallText, SmallText2, HSeparator } from './elem'
 import { getNiceDate } from './utils'
@@ -15,10 +15,11 @@ const Val=(v)=>parseInt(v);
 export default function Matches({ UserInfo, notify, reload, admin }) {
     const [matches, setMatches] = useState(undefined);
     const [edit, setEdit] = useState(undefined);
+    const [more, setMore] = useState(true);
 
     useEffect(() => {
         if (UserInfo) {
-            api.getCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true).then(matches => {
+            api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15).then(matches => {
                 setMatches(matches)
             })
         }
@@ -43,6 +44,18 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
                         :
                         <Loading msg="טוען משחקים" />
                     }
+                    {matches && matches.length > 0 && more? <Button variant="contained" onClick={()=>
+                        api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15, matches[matches.length-1]._doc).then(ms => {
+                            if (ms.length == 0) {
+                                setMore(false);
+                                return;
+                            }
+                            setMatches(oldMatches=>[...oldMatches, ...ms]);
+                            if (ms.length < 15) {
+                                setMore(false);
+                            }
+                        })
+                    }>טען עוד...</Button>:null }
                 </VBox>
             }
 

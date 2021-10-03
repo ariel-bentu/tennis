@@ -103,7 +103,7 @@ export default function Board({ UserInfo, notify }) {
                                 {oneUserStats.ties}
                             </Grid>
                             <Grid item xs={1} alignContent={'flex-start'} >
-                                {Math.floor((oneUserStats.wins / (oneUserStats.wins + oneUserStats.loses + oneUserStats.ties)) * 100) + "%"}
+                                {oneUserStats.wins + oneUserStats.loses + oneUserStats.ties === 0? "0%": (Math.floor((oneUserStats.wins / (oneUserStats.wins + oneUserStats.loses + oneUserStats.ties)) * 100) + "%")}
                             </Grid>
 
                         </Grid>,

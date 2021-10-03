@@ -690,6 +690,7 @@ export async function getCollection(collName, orderBy, orderDesc) {
     if (orderBy) {
         colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
     }
+
     let i = 1;
     return colRef.get().then((items) => {
         return items.docs.map(docObj => {
@@ -699,6 +700,36 @@ export async function getCollection(collName, orderBy, orderDesc) {
 
 
             obj._ref = docObj.ref;
+
+            return obj;
+        })
+    });
+}
+
+export async function getPaginatedCollection(collName, orderBy, orderDesc, limit, startAfter) {
+    var db = firebase.firestore();
+    let colRef = db.collection(collName);
+    if (orderBy) {
+        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+    }
+
+    if (limit) {
+        colRef = colRef.limit(limit);
+    }
+
+    if (startAfter) {
+        colRef = colRef.startAfter(startAfter);
+    }
+    let i = 1;
+    return colRef.get().then((items) => {
+        return items.docs.map(docObj => {
+            let obj = docObj.data();
+            if (orderBy)
+                obj._order = i++;
+
+
+            obj._ref = docObj.ref;
+            obj._doc = docObj;
 
             return obj;
         })
