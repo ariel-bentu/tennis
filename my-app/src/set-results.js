@@ -8,7 +8,9 @@ import { Paper1 } from './elem';
 const isTieBreakSet = (set) => {
     const p1IntVal = parseInt(set.pair1);
     const p2IntVal = parseInt(set.pair2);
-    return !isNaN(p1IntVal) && p1IntVal === 7 || !isNaN(p2IntVal) && p2IntVal === 7;
+    return !isNaN(p1IntVal) && !isNaN(p2IntVal) &&  
+            (p1IntVal === 6 && p2IntVal === 7 ||
+                p1IntVal === 7 && p2IntVal === 6);
 }
 
 const validate = (sets) => {
@@ -50,7 +52,7 @@ const validate = (sets) => {
                 return `סט ${i + 1} אינו חוקי - הכרעה בסט זה אינה חוקית`;
             }
 
-            if (p1 === 7 || p2 === 7) {
+            if (p1 === 6 && p2 === 7 || p1 === 7 && p2 === 6) {
                 const p1TieBreak = parseInt(sets[i].tbPair1)
                 const p2TieBreak = parseInt(sets[i].tbPair2)
 
