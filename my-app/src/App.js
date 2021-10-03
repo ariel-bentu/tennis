@@ -1,5 +1,9 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
+import {
+
+  withStyles
+} from "@material-ui/core/styles";
 import { withOrientationChange } from 'react-device-detect'
 
 import { Alert, AlertTitle } from '@material-ui/lab';
@@ -36,6 +40,18 @@ import 'firebase/auth';
 
 //firebase.initializeApp(config);
 api.initAPI();
+
+const ResponsiveTab = withStyles({
+  root: {
+    minWidth: 65,
+    width: 65
+  }
+})(Tab);
+
+
+
+
+
 
 let App = props => {
   const [admin, setAdmin] = useState(false);
@@ -94,10 +110,7 @@ let App = props => {
     }
 
   }
-  const { isLandscape } = props;
-
-
-
+  
   return (
     <div className="App" dir="rtl" >
 
@@ -186,28 +199,28 @@ let App = props => {
                       <Tab label={"חובות"} />
                     </Tabs>,
                     <TabPanel key={"0"} value={adminTab} index={0} >
-                      {adminTab === 0 ? <Admin notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                      {adminTab === 0 ? <Admin notify={notify}  windowSize={windowSize} /> : null}
                     </TabPanel>,
                     <TabPanel key={"1"} value={adminTab} index={1} >
-                      <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                      <Match notify={notify}  windowSize={windowSize} />
                     </TabPanel>,
                     <TabPanel key={"2"} value={adminTab} index={2} >
-                      {adminTab === 2 ? <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                      {adminTab === 2 ? <Users notify={notify}  windowSize={windowSize} /> : null}
                     </TabPanel>,
                     <TabPanel key={"3"} value={adminTab} index={3} >
-                      {adminTab === 3 ? <Billing notify={notify} isLandscape={isLandscape} windowSize={windowSize} /> : null}
+                      {adminTab === 3 ? <Billing notify={notify}  windowSize={windowSize} /> : null}
                     </TabPanel>
                     ]
                   }}
                 />
                 <Route path="/match-test">
-                  <Match notify={notify} test={true} isLandscape={isLandscape} windowSize={windowSize} />
+                  <Match notify={notify} test={true}  windowSize={windowSize} />
                 </Route>
                 <Route path="/match">
-                  <Match notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                  <Match notify={notify}  windowSize={windowSize} />
                 </Route>
                 <Route path="/users">
-                  <Users notify={notify} isLandscape={isLandscape} windowSize={windowSize} />
+                  <Users notify={notify}  windowSize={windowSize} />
                 </Route>
                 <Route path="/"
                   children={(props) => {
@@ -220,29 +233,29 @@ let App = props => {
                         indicatorColor="primary"
                         textColor="primary"
                         scrollButtons="auto"
-                        variant="fullWidth"
+                        variant="scrollable"
 
                       >
-                        <Tab label={"רישום"} icon={<PlaylistAdd />} />
-                        <Tab label={"מתוכנן"} icon={<CalendarToday />} />
-                        <Tab label={"משחקים"} icon={<SportsTennis />} />
-                        <Tab label={"לוח"} icon={<BarChart />} />
-                        <Tab label={"חוב"} icon={<AttachMoney />} />
+                        <ResponsiveTab  label={"רישום"} icon={<PlaylistAdd />} />
+                        <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
+                        <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
+                        <ResponsiveTab label={"לוח"} icon={<BarChart />} />
+                        <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
                       </Tabs>,
                       <TabPanel key="0" value={tab} index={0} >
                         <Register notify={notify} UserInfo={userInfo} />
                       </TabPanel>,
                       <TabPanel key="1" value={tab} index={1} >
-                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={()=>{
-                          setAllGamesReload(i=>i+1);
-                        }}/> : null}
+                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={() => {
+                          setAllGamesReload(i => i + 1);
+                        }} /> : null}
                       </TabPanel>,
                       <TabPanel key="2" value={tab} index={2} >
-                      {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} admin={admin} reload={allGamesReload}/> : null}
-                    </TabPanel>,
-                     <TabPanel key="3" value={tab} index={3} >
-                     {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
-                   </TabPanel>,
+                        {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} admin={admin} reload={allGamesReload} /> : null}
+                      </TabPanel>,
+                      <TabPanel key="3" value={tab} index={3} >
+                        {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
+                      </TabPanel>,
                       <TabPanel key="4" value={tab} index={4}>
                         {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
                       </TabPanel>
@@ -283,6 +296,7 @@ let App = props => {
     </div>
   );
 }
-App = withOrientationChange(App);
+// App = withOrientationChange(App);
 
 export default App;
+

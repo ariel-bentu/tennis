@@ -8,9 +8,9 @@ import { Paper1 } from './elem';
 const isTieBreakSet = (set) => {
     const p1IntVal = parseInt(set.pair1);
     const p2IntVal = parseInt(set.pair2);
-    return !isNaN(p1IntVal) && !isNaN(p2IntVal) &&  
-            (p1IntVal === 6 && p2IntVal === 7 ||
-                p1IntVal === 7 && p2IntVal === 6);
+    return !isNaN(p1IntVal) && !isNaN(p2IntVal) &&
+        (p1IntVal === 6 && p2IntVal === 7 ||
+            p1IntVal === 7 && p2IntVal === 6);
 }
 
 const validate = (sets) => {
@@ -47,21 +47,23 @@ const validate = (sets) => {
                 return `סט ${i + 1} אינו חוקי - יש להזין סט רק אם שוחק עד הכרעה`;
             }
 
-            if ((Math.abs(p1 - p2) === 1 && p1 < 7 && p2 < 7) ||
-                (p1 == 7 && p2 != 6 || p2 == 7 && p1 != 6)) {
+            if (p1 == 7 && p2 < 5 ||
+                p1 < 5 && p2 == 7) {
                 return `סט ${i + 1} אינו חוקי - הכרעה בסט זה אינה חוקית`;
             }
+
+            const notEmpty = (val) => val !== undefined && val !== "";
 
             if (p1 === 6 && p2 === 7 || p1 === 7 && p2 === 6) {
                 const p1TieBreak = parseInt(sets[i].tbPair1)
                 const p2TieBreak = parseInt(sets[i].tbPair2)
 
-                if ((sets[i].tbPair1 !== "" && isNaN(p1TieBreak)) ||
-                    (sets[i].tbPair2 !== "" && isNaN(p2TieBreak))) {
+                if ((notEmpty(sets[i].tbPair1) && isNaN(p1TieBreak)) ||
+                    (notEmpty(sets[i].tbPair2) && isNaN(p2TieBreak))) {
                     return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון - יש להזין ספרות בלבד`;
                 }
-                if ((sets[i].tbPair1 !== "" && sets[i].tbPair2 === "") ||
-                    (sets[i].tbPair1 === "" && sets[i].tbPair2 !== "")) {
+                if ((notEmpty(sets[i].tbPair1) && !notEmpty(sets[i].tbPair2)) ||
+                    (!notEmpty(sets[i].tbPair1) && notEmpty(sets[i].tbPair2))) {
                     return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון חלקית`;
                 }
 
