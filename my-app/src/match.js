@@ -22,7 +22,7 @@ import { TouchBackend } from 'react-dnd-touch-backend'
 import { isMobile } from 'react-device-detect';
 import { Delete, ExpandMore } from '@material-ui/icons';
 
-import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay, sortByDays } from './utils'
+import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay, sortByDays, getNiceDate } from './utils'
 
 import * as api from './api'
 
@@ -314,7 +314,7 @@ export default function Match(props) {
                                 <List style={{ margin: 5, height: '30%' }}>
                                     {games.map((game) => (
                                         <ListItem key={game.id}
-                                            style={{ display:'flex', width: '100%', textAlign:'right', textDecorationLine: game.disabled? 'line-through':'none' }}
+                                            style={{ display: 'flex', width: '100%', textAlign: 'right', textDecorationLine: game.disabled ? 'line-through' : 'none' }}
                                             button
                                             selected={currentGame === game.id}
                                             onClick={() => setCurrentGame(game.id)}
@@ -386,17 +386,14 @@ export default function Match(props) {
                                                                     autoOk
                                                                     //open={true}
                                                                     keyboardIcon={undefined}
-
-
-                                                                    format={"yyyy-mm-dd"}
-
+                                                                    format={"yyyy-MM-dd"}
                                                                     inputValue={match.date}
                                                                     onChange={d => {
                                                                         updateMatchValue(match.id, { date: dayjs(d).format("YYYY-MM-DD") })
                                                                     }
                                                                     }
                                                                 />}
-                                                                {match._collapse ? null : <SmallText fontSize={12}>{match.date}</SmallText>}
+                                                                {match._collapse ? null : <SmallText fontSize={12}>{getNiceDate(match.date)}</SmallText>}
                                                                 {/* <InputBase
                                                                 style={{ backgroundColor: '#F3F3F3', fontSize: 12 }}
                                                                 fullWidth={true}

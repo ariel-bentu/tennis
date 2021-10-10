@@ -1,5 +1,6 @@
 import firebase from 'firebase/app'
 import 'firebase/auth';
+import 'firebase/messaging';
 import 'firebase/firestore';
 import 'firebase/functions';
 
@@ -30,14 +31,85 @@ export const Collections = {
 const SYSTEM_RECORD_REGISTRATION = "registration"
 
 let app = undefined;
-//let functions = undefined;
 
-export function initAPI() {
+export function initAPI(onPushNotification, onNotificationToken) {
     if (!app) {
         app = firebase.initializeApp({ ...config });
-        // functions = getFunctions(app)
+
+        try {
+            if ('safari' in window && 'pushNotification' in window.safari) {
+                
+            } else {
+                const messaging = firebase.messaging(app);
+                Notification.requestPermission().then(perm => {
+                    if (perm == "granted") {
+                        console.log("permission granted");
+                        messaging.getToken({ vapidKey: 'BFMK8mjTcp6ArpTF4QNhnXwo387CzIADR9WmybUvlf5yXI2NExGdTFsvD4_KHZ-3CWLF4gRq19VQTngTsREWYl8' }).then((currentToken) => {
+                            if (currentToken) {
+                                // Send the token to your server and update the UI if necessary
+                                console.log("Web notification", currentToken);
+                                if (onNotificationToken) {
+                                    onNotificationToken(currentToken);
+                                }
+                            } else {
+                                // Show permission request UI
+                                console.log('No registration token available. Request permission to generate one.');
+                                // ...
+                            }
+                        }).catch((err) => {
+                            console.log('An error occurred while retrieving token. ', err);
+                            // ...
+                        });
+                    } else {
+                        console.log("Permission denied to notifications");
+                    }
+
+                    messaging.onMessage((payload) => {
+                        console.log('Message received. ', JSON.stringify(payload));
+                        //alert(payload);
+                        if (onPushNotification) {
+                            onPushNotification(payload);
+                        }
+                    });
+                });
+            }
+        } catch (err) {
+            console.log("Cannot initialize messaging", err.message);
+        }
     }
 }
+
+export const checkSafariRemotePermission = (permissionData) => {
+    if (permissionData.permission === 'default') {
+        // This is a new web service URL and its validity is unknown.
+        window.safari.pushNotification.requestPermission(
+            'https://tennis.atpenn.com', // The web service URL.
+            'web.com.atpenn',     // The Website Push ID.
+            {}, // Data that you choose to send to your server to help you identify the user.
+            checkSafariRemotePermission         // The callback function.
+        );
+    }
+    else if (permissionData.permission === 'denied') {
+        // The user said no.
+    }
+    else if (permissionData.permission === 'granted') {
+        // The web service URL is a valid push provider, and the user said yes.
+        // permissionData.deviceToken is now available to use.
+        console.log("Safari push is ready. deviceToken:", permissionData.deviceToken);
+        return permissionData.deviceToken;
+    }
+    return undefined;
+};
+
+export async function updateUserNotificationToken(email, newNotificationToken) {
+    var db = firebase.firestore();
+    let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(email);
+
+    return docRef.update({
+        notificationToken: newNotificationToken
+    });
+}
+
 
 export async function migrateDate() {
 
@@ -256,14 +328,14 @@ export async function isAdmin() {
 /*
 export async function openWeekForMatch() {
   let gameTarif = await getGameTarif();
-
+ 
     return getCollection(Collections.MATCHES_COLLECTION).then(srcData => {
         var db = firebase.firestore();
         var batch = db.batch();
         let debtUpdateMap = {}
-
+ 
         return getCollection(Collections.BILLING_COLLECTION).then(billing => {
-
+ 
             //Add Debt for each player
             srcData.forEach((match) => {
                 let isSingles = !match.Player2 && !match.Player4;
@@ -280,12 +352,12 @@ export async function openWeekForMatch() {
                     }
                 }
             });
-
-
+ 
+ 
             //update the balance field
             for (const [email, addToBalance] of Object.entries(debtUpdateMap)) {
                 let billingRecord = billing.find(b => b._ref.id === email);
-
+ 
                 if (billingRecord) {
                     batch.update(billingRecord._ref, { balance: billingRecord.balance - addToBalance });
                 } else {
@@ -293,7 +365,7 @@ export async function openWeekForMatch() {
                     batch.set(newBillingRecord, { balance: -addToBalance });
                 }
             }
-
+ 
             //move to archive
             srcData.forEach(({ _ref, ...item }) => {
                 let docRef = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION).doc(_ref.id);
@@ -301,14 +373,14 @@ export async function openWeekForMatch() {
                 batch.set(docRef, newItem);
                 batch.delete(_ref);
             })
-
+ 
             return batch.commit();
         })
     });
 }
-
-
-
+ 
+ 
+ 
 async function getGameTarif() {
     var db = firebase.firestore();
     let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_BILLING);

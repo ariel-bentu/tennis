@@ -10,9 +10,16 @@ const admin = require("firebase-admin");
 const axios = require("axios");
 const dayjs = require("dayjs");
 const elo = require("elo-rating");
+const apn = require("apn");
+const fs = require("fs");
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
+
+const express = require("express");
+const app = express();
+
+app.use(express.json());
 
 admin.initializeApp({
     credential: admin.credential.applicationDefault(),
@@ -24,6 +31,25 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+
+app.post("/v2/devices/:deviceToken//web.com.atpenn", (req, res) => {
+    const deviceToken = req.params.deviceToken;
+    functions.logger.info("POST /v2/devices/deviceToken", deviceToken, JSON.stringify(req.body));
+    res.send("Device token post received");
+});
+
+app.delete("/v2/devices/:deviceToken//web.com.atpenn", (req, res) => {
+    const deviceToken = req.params.deviceToken;
+    functions.logger.info("DELETE /v2/devices/deviceToken", deviceToken, JSON.stringify(req.body));
+    res.send("Device token delete received");
+});
+
+app.post("/:version/log", (req, res) => {
+    functions.logger.info("Safari Notification log", req.body.logs);
+    res.send("logged");
+});
+
+exports.httpApp = functions.https.onRequest(app);
 
 const getGameTariff = () => {
     const docRef = db.collection("systemInfo").doc("Billing");
@@ -112,6 +138,71 @@ ${team}
 לצפיה במשחקים שלך כנס לאפליקציה.
 https://tennis.atpenn.com
 טניס טוב!`;
+};
+
+const sendNotification = (title, body, devices, link) => {
+    const postData = {
+        "notification": {
+            "title": title,
+            "body": body,
+            "click_action": link,
+            "icon": "https://tennis.atpenn.com/favicon.ico",
+        },
+        "webpush": link ? {
+            "fcm_options": {
+                "link": link,
+            },
+        } : undefined,
+    };
+
+    const headers = {
+        "Authorization": functions.config().notification.serverkey,
+        "Content-Type": "application/json",
+    };
+    const waitFor = [];
+    devices.forEach(device => {
+        postData.to = device;
+        waitFor.push(
+            axios.post("https://fcm.googleapis.com/fcm/send ", postData, {
+                headers,
+            })
+        );
+    });
+    return Promise.all(waitFor);
+};
+
+const sendSafaryNotification = (title, body, deviceTokens, link) => {
+    const p12 = fs.readFileSync("cert_with_pk.p12");
+    if (!p12 || !p12.length || p12.length === 0) {
+        functions.logger.info("Safari Notification", deviceTokens, "failed loading cert");
+    } else {
+        functions.logger.info("Safari Notification", deviceTokens);
+    }
+    const options = {
+        pfx: fs.readFileSync("cert_with_pk.p12"),
+        passphrase: functions.config().notification.passphrase,
+        production: true,
+    };
+
+    const apnProvider = new apn.Provider(options);
+
+    const note = new apn.Notification();
+
+    note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+    note.alert = {
+        title,
+        body,
+    };
+    note.topic = "web.com.atpenn";
+    note.urlArgs = [link];
+
+    const waitFor = [];
+    deviceTokens.forEach(deviceToken => {
+        waitFor.push(
+            apnProvider.send(note, deviceToken)
+        );
+    });
+    return Promise.all(waitFor).then(()=>apnProvider.shutdown());
 };
 
 const sendSMS = (msg, numbers) => {
@@ -564,6 +655,25 @@ const handleMatchResultsChange = (change) => {
     });
 };
 
+exports.notificationAdded = functions.region("europe-west1").firestore
+    .document("notifications/{notifID}")
+    .onCreate((snapshot, context) => {
+        const usersInfoRef = db.collection("users-info");
+        return usersInfoRef.where(FieldPath.documentId(), "in", snapshot.data().to).get().then(users => {
+            const devices = users.docs.filter(u1 => u1.data().notificationToken).map(u2 => u2.data().notificationToken);
+
+            const webPushDevices = devices.filter(d => d !== undefined && d !== "" && !d.startsWith("SAFARI:"));
+            const safariPushDevices = devices.filter(d => d !== undefined && d !== "" && d.startsWith("SAFARI:")).map(d2 => d2.substr(7));
+            const waitFor = [];
+            if (webPushDevices.length > 0) {
+                waitFor.push(sendNotification(snapshot.data().title, snapshot.data().body, webPushDevices, snapshot.data().link));
+            }
+            if (safariPushDevices.length > 0) {
+                waitFor.push(sendSafaryNotification(snapshot.data().title, snapshot.data().body, safariPushDevices, snapshot.data().link));
+            }
+            return Promise.all(waitFor);
+        });
+    });
 
 exports.matchUpdated = functions.region("europe-west1").firestore
     .document("matches/{matchID}")
@@ -643,7 +753,8 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                         adminMsg += `ביום ${relevantData.Day}, ${getNiceDate(relevantData.date)} ב- ${relevantData.Hour} ב${relevantData.Location} במגרש ${relevantData.Court}.`;
 
                                         const sendSMSArray = [];
-                                        adminMsg += "\nקיבלו הודעת עדכון: ";
+                                        let adminHeader = false;
+
                                         for (const [player] of Object.entries(addedOrChanged)) {
                                             const dataAfter = change.after.data();
 
@@ -658,12 +769,16 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                                         dataAfter.Player3, dataAfter.Player4),
                                                     [user.phone]);
                                                 sendSMSArray.push(ret);
+                                                if (!adminHeader) {
+                                                    adminHeader = true;
+                                                    adminMsg += "\nקיבלו הודעת עדכון: ";
+                                                }
                                                 adminMsg += user.displayName + ", ";
                                             }
                                         }
 
-                                        adminMsg += "\nקיבלו הודעת ביטול: ";
 
+                                        adminHeader = false;
                                         for (const [player] of Object.entries(deleted)) {
                                             const dataBefore = change.before.data();
                                             const user = users.find((u) => u.email === player);
@@ -674,6 +789,11 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                                         dataBefore.Court),
                                                     [user.phone]);
                                                 sendSMSArray.push(ret);
+
+                                                if (!adminHeader) {
+                                                    adminHeader = true;
+                                                    adminMsg += "\nקיבלו הודעת ביטול: ";
+                                                }
                                                 adminMsg += user.displayName + ", ";
                                             }
                                         }

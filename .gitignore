@@ -7,6 +7,12 @@ local-admin.js
 my-app/node_modules
 /.pnp
 .pnp.js
+*.cer 
+*.pem
+*.p12
+
+my-app/public/*.zip
+**/website.json
 
 # testing
 /coverage

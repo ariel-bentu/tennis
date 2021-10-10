@@ -3,6 +3,7 @@ import { Button, CssBaseline, FormControlLabel, Table, TableHead, TableRow, Tabl
 import Container from '@material-ui/core/Container';
 
 import { IOSSwitch, Loading, Spacer, Header, VBox, MyTableCell, Text } from './elem';
+import { sortByDays } from './utils';
 
 import * as api from './api'
 
@@ -18,7 +19,7 @@ export default function Admin(props) {
         api.getRegistrationOpen().then(val => setRegistrationOpen(val));
 
         api.getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
-            games.sort((g1, g2) => g1.id - g2.id);
+            games.sort((a, b) => sortByDays(a.Day, b.Day));
             setGames(games);
         });
     }, [reload]);
@@ -26,9 +27,8 @@ export default function Admin(props) {
 
     return (<Container component="main" maxWidth="xs">
         <CssBaseline />
-        <Header>ניהול שבוע</Header>
-        <Spacer height={30} />
         <VBox>
+            <Spacer width={20} />
             <FormControlLabel
                 control={<IOSSwitch
                     checked={registrationOpen}
@@ -45,7 +45,8 @@ export default function Admin(props) {
                 label="הרשמה פתוחה"
             />
 
-            <Text>ימים פעילים</Text>
+            <Spacer width={20} />
+
             <Table >
                 <TableHead>
                     <TableRow>
@@ -80,8 +81,8 @@ export default function Admin(props) {
                     : null}
             </Table>
 
-            
 
+            <Spacer width={20}/>
             <Button variant="contained" onClick={() => {
                 props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת רישום", [
                     {

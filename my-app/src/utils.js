@@ -102,7 +102,7 @@ export function getShortDay(day) {
 
 export function getMatchDate(match) {
     let begin = dayjs()
-    if (begin.day() === 6) {
+    if (begin.day() === 6 && match.Day !== 'שבת') {
         begin = begin.startOf('week').add(1, 'week');
     } else {
         begin = dayjs().startOf('week');

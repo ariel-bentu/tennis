@@ -12,6 +12,22 @@
     ],
     "rewrites": [
       {
+        "source": "/v2/pushPackages/web.com.atpenn",
+        "destination": "/safariPushPackage.zip"
+      },
+      {
+        "source": "/v2/devices/**",
+        "function": "httpApp"
+      },
+      {
+        "source": "/v2/log",
+        "function": "httpApp"
+      },
+      {
+        "source": "/v1/log",
+        "function": "httpApp"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
