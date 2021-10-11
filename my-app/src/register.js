@@ -18,6 +18,7 @@ export default function Register(props) {
   const [timer, setTimer] = useState(undefined);
   const [registrationOpen, setRegistrationOpen] = useState(false);
 
+  // eslint-disable-next-line no-unused-vars
   const [lastReloaded, setLastReloaded] = useState(dayjs());
   const [reload, setReload] = useState(1);
 
@@ -25,7 +26,7 @@ export default function Register(props) {
     window.addEventListener('focus', () => {
       setLastReloaded(lr => {
         if (lr.diff(dayjs(), 'minute') < -10) {
-          setReload(old=>old+1);
+          setReload(old => old + 1);
           return dayjs();
         }
         return lr;

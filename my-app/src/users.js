@@ -17,6 +17,7 @@ export default function Users(props) {
 
     const [users, setUsers] = useState([]);
     const [filter, setFilter] = useState(undefined);
+    // eslint-disable-next-line no-unused-vars
     const [usersInfo, setUsersInfo] = useState(undefined);
     const [submitInProcess, setSubmitInProcess] = useState(false);
     const [addMode, setAddMode] = useState(false);
@@ -26,23 +27,33 @@ export default function Users(props) {
     const [paymentUser, setPaymentUser] = useState(undefined);
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [paymentComment, setPaymentComment] = useState("");
-    const [sortByRank, setSortByRank] = useState(false);
+    const [sortBy, setSortBy] = useState(0); // 0 is sortByName
+    // eslint-disable-next-line no-unused-vars
     const [refresh, setRefresh] = useState(1);
 
-    const getComparator = (byRank) => {
-        return byRank ?
-            (u1, u2) => u1.rank - u2.rank :
-            (u1, u2) => (u1.displayName > u2.displayName ? 1 : -1)
+    const getComparator = (_sortBy) => {
+        switch (_sortBy) {
+            case 0:
+                return (u1, u2) => (u1.displayName > u2.displayName ? 1 : -1);
+            case 1:
+                return (u1, u2) => u1.rank - u2.rank;
+            case 2:
+                return (u1, u2) => u2._elo1 - u1._elo1;
+            case 3:
+                return (u1, u2) => u2._elo2 - u1._elo2;
+            default:
+                return undefined;
+        }
     }
 
     useEffect(() => {
         setUsers(u => {
-            u.sort(getComparator(sortByRank))
+            u.sort(getComparator(sortBy))
             return u;
         });
 
         setRefresh(old => old + 1);
-    }, [sortByRank]);
+    }, [sortBy]);
 
     useEffect(() => {
         Promise.all([
@@ -53,7 +64,7 @@ export default function Users(props) {
             api.getCollection(api.Collections.USERS_INFO_COLLECTION).then(ui => {
                 setUsersInfo(ui)
                 return ui;
-            }), 
+            }),
             api.getCollection(api.Collections.STATS_COLLECTION)
         ]).then(all => {
             let u = all[0];
@@ -73,10 +84,10 @@ export default function Users(props) {
                     oneUser._elo2 = userStats.elo2;
                 }
             })
-            u.sort(getComparator(sortByRank));
+            u.sort(getComparator(sortBy));
             setUsers(u);
         });
-
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     let updateUserValue = (email, fragment, ignoreDirty) => {
@@ -98,9 +109,9 @@ export default function Users(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
-                <HBox style={{ width:'100%', justifyContent: 'space-between' }}>
+                <HBox style={{ width: '100%', justifyContent: 'space-between' }}>
                     <Search value={filter} onChange={val => setFilter(val)} />
-                    <Button variant="contained" 
+                    <Button variant="contained"
                         onClick={() => setAddMode(true)}
                         style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button>
                 </HBox>
@@ -109,15 +120,21 @@ export default function Users(props) {
                         <Grid item xs={condense ? 5 : 3}>
                             <HBox style={{ justifyContent: 'space-between' }}>
                                 <SmallText>שם</SmallText>
-                                <Sort onClick={() => setSortByRank(false)} />
+                                <Sort style={{ color: sortBy === 0 ? "red" : "black" }} onClick={() => setSortBy(0)} />
                             </HBox>
                         </Grid>
                         {condense ? null : <Grid item xs={4}>אימייל</Grid>}
                         <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
                         <Grid item xs={condense ? 2 : 1}>
                             <HBox style={{ justifyContent: 'space-between' }}>
-                                <SmallText>דירוג</SmallText>
-                                <Sort onClick={() => setSortByRank(true)} />
+                                <SmallText>{"דירוג" + (sortBy === 2 ? "(e)" : sortBy === 3 ? "(e.n)" : "")}</SmallText>
+                                <Sort style={{ color: sortBy > 0 ? "red" : "black" }} onClick={() => setSortBy(oldSort => {
+                                    let newSort = oldSort + 1;
+                                    if (newSort > 3) {
+                                        newSort = 1;
+                                    }
+                                    return newSort;
+                                })} />
                             </HBox>
                         </Grid>
                         <Grid item xs={2}>
@@ -175,16 +192,16 @@ export default function Users(props) {
                         </Grid>
                         <Grid item xs={condense ? 2 : 1} style={{ paddingRight: 2, paddingLeft: 2 }}>
                             <VBox>
-                            <InputBase
-                                style={{ backgroundColor: '#F3F3F3' }}
-                                fullWidth={true}
-                                value={user.rank}
-                                onChange={e => updateUserValue(user.email, { rank: e.currentTarget.value })}
-                            />
-                            <HBox>
-                                <SmallText2 textAlign={'center'} fontSize={12}>{user._elo1}n</SmallText2>
-                                <Spacer width={15}/>
-                                <SmallText2 textAlign={'center'} fontSize={12}>{user._elo2}</SmallText2>
+                                <InputBase
+                                    style={{ backgroundColor: '#F3F3F3' }}
+                                    fullWidth={true}
+                                    value={user.rank}
+                                    onChange={e => updateUserValue(user.email, { rank: e.currentTarget.value })}
+                                />
+                                <HBox>
+                                    <SmallText2 textAlign={'center'} fontSize={12}>{user._elo1}n</SmallText2>
+                                    <Spacer width={15} />
+                                    <SmallText2 textAlign={'center'} fontSize={12}>{user._elo2}</SmallText2>
                                 </HBox>
                             </VBox>
                         </Grid>
@@ -255,7 +272,7 @@ export default function Users(props) {
                                 () => {
                                     props.notify.success("נשמר בהצלחה")
                                     api.getCollection(api.Collections.USERS_COLLECTION).then(u => {
-                                        u.sort(getComparator(sortByRank));
+                                        u.sort(getComparator(sortBy));
                                         setUsers(u);
                                     });
                                     setAddMode(false);

@@ -40,6 +40,7 @@ app.post("/v2/devices/:deviceToken//web.com.atpenn", (req, res) => {
 
 app.delete("/v2/devices/:deviceToken//web.com.atpenn", (req, res) => {
     const deviceToken = req.params.deviceToken;
+
     functions.logger.info("DELETE /v2/devices/deviceToken", deviceToken, JSON.stringify(req.body));
     res.send("Device token delete received");
 });
@@ -150,7 +151,7 @@ const sendNotification = (title, body, devices, link) => {
         },
         "webpush": link ? {
             "fcm_options": {
-                "link": link,
+                "link": "https://tennis.atpenn.com/" + link,
             },
         } : undefined,
     };
@@ -179,7 +180,7 @@ const sendSafaryNotification = (title, body, deviceTokens, link) => {
         functions.logger.info("Safari Notification", deviceTokens);
     }
     const options = {
-        pfx: fs.readFileSync("cert_with_pk.p12"),
+        pfx: p12,
         passphrase: functions.config().notification.passphrase,
         production: true,
     };
@@ -202,7 +203,7 @@ const sendSafaryNotification = (title, body, deviceTokens, link) => {
             apnProvider.send(note, deviceToken)
         );
     });
-    return Promise.all(waitFor).then(()=>apnProvider.shutdown());
+    return Promise.all(waitFor).then(() => apnProvider.shutdown());
 };
 
 const sendSMS = (msg, numbers) => {
@@ -453,6 +454,7 @@ const handleMatchResultsChange = (change) => {
         }
         */
 
+        let winner = 0;
         if (dataBefore.sets !== undefined) {
             // Sets existed before - find changes, calculate and update players stats
             const winnerBefore = calcWinner(dataBefore.sets);
@@ -462,6 +464,7 @@ const handleMatchResultsChange = (change) => {
                 resolve();
                 return;
             }
+            winner = winnerAfter;
 
             // Pair1
             //   winBefore  | winAfter
@@ -497,6 +500,7 @@ const handleMatchResultsChange = (change) => {
 
             if (dataAfter.Player1) {
                 updates.push({
+                    _pair: 1,
                     email: dataAfter.Player1.email,
                     win: winVal,
                     lose: loseVal,
@@ -505,6 +509,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player2) {
                 updates.push({
+                    _pair: 1,
                     email: dataAfter.Player2.email,
                     win: winVal,
                     lose: loseVal,
@@ -513,6 +518,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player3) {
                 updates.push({
+                    _pair: 2,
                     email: dataAfter.Player3.email,
                     win: loseVal,
                     lose: winVal,
@@ -521,6 +527,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player4) {
                 updates.push({
+                    _pair: 2,
                     email: dataAfter.Player4.email,
                     win: loseVal,
                     lose: winVal,
@@ -529,9 +536,10 @@ const handleMatchResultsChange = (change) => {
             }
         } else {
             // Sets now added - calculate and save players stats
-            const winner = calcWinner(dataAfter.sets);
+            winner = calcWinner(dataAfter.sets);
             if (dataAfter.Player1) {
                 updates.push({
+                    _pair: 1,
                     email: dataAfter.Player1.email,
                     win: winner === 1 ? 1 : 0,
                     lose: winner === 2 ? 1 : 0,
@@ -540,6 +548,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player2) {
                 updates.push({
+                    _pair: 1,
                     email: dataAfter.Player2.email,
                     win: winner === 1 ? 1 : 0,
                     lose: winner === 2 ? 1 : 0,
@@ -548,6 +557,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player3) {
                 updates.push({
+                    _pair: 2,
                     email: dataAfter.Player3.email,
                     win: winner === 2 ? 1 : 0,
                     lose: winner === 1 ? 1 : 0,
@@ -556,6 +566,7 @@ const handleMatchResultsChange = (change) => {
             }
             if (dataAfter.Player4) {
                 updates.push({
+                    _pair: 2,
                     email: dataAfter.Player4.email,
                     win: winner === 2 ? 1 : 0,
                     lose: winner === 1 ? 1 : 0,
@@ -611,20 +622,24 @@ const handleMatchResultsChange = (change) => {
                 const pair1EloAvg = getEloAvg(dataAfter.Player1, dataAfter.Player2);
                 const pair2EloAvg = getEloAvg(dataAfter.Player3, dataAfter.Player4);
 
-                const newElo1Rating = elo.calculate(pair1EloAvg.elo1, pair2EloAvg.elo1, true, 32);
-                const newElo2Rating = elo.calculate(pair1EloAvg.elo2, pair2EloAvg.elo2, true, 32);
-                const eloDiff1 = Math.abs(newElo1Rating.playerRating - pair1EloAvg.elo1);
-                const eloDiff2 = Math.abs(newElo2Rating.playerRating - pair1EloAvg.elo2);
+                const newElo1Rating = elo.calculate(pair1EloAvg.elo1, pair2EloAvg.elo1, winner === 1, 32);
+                const newElo2Rating = elo.calculate(pair1EloAvg.elo2, pair2EloAvg.elo2, winner === 1, 32);
+
+                const eloDiff1_p1_2 = Math.abs(newElo1Rating.playerRating - pair1EloAvg.elo1);
+                const eloDiff1_p3_4 = Math.abs(newElo1Rating.opponentRating - pair2EloAvg.elo1);
+                const eloDiff2_p1_2 = Math.abs(newElo2Rating.playerRating - pair1EloAvg.elo2);
+                const eloDiff2_p3_4 = Math.abs(newElo2Rating.opponentRating - pair2EloAvg.elo2);
 
 
                 const batch = db.batch();
                 updates.forEach(update => {
+                    const eloDiff1 = update._pair == 1 ? eloDiff1_p1_2 : eloDiff1_p3_4;
+                    const eloDiff2 = update._pair == 1 ? eloDiff2_p1_2 : eloDiff2_p3_4;
                     let elo1Update = update.win * eloDiff1;
                     elo1Update += update.lose * (-eloDiff1);
 
                     let elo2Update = update.win * eloDiff2;
                     elo2Update += update.lose * (-eloDiff2);
-
 
                     const statDoc = stats.docs.find(doc => doc.ref.id === update.email);
                     if (!statDoc || !statDoc.exists) {
@@ -659,11 +674,38 @@ exports.notificationAdded = functions.region("europe-west1").firestore
     .document("notifications/{notifID}")
     .onCreate((snapshot, context) => {
         const usersInfoRef = db.collection("users-info");
-        return usersInfoRef.where(FieldPath.documentId(), "in", snapshot.data().to).get().then(users => {
-            const devices = users.docs.filter(u1 => u1.data().notificationToken).map(u2 => u2.data().notificationToken);
+        // return usersInfoRef.where(FieldPath.documentId(), "in", snapshot.data().to).get().then(users => {
+        return usersInfoRef.get().then(users => {
+            const to = snapshot.data().to;
+            const webPushDevices = [];
+            const safariPushDevices = [];
+            to.forEach(sentToUser => {
+                if (sentToUser === "all") {
+                    users.docs.forEach(user => {
+                        if (user && user.data().notificationTokens) {
+                            user.data().notificationTokens.forEach(token => {
+                                if (token.isSafari) {
+                                    safariPushDevices.push(token.token);
+                                } else {
+                                    webPushDevices.push(token.token);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    const user = users.docs.find(u => u.ref.id === sentToUser);
+                    if (user && user.data().notificationTokens) {
+                        user.data().notificationTokens.forEach(token => {
+                            if (token.isSafari) {
+                                safariPushDevices.push(token.token);
+                            } else {
+                                webPushDevices.push(token.token);
+                            }
+                        });
+                    }
+                }
+            });
 
-            const webPushDevices = devices.filter(d => d !== undefined && d !== "" && !d.startsWith("SAFARI:"));
-            const safariPushDevices = devices.filter(d => d !== undefined && d !== "" && d.startsWith("SAFARI:")).map(d2 => d2.substr(7));
             const waitFor = [];
             if (webPushDevices.length > 0) {
                 waitFor.push(sendNotification(snapshot.data().title, snapshot.data().body, webPushDevices, snapshot.data().link));

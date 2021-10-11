@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, Text, SmallText, HSeparator } from './elem'
+import { Spacer, Loading, VBox, Text, SmallText, SmallText2, HSeparator } from './elem'
 import SetResults from './set-results';
-import {getNiceDate} from './utils'
+import { getNiceDate } from './utils'
 import * as api from './api'
 
 
@@ -15,13 +15,14 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 
 
     const [matches, setMatches] = useState(undefined);
+    const [otherMatches, setOtherMatches] = useState(undefined);
     const [myMatches, setMyMatches] = useState(undefined);
     const [edit, setEdit] = useState(undefined);
     const [reload, setReload] = useState(1);
 
     useEffect(() => {
         if (UserInfo) {
-            api.getCollection(api.Collections.MATCHES_COLLECTION,  "date").then(
+            api.getCollection(api.Collections.MATCHES_COLLECTION, "date").then(
                 mtchs => {
                     setMatches(mtchs);
 
@@ -33,13 +34,19 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                         return false;
                     })
                     setMyMatches(myM);
+
+                    let nonMy = mtchs.filter(m => !myM.find(mm=>mm.id === m.id));
+                    setOtherMatches(nonMy);
+
                 },
                 (err) => {
                     notify.error(err.message);
                     setMatches([]);
                     setMyMatches([]);
+                    setOtherMatches([]);
                 })
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [UserInfo, reload])
 
 
@@ -60,7 +67,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                             <VBox><Text>אין משחקים מתוכננים</Text></VBox>
                             :
                             <Grid container spacing={2}>
-
+                                <SmallText2 fontSize={18} textAlign="center">משחקים שלי</SmallText2>
                                 <Grid container item xs={12} spacing={3} style={{ textAlign: "right" }}>
                                     <Grid item xs={2}>מתי</Grid>
                                     <Grid item xs={3}>איפה</Grid>
@@ -68,10 +75,10 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                                     <Grid item xs={2}></Grid>
                                 </Grid>
                                 <HSeparator />
-                                {myMatches? myMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} />):null}
+                                {myMatches ? myMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} showSetResults={true}/>) : null}
                                 {admin ? <HSeparator /> : null}
-                                {admin ? <SmallText>תצוגת מנהל: כל המשחקים</SmallText> : null}
-                                {admin?matches.map((match, i) => <OneGame match={match} setEdit={setEdit} />):null}
+                                <SmallText2 fontSize={18} textAlign="center">שאר המשחקים</SmallText2>
+                                {otherMatches ? otherMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} showSetResults={admin === true}/>):null}
                             </Grid>
                     : <Loading msg="טוען משחקים" />
             }
@@ -80,10 +87,10 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 }
 
 
-function OneGame({ match, setEdit }) {
+function OneGame({ match, setEdit, showSetResults }) {
     return [<Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}  >
         <Grid item xs={2}>
-            <SmallText> {getNiceDate(match.date) + ", "+ match.Day}</SmallText>
+            <SmallText> {getNiceDate(match.date) + ", " + match.Day}</SmallText>
             <SmallText> {match.Hour}</SmallText>
         </Grid>
         <Grid item xs={3}>
@@ -106,15 +113,16 @@ function OneGame({ match, setEdit }) {
                 </SmallText>
             </VBox>
         </Grid>
-        <Grid item xs={2} >
-            <Button variant="contained" onClick={() => setEdit(match)}
-                style={{ width: '1.2rem', height: '4rem' }}>
-                <VBox>
-                    <SmallText>הזנת</SmallText>
-                    <SmallText>תוצאות</SmallText>
-                </VBox>
-            </Button>
-        </Grid>
+        {showSetResults ?
+            <Grid item xs={2} >
+                <Button variant="contained" onClick={() => setEdit(match)}
+                    style={{ width: '1.2rem', height: '4rem' }}>
+                    <VBox>
+                        <SmallText>הזנת</SmallText>
+                        <SmallText>תוצאות</SmallText>
+                    </VBox>
+                </Button>
+            </Grid> : null}
     </Grid>,
     <HSeparator />]
 }

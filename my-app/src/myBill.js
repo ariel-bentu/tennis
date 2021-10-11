@@ -28,6 +28,7 @@ export default function MyBill({ UserInfo, notify }) {
                     setNoBalance(true)
                 })
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [UserInfo])
 
 
@@ -35,21 +36,21 @@ export default function MyBill({ UserInfo, notify }) {
         <div style={{ height: '65vh', width: '100%' }}>
             <Spacer height={45} />
 
-            
+
             <VBox>
                 {noBalance ?
                     "אין נתונים עבורך"
                     :
                     balance ?
                         <VBox>
-                        <Text fontSize={35}>{balance > 0 ? balance + ' ש״ח בזכות' :
-                            balance === 0 ? "0 - אין חוב" :
-                                -balance + ' ש״ח בחובה'
-                        }</Text>
-                        <Spacer height={20} />
-                        <a href="https://payboxapp.page.link/nUbbPFMPQMeBQ8YB9">לתשלום בפייבוקס</a>
+                            <Text fontSize={35}>{balance > 0 ? balance + ' ש״ח בזכות' :
+                                balance === 0 ? "0 - אין חוב" :
+                                    -balance + ' ש״ח בחובה'
+                            }</Text>
+                            <Spacer height={20} />
+                            <a href="https://payboxapp.page.link/nUbbPFMPQMeBQ8YB9">לתשלום בפייבוקס</a>
                         </VBox>
-                         :
+                        :
                         <Loading msg="טוען מאזן" />
                 }
             </VBox>

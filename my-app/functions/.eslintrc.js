@@ -15,5 +15,6 @@ module.exports = {
     "eol-last": "off",
     "arrow-parens": 0,
     "max-len": 0,
+    "camelcase": "off",
   },
 };

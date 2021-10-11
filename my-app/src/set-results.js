@@ -9,8 +9,8 @@ const isTieBreakSet = (set) => {
     const p1IntVal = parseInt(set.pair1);
     const p2IntVal = parseInt(set.pair2);
     return !isNaN(p1IntVal) && !isNaN(p2IntVal) &&
-        (p1IntVal === 6 && p2IntVal === 7 ||
-            p1IntVal === 7 && p2IntVal === 6);
+        ((p1IntVal === 6 && p2IntVal === 7) ||
+           (p1IntVal === 7 && p2IntVal === 6));
 }
 
 const validate = (sets) => {
@@ -47,14 +47,13 @@ const validate = (sets) => {
                 return `סט ${i + 1} אינו חוקי - יש להזין סט רק אם שוחק עד הכרעה`;
             }
 
-            if (p1 == 7 && p2 < 5 ||
-                p1 < 5 && p2 == 7) {
+            if ((p1 === 7 && p2 < 5) ||(p1 < 5 && p2 === 7)) {
                 return `סט ${i + 1} אינו חוקי - הכרעה בסט זה אינה חוקית`;
             }
 
             const notEmpty = (val) => val !== undefined && val !== "";
 
-            if (p1 === 6 && p2 === 7 || p1 === 7 && p2 === 6) {
+            if ((p1 === 6 && p2 === 7) || (p1 === 7 && p2 === 6)) {
                 const p1TieBreak = parseInt(sets[i].tbPair1)
                 const p2TieBreak = parseInt(sets[i].tbPair2)
 
@@ -76,8 +75,8 @@ const validate = (sets) => {
                         return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון - הפרש לא חוקי`;
                     }
 
-                    if (p1TieBreak > p2TieBreak && p1 < p2 ||
-                        p1TieBreak < p2TieBreak && p1 > p2) {
+                    if ((p1TieBreak > p2TieBreak && p1 < p2) ||
+                        (p1TieBreak < p2TieBreak && p1 > p2)) {
                         return `סט ${i + 1} אינו חוקי - תוצאת שובר שוויון הפוכה לתוצאת הסט `;
                     }
                 }

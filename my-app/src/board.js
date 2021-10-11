@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Grid } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator, Text } from './elem'
+import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator } from './elem'
 
 import * as api from './api'
 import { DragHandle, EmojiEvents, SportsTennis, ThumbDown } from '@material-ui/icons';
@@ -51,6 +51,7 @@ export default function Board({ UserInfo, notify }) {
                         setStats([]);
                     })
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
 

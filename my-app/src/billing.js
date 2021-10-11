@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Button, Divider,
     TextField, Grid
@@ -11,9 +11,6 @@ import {
 
 import { Sort } from '@material-ui/icons';
 import * as api from './api'
-import { validate } from 'uuid';
-//import dayjs from 'dayjs';
-//const sortByDate = (o1, o2) => dayjs(o1.date) - dayjs(o2.date);
 
 export default function Billing(props) {
 
@@ -32,6 +29,7 @@ export default function Billing(props) {
     const [paymentComment, setPaymentComment] = useState("");
     const [usersReload, setUsersReload] = useState(1);
 
+    // eslint-disable-next-line no-unused-vars 
     const [refresh, setRefresh] = useState(1);
 
     const getComparator = (byDebt) => {
@@ -71,8 +69,8 @@ export default function Billing(props) {
             u.sort(getComparator(sortByDebt));
             setUsers(u);
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [usersReload]);
-
 
     useEffect(() => {
         if (userDetails) {
@@ -95,6 +93,7 @@ export default function Billing(props) {
             setUserPayments([]);
             setUserDebts([]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userDetails]);
 
 
@@ -159,12 +158,12 @@ export default function Billing(props) {
             : userDetails ?
                 <VBox style={{ width: '100%' }}>
                     <HBox>
-                    <Text fontSize={35}>{userDetails.displayName + " - "}</Text>
-                    <Text fontSize={35}>{userDetails.debt === "חסר" ? "חסר" :
-                        userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
-                            userDetails.debt === 0 ? "0 - אין חוב" :
-                                -userDetails.debt + ' ש״ח בחובה'
-                    }</Text>
+                        <Text fontSize={35}>{userDetails.displayName + " - "}</Text>
+                        <Text fontSize={35}>{userDetails.debt === "חסר" ? "חסר" :
+                            userDetails.debt > 0 ? userDetails.debt + ' ש״ח בזכות' :
+                                userDetails.debt === 0 ? "0 - אין חוב" :
+                                    -userDetails.debt + ' ש״ח בחובה'
+                        }</Text>
                     </HBox>
                     <Text>תשלומים</Text>
                     <Grid container spacing={2} >

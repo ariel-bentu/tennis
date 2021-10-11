@@ -46,7 +46,7 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
                     }
                     {matches && matches.length > 0 && more? <Button variant="contained" onClick={()=>
                         api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15, matches[matches.length-1]._doc).then(ms => {
-                            if (ms.length == 0) {
+                            if (ms.length === 0) {
                                 setMore(false);
                                 return;
                             }
@@ -101,12 +101,12 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
         <Spacer />
 
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
-            firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner == 0}
+            firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner === 0}
             button={admin || (userInMatch(match, UserInfo) && !match.sets)?
                 <Edit onClick={() => setEdit(match)} />
                 : undefined} />
         <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
-            wins={winner === 2} tie={winner == 0}
+            wins={winner === 2} tie={winner === 0}
             UserInfo={UserInfo}
         />
         <HSeparator/>
@@ -147,8 +147,8 @@ function GetOneLine(props) {
                     const tbIntValue = parseInt(props.firstPair ? result.tbPair1 : result.tbPair2);
                     let tbValue = undefined;
 
-                    if ((!isNaN(p1IntVal) && p1IntVal === 7 ||
-                    !isNaN(p2IntVal) && p2IntVal === 7) && !isNaN(tbIntValue)) {
+                    if (((!isNaN(p1IntVal) && p1IntVal === 7) ||
+                    (!isNaN(p2IntVal) && p2IntVal === 7)) && !isNaN(tbIntValue)) {
                         tbValue = tbIntValue;
                     }
 

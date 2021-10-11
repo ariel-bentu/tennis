@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, CssBaseline, FormControlLabel, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
 import Container from '@material-ui/core/Container';
 
-import { IOSSwitch, Loading, Spacer, Header, VBox, MyTableCell, Text } from './elem';
+import { IOSSwitch, Loading, Spacer, VBox, MyTableCell } from './elem';
 import { sortByDays } from './utils';
 
 import * as api from './api'

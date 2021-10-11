@@ -38,11 +38,11 @@ export function initAPI(onPushNotification, onNotificationToken) {
 
         try {
             if ('safari' in window && 'pushNotification' in window.safari) {
-                
+                // requires user gesture...
             } else {
                 const messaging = firebase.messaging(app);
                 Notification.requestPermission().then(perm => {
-                    if (perm == "granted") {
+                    if (perm === "granted") {
                         console.log("permission granted");
                         messaging.getToken({ vapidKey: 'BFMK8mjTcp6ArpTF4QNhnXwo387CzIADR9WmybUvlf5yXI2NExGdTFsvD4_KHZ-3CWLF4gRq19VQTngTsREWYl8' }).then((currentToken) => {
                             if (currentToken) {
@@ -66,7 +66,6 @@ export function initAPI(onPushNotification, onNotificationToken) {
 
                     messaging.onMessage((payload) => {
                         console.log('Message received. ', JSON.stringify(payload));
-                        //alert(payload);
                         if (onPushNotification) {
                             onPushNotification(payload);
                         }
@@ -101,12 +100,16 @@ export const checkSafariRemotePermission = (permissionData) => {
     return undefined;
 };
 
-export async function updateUserNotificationToken(email, newNotificationToken) {
+export async function updateUserNotificationToken(email, newNotificationToken, isSafari) {
     var db = firebase.firestore();
     let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(email);
 
     return docRef.update({
-        notificationToken: newNotificationToken
+        notificationTokens: firebase.firestore.FieldValue.arrayUnion({
+            isSafari,
+            token: newNotificationToken,
+            ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        }),
     });
 }
 
