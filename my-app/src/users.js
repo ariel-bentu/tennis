@@ -111,9 +111,31 @@ export default function Users(props) {
             <VBox style={{ width: '100%', margin: 10 }}>
                 <HBox style={{ width: '100%', justifyContent: 'space-between' }}>
                     <Search value={filter} onChange={val => setFilter(val)} />
-                    <Button variant="contained"
-                        onClick={() => setAddMode(true)}
-                        style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button>
+                    <VBox>
+                        <Button variant="contained"
+                            onClick={() => setAddMode(true)}
+                            style={{ height: '1.5rem', fontSize: 25, width: '2.5rem' }}>+</Button>
+                        <Spacer />
+                        <Button
+                            style={{ fontSize: 15, height: '1.5rem', width: '2.5rem' }}
+                            size={"large"}
+
+                            variant="contained"
+                            disabled={submitInProcess || !isDirty()} onClick={() => {
+                                setSubmitInProcess(true);
+                                api.saveUsers(users).then(
+                                    () => {
+                                        props.notify.success("נשמר בהצלחה");
+                                        let updatedUsers = users.map(({ dirty, ...user }) => user);
+                                        setUsers(updatedUsers);
+                                    },
+                                    (err) => props.notify.error(err.message)
+                                ).finally(
+                                    () => setSubmitInProcess(false)
+                                );
+                            }
+                            }>שמור</Button>
+                    </VBox>
                 </HBox>
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
@@ -127,7 +149,7 @@ export default function Users(props) {
                         <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
                         <Grid item xs={condense ? 2 : 1}>
                             <HBox style={{ justifyContent: 'space-between' }}>
-                                <SmallText>{"דירוג" + (sortBy === 2 ? "(e)" : sortBy === 3 ? "(e.n)" : "")}</SmallText>
+                                <SmallText>{"דירוג" + (sortBy === 3 ? "(e)" : sortBy === 2 ? "(e.n)" : "")}</SmallText>
                                 <Sort style={{ color: sortBy > 0 ? "red" : "black" }} onClick={() => setSortBy(oldSort => {
                                     let newSort = oldSort + 1;
                                     if (newSort > 3) {
@@ -137,34 +159,7 @@ export default function Users(props) {
                                 })} />
                             </HBox>
                         </Grid>
-                        <Grid item xs={2}>
-                            <VBox style={{ justifyContent: 'center' }}>
-
-
-                                <Spacer />
-                                <Button
-                                    style={{ fontSize: 15, height: '1.5rem', width: '2.5rem' }}
-                                    size={"large"}
-
-                                    variant="contained"
-                                    disabled={submitInProcess || !isDirty()} onClick={() => {
-                                        setSubmitInProcess(true);
-                                        api.saveUsers(users).then(
-                                            () => {
-                                                props.notify.success("נשמר בהצלחה");
-                                                let updatedUsers = users.map(({ dirty, ...user }) => user);
-                                                setUsers(updatedUsers);
-                                            },
-                                            (err) => props.notify.error(err.message)
-                                        ).finally(
-                                            () => setSubmitInProcess(false)
-                                        );
-                                    }
-                                    }>שמור</Button>
-
-
-                            </VBox>
-                        </Grid>
+                        
                     </Grid>
                     <Grid item xs={12}>
                         <Divider flexItem style={{ height: 2, backgroundColor: 'gray' }} />
