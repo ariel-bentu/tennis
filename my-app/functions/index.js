@@ -56,11 +56,16 @@ const getGameTariff = () => {
     const docRef = db.collection("systemInfo").doc("Billing");
     if (docRef) {
         return docRef.get().then((doc) => {
-            return doc.data().PricePerGame;
+            return {
+                PricePerGame: doc.data().PricePerGame,
+                PricePerSinglesGame: doc.data().PricePerSinglesGame,
+            };
         });
     }
     throw new Error("Cannot obtain price per game");
 };
+
+const normalizeFactor = (f) => f === undefined ? 1 : f;
 
 const addOneGameDebt = (db, batch, gameTariff,
     email, matchID, isSingles, date) => {
@@ -412,6 +417,10 @@ const handleMatchResultsChange = (change) => {
         const dataBefore = change.before.data();
         const dataAfter = change.after.data();
 
+        if (dataAfter.matchCanceled) {
+            resolve(true); // results exists (canceled) - archive it
+            return;
+        }
         if (dataAfter.sets == undefined) {
             // No sets data (assume they are not deleted - when deleted, it will be empty array)
             resolve(false);
@@ -890,7 +899,15 @@ exports.matchArchiveUpdated = functions.region("europe-west1").firestore
                 functions.logger.info("matchArchiveUpdated: Events are off - skipping event");
                 return;
             }
-            return handleMatchResultsChange(change);
+            return handleMatchResultsChange(change).then(() => {
+                if (change.after.exists && change.before.exists) {
+                    const matchData = change.after.data();
+                    const matchDataBefore = change.before.data();
+                    if (normalizeFactor(matchData.paymentFactor) !== normalizeFactor(matchDataBefore.paymentFactor)) {
+                        return updateGameDebt(context.params.matchID, matchData, matchDataBefore);
+                    }
+                }
+            });
         });
     });
 
@@ -901,6 +918,56 @@ exports.archiveMatches = functions.region("europe-west1").pubsub
     .onRun((context) => {
         return archiveMatchesImpl();
     });
+
+const updateGameDebt = (matchID, matchData, matchDataBefore) => {
+    return getGameTariff().then((tariff) => {
+        if (matchData.paymentFactor === matchDataBefore.paymentFactor) {
+            return;
+        }
+
+        const isSingles = !matchData.Player2 && !matchData.Player4;
+        let price = isSingles ? tariff.PricePerSinglesGame : tariff.PricePerGame;
+        const paymentFactor = normalizeFactor(matchData.paymentFactor);
+        price = price * paymentFactor;
+
+        return db.runTransaction(transaction => {
+            const waitFor = [];
+            for (let i = 1; i <= 4; i++) {
+                if (matchData["Player" + i]) {
+                    const email = matchData["Player" + i].email;
+
+                    // Get current Debt associated with the match
+                    const billingDocRef = db.collection(BILLING_COLLECTION).doc(email);
+                    waitFor.push(
+
+                        transaction.get(billingDocRef).then(billingDoc => {
+                            const debtDocRef = db.collection(BILLING_COLLECTION).doc(email).collection("debts").where(
+                                "matchID", "==", matchID);
+                            return transaction.get(debtDocRef).then(debtDocs => {
+                                let previousCharge = 0;
+                                if (debtDocs.docs.length > 0) {
+                                    previousCharge += debtDocs.docs[0].data().amount;
+                                    transaction.delete(debtDocs.docs[0].ref);
+                                }
+                                // Add a new record
+                                if (price !== 0) {
+                                    addOneGameDebt(db, transaction, price, email,
+                                        matchID,
+                                        isSingles, matchData.date);
+                                }
+
+                                // updated balance:
+                                let newBalance = billingDoc.data().balance;
+                                newBalance = newBalance + previousCharge - price;
+                                transaction.update(billingDoc.ref, { balance: newBalance });
+                            });
+                        }));
+                }
+            }
+            return Promise.all(waitFor);
+        });
+    });
+};
 
 const archiveMatchesImpl = (matchID) => {
     let msg = "Billing: ";
@@ -921,18 +988,25 @@ const archiveMatchesImpl = (matchID) => {
                 matches.forEach((match) => {
                     const matchData = match.data();
                     const isSingles = !matchData.Player2 && !matchData.Player4;
-                    for (let i = 1; i <= 4; i++) {
-                        if (matchData["Player" + i]) {
-                            const email = matchData["Player" + i].email;
-                            addOneGameDebt(db, batch, tariff, email,
-                                match.ref.id,
-                                isSingles, matchData.date);
-                            msg += "- " + email + "\n";
+                    let price = isSingles ? tariff.PricePerSinglesGame : tariff.PricePerGame;
+                    const paymentFactor = matchData.paymentFactor !== undefined ? matchData.paymentFactor : 1;
+                    price = price * paymentFactor;
 
-                            if (!debtUpdateMap[email]) {
-                                debtUpdateMap[email] = 0;
+                    if (price !== 0) {
+                        for (let i = 1; i <= 4; i++) {
+                            if (matchData["Player" + i]) {
+                                const email = matchData["Player" + i].email;
+
+                                addOneGameDebt(db, batch, price, email,
+                                    match.ref.id,
+                                    isSingles, matchData.date);
+                                msg += "- " + email + "\n";
+
+                                if (!debtUpdateMap[email]) {
+                                    debtUpdateMap[email] = 0;
+                                }
+                                debtUpdateMap[email] += price;
                             }
-                            debtUpdateMap[email] += tariff;
                         }
                     }
                 });

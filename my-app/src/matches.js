@@ -9,7 +9,7 @@ import * as api from './api'
 import { Edit, EmojiEvents } from '@material-ui/icons';
 import SetResults from './set-results';
 
-const Val=(v)=>parseInt(v);
+const Val = (v) => parseInt(v);
 
 
 export default function Matches({ UserInfo, notify, reload, admin }) {
@@ -25,37 +25,37 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
         }
     }, [UserInfo, reload])
 
-    
+
     return (
         <div style={{ height: '100%', width: '100%' }}>
             <Spacer width={10} />
             {edit ?
-                <SetResults match={edit} notify={notify} onCancel={() => setEdit(undefined)} 
-                onDone={(editedSet => {
-                    setMatches(currentMatches=>currentMatches.map(m=>m._ref.id === edit._ref.id? {...m, set:editedSet}: m));
-                    setEdit(undefined);
-                })} isArchived={true}/>
+                <SetResults match={edit} notify={notify} onCancel={() => setEdit(undefined)}
+                    onDone={(editedSet => {
+                        setMatches(currentMatches => currentMatches.map(m => m._ref.id === edit._ref.id ? { ...m, set: editedSet } : m));
+                        setEdit(undefined);
+                    })} isArchived={true} Admin={admin} />
                 : <VBox>
-                    <HSeparator/>
+                    <HSeparator />
                     {matches ?
                         matches.map(match => (
-                            <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin}/>
+                            <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin} />
                         ))
                         :
                         <Loading msg="טוען משחקים" />
                     }
-                    {matches && matches.length > 0 && more? <Button variant="contained" onClick={()=>
-                        api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15, matches[matches.length-1]._doc).then(ms => {
+                    {matches && matches.length > 0 && more ? <Button variant="contained" onClick={() =>
+                        api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15, matches[matches.length - 1]._doc).then(ms => {
                             if (ms.length === 0) {
                                 setMore(false);
                                 return;
                             }
-                            setMatches(oldMatches=>[...oldMatches, ...ms]);
+                            setMatches(oldMatches => [...oldMatches, ...ms]);
                             if (ms.length < 15) {
                                 setMore(false);
                             }
                         })
-                    }>טען עוד...</Button>:null }
+                    }>טען עוד...</Button> : null}
                 </VBox>
             }
 
@@ -96,20 +96,22 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
     //alert(match.date + "-"+ getNiceDate(match.date));
 
     return <VBox style={{ width: '80%', height: 100 }}>
-        
+
         <SmallText fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
         <Spacer />
 
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
             firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner === 0}
-            button={admin || (userInMatch(match, UserInfo) && !match.sets)?
+            canceled={match.matchCanceled}
+            button={admin || (userInMatch(match, UserInfo) && !match.sets) ?
                 <Edit onClick={() => setEdit(match)} />
                 : undefined} />
         <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
             wins={winner === 2} tie={winner === 0}
             UserInfo={UserInfo}
+            canceled={match.matchCanceled}
         />
-        <HSeparator/>
+        <HSeparator />
     </VBox>
 }
 
@@ -136,10 +138,16 @@ function GetOneLine(props) {
                     {props.P2 ? <SmallText2 backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
                 </VBox>
             </Grid >
-            <Grid item xs={1} alignSelf={'center'}>
-                {props.wins ? <EmojiEvents style={{ color: 'gold' }} /> : null}
-            </Grid>
-            {
+            {props.canceled ? null :
+                <Grid item xs={1} alignSelf={'center'}>
+                    {props.wins ? <EmojiEvents style={{ color: 'gold' }} /> : null}
+                </Grid>}
+
+            {props.canceled ?
+
+                <Grid item xs={7} style={{ padding: 2 }}>
+                    {props.firstPair ? null : <SmallText2 textAlign="center">משחק בוטל</SmallText2>}
+                </Grid> :
                 props.sets.map(result => {
                     const setValue = props.firstPair ? result.pair1 : result.pair2;
                     const p1IntVal = parseInt(result.pair1);
@@ -148,7 +156,7 @@ function GetOneLine(props) {
                     let tbValue = undefined;
 
                     if (((!isNaN(p1IntVal) && p1IntVal === 7) ||
-                    (!isNaN(p2IntVal) && p2IntVal === 7)) && !isNaN(tbIntValue)) {
+                        (!isNaN(p2IntVal) && p2IntVal === 7)) && !isNaN(tbIntValue)) {
                         tbValue = tbIntValue;
                     }
 
@@ -160,29 +168,30 @@ function GetOneLine(props) {
                                     result.pair1 === result.pair2 ? 'lightblue' :
                                         'lightpink'
                             ,
-                            width: 22, height: 35, 
+                            width: 22, height: 35,
                             justifyContent: 'center',
                             alignItems: 'center'
                         }}>
                             <SmallText2 lineHeight={30} textAlign='center'>{setValue}</SmallText2>
-                            {tbValue? <SmallText2 transform="translateY(-8px)" fontSize={8} textAlign='center'>{tbValue}</SmallText2>:null}
+                            {tbValue ? <SmallText2 transform="translateY(-8px)" fontSize={8} textAlign='center'>{tbValue}</SmallText2> : null}
 
                         </HBox>
                     </Grid>
                 })
             }
 
-            <Grid item xs={1} style={{ padding: 2 }}>
-                <HBox style={{ width: '100%', height: '100%' }}>
-                    <VBox style={{ backgroundColor: 'black', width: '4%', height: 35 }} />
-                    <VBox style={{
-                        backgroundColor: (props.wins ? 'lightgreen' : (props.wonSets === -1 ? 'white' : props.tie? 'lightgray': 'lightpink')),
-                        width: 22, height: 35, justifyContent: 'center'
-                    }}>
-                        <SmallText2 textAlign='center'>{props.wonSets >= 0 ? props.wonSets : "-"}</SmallText2>
-                    </VBox>
-                </HBox>
-            </Grid>
+            {props.canceled ? null :
+                <Grid item xs={1} style={{ padding: 2 }}>
+                    <HBox style={{ width: '100%', height: '100%' }}>
+                        <VBox style={{ backgroundColor: 'black', width: '4%', height: 35 }} />
+                        <VBox style={{
+                            backgroundColor: (props.wins ? 'lightgreen' : (props.wonSets === -1 ? 'white' : props.tie ? 'lightgray' : 'lightpink')),
+                            width: 22, height: 35, justifyContent: 'center'
+                        }}>
+                            <SmallText2 textAlign='center'>{props.wonSets >= 0 ? props.wonSets : "-"}</SmallText2>
+                        </VBox>
+                    </HBox>
+                </Grid>}
             {props.button ? <Grid item xs={1} style={{ padding: 2 }}>{props.button}</Grid> : null}
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@material-ui/core';
-import { HBox, VBox, Spacer, SmallText, SmallText2, BoxInput } from './elem';
+import { Button, TextField } from '@material-ui/core';
+import { HBox, VBox, Spacer, SmallText, SmallText2, BoxInput, IOSSwitch } from './elem';
 import { getNiceDate } from './utils';
 import * as api from './api'
 import { Paper1 } from './elem';
@@ -10,7 +10,7 @@ const isTieBreakSet = (set) => {
     const p2IntVal = parseInt(set.pair2);
     return !isNaN(p1IntVal) && !isNaN(p2IntVal) &&
         ((p1IntVal === 6 && p2IntVal === 7) ||
-           (p1IntVal === 7 && p2IntVal === 6));
+            (p1IntVal === 7 && p2IntVal === 6));
 }
 
 const validate = (sets) => {
@@ -47,7 +47,7 @@ const validate = (sets) => {
                 return `סט ${i + 1} אינו חוקי - יש להזין סט רק אם שוחק עד הכרעה`;
             }
 
-            if ((p1 === 7 && p2 < 5) ||(p1 < 5 && p2 === 7)) {
+            if ((p1 === 7 && p2 < 5) || (p1 < 5 && p2 === 7)) {
                 return `סט ${i + 1} אינו חוקי - הכרעה בסט זה אינה חוקית`;
             }
 
@@ -87,7 +87,13 @@ const validate = (sets) => {
     }
     return "";
 }
-const isDirty = (setsOrig, setsEdited) => {
+const isDirty = (match, setsEdited, canceled) => {
+    const setsOrig = match.sets;
+
+    if ((!match.matchCanceled && canceled) || (match.matchCanceled && !canceled)) {
+        return true;
+    }
+
     if (!setsOrig) {
         return setsEdited[0].pair1 !== "";
     }
@@ -108,10 +114,13 @@ const isDirty = (setsOrig, setsEdited) => {
     return false;
 };
 
-export default function SetResults({ UserInfo, match, notify, onCancel, onDone, isArchived }) {
+export default function SetResults({ UserInfo, match, notify, onCancel, onDone, isArchived, Admin }) {
 
     const [editedSets, setEditedSets] = useState([]);
     const [nextFocus, setNextFocus] = useState(0);
+    const [gameCanceled, setGameCanceled] = useState(match.matchCanceled === true);
+    const [paymentFactor, setPaymentFactor] = useState(match.paymentFactor);
+
 
     useEffect(() => {
         let sets = match.sets ? [...match.sets] : [];
@@ -152,7 +161,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 </VBox>
                 <Spacer width={15} />
 
-                {editedSets.map((set, i) => (
+                {!gameCanceled ? editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
                         focus={i * 2 === nextFocus}
 
@@ -164,7 +173,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         }
                     />
                 )
-                )}
+                ) : null}
             </HBox>
             <HBox>
                 <Spacer width={25} />
@@ -176,7 +185,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     {match.Player4 ? <SmallText textAlign='center'>{match.Player4.displayName}</SmallText> : null}
                 </VBox>
                 <Spacer width={15} />
-                {editedSets.map((set, i) => (
+                {!gameCanceled ? editedSets.map((set, i) => (
                     <BoxInput
                         value={set.pair2}
                         focus={i * 2 + 1 === nextFocus}
@@ -185,7 +194,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         onChange={newVal => setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair2: newVal } : s))}
                     />
                 )
-                )}
+                ) : null}
             </HBox>
 
             {tieBreak ?
@@ -193,11 +202,53 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 : null}
 
 
-            <Spacer height={40} />
+            <Spacer height={30} />
+            <HBox>
+                <SmallText fontSize={15}>משחק בוטל</SmallText>
+                <IOSSwitch checked={gameCanceled} onChange={() => {
+                    setGameCanceled(canc => !canc);
+                }} />
+
+            </HBox>
+            <HBox>
+            {Admin ? <TextField
+                variant="outlined"
+                margin="normal"
+                label="מקדם חיוב"
+                autoComplete="number"
+                value={paymentFactor === undefined ? "" : paymentFactor}
+                onFocus={() => setNextFocus(-1)}
+                onChange={(e) => {
+                    const val = e.currentTarget.value;
+                    const floatVal = parseFloat(val);
+                    if (val && val.trim() !== "" && val.trim() !== ".") {
+                        if (isNaN(floatVal) || floatVal < 0 || floatVal > 1) {
+                            notify.error("מקדם תשלום: ערך חייב להיות בין 0 ל-1");
+                        }
+                    }
+                    setPaymentFactor(val);
+                }}
+            /> : null}
+            </HBox>
+            <Spacer height={30} />
             <HBox style={{ width: '100%', justifyContent: 'center' }}>
                 <Button variant="contained" onClick={() => {
                     //Check if changed
-                    if (isDirty(match.sets, editedSets)) {
+                    let pf = parseFloat(paymentFactor);
+                    if (isNaN(pf)) {
+                        pf = undefined;
+                    }
+                    if (isDirty(match, editedSets, gameCanceled)) {
+                        if (gameCanceled) {
+                            return api.saveMatchCanceled(match, pf, isArchived).then(
+                                () => {
+                                    notify.success("משחק סומן כבוטל");
+                                    onDone([]);
+                                },
+                                (err) => notify.error(err.message)
+                            );
+                        }
+
                         let msg = validate(editedSets);
                         if (msg.length > 0) {
                             notify.error(msg);
@@ -205,7 +256,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         }
                         //save changes
                         match.sets = editedSets.filter(s => s.pair1 !== "");
-                        api.saveMatchResults(match, isArchived).then(
+                        api.saveMatchResults(match, pf, isArchived).then(
                             () => {
                                 if (!isArchived) {
                                     notify.success("תוצאות נשמרו בהצלחה. המשחק יוסר מלשונית ׳מתוכנן׳ ויופיע בלשונית ׳משחקים׳");

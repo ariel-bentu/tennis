@@ -58,7 +58,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                     onDone={(editedSet => {
                         setTimeout(() => setReload(r => r + 1), 4000);
                         setEdit(undefined);
-                    })} isArchived={false} /> :
+                    })} isArchived={false} Admin={admin}/> :
 
                 matches ?
                     matches.length === 0 ?

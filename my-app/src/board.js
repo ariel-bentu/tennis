@@ -79,6 +79,9 @@ export default function Board({ UserInfo, notify }) {
                         <Grid item xs={1} alignContent={'flex-start'} >
                             {"%"}
                         </Grid>
+                        <Grid item xs={2} alignContent={'center'} >
+                            <a target="_blank" rel="noreferrer" href="https://en.wikipedia.org/wiki/Elo_rating_system">Elo rate</a>
+                        </Grid>
 
                     </Grid>
                     <HSeparator key={1} />
@@ -105,6 +108,9 @@ export default function Board({ UserInfo, notify }) {
                             </Grid>
                             <Grid item xs={1} alignContent={'flex-start'} >
                                 {oneUserStats.wins + oneUserStats.loses + oneUserStats.ties === 0? "0%": (Math.floor((oneUserStats.wins / (oneUserStats.wins + oneUserStats.loses + oneUserStats.ties)) * 100) + "%")}
+                            </Grid>
+                            <Grid item xs={2} alignContent={'center'} >
+                                {oneUserStats.elo1}
                             </Grid>
 
                         </Grid>,
