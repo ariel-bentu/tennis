@@ -67,6 +67,7 @@ let App = props => {
   const [notifications, setNotifications] = useState([]);
   // eslint-disable-next-line no-unused-vars
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [forceMode, setForceMode] = useState(undefined);
 
   const anchorRef = React.useRef(null);
   const notificationRef = React.useRef(null);
@@ -103,7 +104,7 @@ let App = props => {
   useEffect(() => {
     //Update server with notification info if needed
     if (notificationToken && notificationToken !== "" && userInfo && userInfo._user &&
-      (!userInfo._user.notificationTokens || !userInfo._user.notificationTokens.find(n => n === notificationToken))) {
+      (!userInfo._user.notificationTokens || !userInfo._user.notificationTokens.find(n => n.token === notificationToken))) {
       const isSafari = 'safari' in window;
       api.updateUserNotificationToken(userInfo.email, notificationToken, isSafari);
     }
@@ -152,10 +153,10 @@ let App = props => {
     };
   };
 
-
+  const isAdminPath = window.location && window.location.pathname && window.location.pathname.endsWith("admin");
+  console.log("adminPath" + (isAdminPath ? " y" : " n"))
   return (
     <div className="App" dir="rtl" >
-
       <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left: 0, right: 0, fontSize: 15, zIndex: 1000 }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
@@ -180,11 +181,11 @@ let App = props => {
           <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 10 }}>
             <Menu ref={anchorRef} onClick={() => setMenuOpen(prev => !prev)} />
             <Spacer width={10} />
-            <Badge badgeContent={notifications.length} color="primary">
+            {/* <Badge badgeContent={notifications.length} color="primary">
               {notificationToken ?
                 <NotificationsActive ref={notificationRef} /> :
                 <NotificationsNone ref={notificationRef} onClick={handleNotifClick} />}
-            </Badge>
+            </Badge> */}
             <Popper open={menuOpen} anchorEl={anchorRef.current} role={undefined} transition disablePortal style={{ zIndex: 1000, backgroundColor: 'white' }}>
               {({ TransitionProps, placement }) => (
                 <Grow
@@ -217,6 +218,12 @@ let App = props => {
             </HBox> */}
             {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
             {/* <Text>{window.innerWidth}</Text> */}
+            <Spacer width={100} />
+            {admin ? <Button style={{ height: "1.5rem" }} variant={"contained"}
+              onClick={() => {
+                isAdminPath ? setForceMode(0) : setForceMode(1)
+                console.log("clicl " + (isAdminPath?"0":"1"))
+              }}>{!isAdminPath ? "ניהול" : "משתמשים"}</Button> : null}
           </HBox>
         </Toolbar> : null}
       {forgotPwd ? null :
@@ -235,6 +242,11 @@ let App = props => {
                 <Route
                   path="/admin"
                   children={(props) => {
+                    if (forceMode !== undefined && forceMode === 0) {
+                      console.log("goto /")
+                      setForceMode(undefined);
+                      props.history.push("/")
+                    }
                     let adminTab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 1;
                     return [<Tabs key={"100"}
                       value={adminTab}
@@ -280,6 +292,11 @@ let App = props => {
                 </Route>
                 <Route path="/"
                   children={(props) => {
+                    if (forceMode !== undefined && forceMode === 1) {
+                      console.log("goto /admin")
+                      setForceMode(undefined);
+                      props.history.push("/admin")
+                    }
                     let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 0;
                     return [
                       <Tabs
@@ -297,8 +314,7 @@ let App = props => {
                         <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
                         <ResponsiveTab label={"לוח"} icon={<BarChart />} />
                         <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
-                        {admin ? <Button style={{ height: "1.5rem", top: 20 }} variant={"contained"}
-                          onClick={() => props.history.push("/admin")}>ניהול</Button> : null}
+
                       </Tabs>,
                       <TabPanel key="0" value={tab} index={0} >
                         <Register notify={notify} UserInfo={userInfo} />

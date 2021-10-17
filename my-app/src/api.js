@@ -185,7 +185,7 @@ export async function getUserObj(user) {
                 } else if (data.inactive) {
                     throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
                 }
-                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: user };
+                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: data };
             },
             (err) => {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
