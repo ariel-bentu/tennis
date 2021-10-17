@@ -66,6 +66,8 @@ const getGameTariff = () => {
 };
 
 const normalizeFactor = (f) => f === undefined ? 1 : f;
+const round = (f) = Math.floor(f*10)/10;
+
 
 const addOneGameDebt = (db, batch, gameTariff,
     email, matchID, isSingles, date) => {
@@ -959,7 +961,8 @@ const updateGameDebt = (matchID, matchData, matchDataBefore) => {
                                 // updated balance:
                                 let newBalance = billingDoc.data().balance;
                                 newBalance = newBalance + previousCharge - price;
-                                transaction.update(billingDoc.ref, { balance: newBalance });
+
+                                transaction.update(billingDoc.ref, { balance: round(newBalance) });
                             });
                         }));
                 }
@@ -1019,13 +1022,13 @@ const archiveMatchesImpl = (matchID) => {
 
                     if (billingRecord && billingRecord.data()) {
                         batch.update(billingRecord.ref, {
-                            balance: billingRecord.data().balance - addToBalance,
+                            balance: round(billingRecord.data().balance - addToBalance),
                         });
                         msg += email + ": " + (billingRecord.data().balance - addToBalance) + "\n";
                     } else {
                         const newBillingRecord = db.collection(BILLING_COLLECTION).doc(email);
                         batch.set(newBillingRecord, {
-                            balance: -addToBalance,
+                            balance: round(-addToBalance),
                         });
                         msg += email + "(new): " + (-addToBalance) + "\n";
                     }
