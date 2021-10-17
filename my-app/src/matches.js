@@ -6,7 +6,7 @@ import { Spacer, Loading, VBox, HBox, SmallText, SmallText2, HSeparator } from '
 import { getNiceDate } from './utils'
 
 import * as api from './api'
-import { Edit, EmojiEvents } from '@material-ui/icons';
+import { Edit, EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
 import SetResults from './set-results';
 
 const Val = (v) => parseInt(v);
@@ -96,8 +96,14 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
     //alert(match.date + "-"+ getNiceDate(match.date));
 
     return <VBox style={{ width: '80%', height: 100 }}>
-
-        <SmallText fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
+        <Grid container spacing={2} style={{ height: 60 }} direction={'row-reverse'}>
+            <Grid item xs={4} >
+            </Grid>
+            <Grid item xs={7}>
+            <SmallText textAlign="center" fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
+               
+            </Grid>
+        </Grid>
         <Spacer />
 
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
@@ -131,11 +137,11 @@ function userInMatch(match, UserInfo) {
 function GetOneLine(props) {
 
     return (
-        <Grid container spacing={2} style={{ height: 60 }} direction={'row'}>
-            <Grid item xs={3} alignContent={'flex-start'} style={{ padding: 2 }}>
+        <Grid container spacing={2} style={{ height: 60 }} direction={'row-reverse'}>
+            <Grid item xs={4} alignContent={'flex-start'} style={{ padding: 2 }}>
                 <VBox>
-                    {props.P1 ? <SmallText2 backgroundColor={props.P1.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P1.displayName}</SmallText2> : null}
-                    {props.P2 ? <SmallText2 backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
+                    {props.P1 ? <SmallText2 textAlign="center" backgroundColor={props.P1.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P1.displayName}</SmallText2> : null}
+                    {props.P2 ? <SmallText2 textAlign="center" backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
                 </VBox>
             </Grid >
             {props.canceled ? null :
@@ -146,7 +152,18 @@ function GetOneLine(props) {
             {props.canceled ?
 
                 <Grid item xs={7} style={{ padding: 2 }}>
-                    {props.firstPair ? null : <SmallText2 textAlign="center">משחק בוטל</SmallText2>}
+                    {props.firstPair ? <HBox style={{ justifyContent: 'center' }}>
+                        <SentimentDissatisfied />
+                    </HBox>
+                        :
+                        <HBox >
+                            <SmallText2 textAlign="center">משחק בוטל</SmallText2>
+                            
+
+
+                        </HBox>
+                    }
+
                 </Grid> :
                 props.sets.map(result => {
                     const setValue = props.firstPair ? result.pair1 : result.pair2;
@@ -183,13 +200,13 @@ function GetOneLine(props) {
             {props.canceled ? null :
                 <Grid item xs={1} style={{ padding: 2 }}>
                     <HBox style={{ width: '100%', height: '100%' }}>
-                        <VBox style={{ backgroundColor: 'black', width: '4%', height: 35 }} />
                         <VBox style={{
                             backgroundColor: (props.wins ? 'lightgreen' : (props.wonSets === -1 ? 'white' : props.tie ? 'lightgray' : 'lightpink')),
                             width: 22, height: 35, justifyContent: 'center'
                         }}>
                             <SmallText2 textAlign='center'>{props.wonSets >= 0 ? props.wonSets : "-"}</SmallText2>
                         </VBox>
+                        <VBox style={{ backgroundColor: 'black', width: '4%', height: 35 }} />
                     </HBox>
                 </Grid>}
             {props.button ? <Grid item xs={1} style={{ padding: 2 }}>{props.button}</Grid> : null}

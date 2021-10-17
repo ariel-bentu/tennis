@@ -984,6 +984,23 @@ export async function saveUsers(users) {
     })
 }
 
+export async function getUsersWithBalls() {
+    var db = firebase.firestore();
+    return db.collection(Collections.USERS_INFO_COLLECTION).where("balls", ">", 0).get();
+}
+
+export async function setBallsAmount(email, curr, delta) {
+    if (!curr) {
+        curr = 0;
+    }
+    const newVal = curr + delta;
+    if (newVal < 0) {
+        throw new Error("ערך קטן מ-0 אינו חוקי");
+    }
+    var db = firebase.firestore();
+    return db.collection(Collections.USERS_INFO_COLLECTION).doc(email).update({balls:newVal});
+}
+
 export async function getRegistrationOpen() {
     var db = firebase.firestore();
     let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_REGISTRATION);

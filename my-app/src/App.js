@@ -38,6 +38,7 @@ import {
 
 import firebase from 'firebase/app'
 import 'firebase/auth';
+import BallsAdmin from './balls-admin';
 
 //import { config } from "./config";
 
@@ -244,10 +245,11 @@ let App = props => {
                       centered
                       style={{ marginTop: 5 }}
                     >
-                      <Tab label={"ניהול"} />
-                      <Tab label={"שיבוץ"} />
-                      <Tab label={"משתמשים"} />
-                      <Tab label={"חובות"} />
+                      <ResponsiveTab label={"ניהול"} />
+                      <ResponsiveTab label={"שיבוץ"} />
+                      <ResponsiveTab label={"משתמשים"} />
+                      <ResponsiveTab label={"חובות"} />
+                      <ResponsiveTab label={"כדורים"} />
                     </Tabs>,
                     <TabPanel key={"0"} value={adminTab} index={0} >
                       {adminTab === 0 ? <Admin notify={notify} windowSize={windowSize} /> : null}
@@ -260,6 +262,9 @@ let App = props => {
                     </TabPanel>,
                     <TabPanel key={"3"} value={adminTab} index={3} >
                       {adminTab === 3 ? <Billing notify={notify} windowSize={windowSize} /> : null}
+                    </TabPanel>,
+                    <TabPanel key={"4"} value={adminTab} index={4} >
+                      {adminTab === 4 ? <BallsAdmin notify={notify} windowSize={windowSize} /> : null}
                     </TabPanel>
                     ]
                   }}
@@ -292,6 +297,8 @@ let App = props => {
                         <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
                         <ResponsiveTab label={"לוח"} icon={<BarChart />} />
                         <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
+                        {admin ? <Button style={{ height: "1.5rem", top: 20 }} variant={"contained"}
+                          onClick={() => props.history.push("/admin")}>ניהול</Button> : null}
                       </Tabs>,
                       <TabPanel key="0" value={tab} index={0} >
                         <Register notify={notify} UserInfo={userInfo} />
