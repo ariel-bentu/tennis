@@ -224,7 +224,11 @@ let App = props => {
                 isAdminPath ? setForceMode(0) : setForceMode(1)
                 //console.log("clicl " + (isAdminPath?"0":"1"))
               }}>{!isAdminPath ? "ניהול" : "משתמשים"}</Button> : null}
+            
           </HBox>
+            <div style={{position:"absolute", left:30, top:0, width:10, height:10}}>
+              <img src="Penn1.png" style={{width:38}} alt=""/>
+            </div>
         </Toolbar> : null}
       {forgotPwd ? null :
         changePwd ?
