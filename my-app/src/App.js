@@ -8,7 +8,7 @@ import {
 import { Alert, AlertTitle } from '@material-ui/lab';
 import {
   Collapse, Button, Tabs, Tab, Paper, Popper, MenuItem, MenuList, Grow,
-  ClickAwayListener, Snackbar, Badge
+  ClickAwayListener, Snackbar
 } from '@material-ui/core';
 import Register from './register';
 import MyMatches from './myMatches'
@@ -24,7 +24,7 @@ import { Notifications } from './notifications';
 
 import { Toolbar, Text, Loading, HBox, Spacer, TabPanel } from './elem'
 
-import { AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart, NotificationsActive, NotificationsNone } from '@material-ui/icons';
+import { AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart } from '@material-ui/icons';
 
 import * as api from './api'
 import Login from './login'
@@ -66,11 +66,11 @@ let App = props => {
   const [notificationToken, setNotificationToken] = useState(undefined);
   const [notifications, setNotifications] = useState([]);
   // eslint-disable-next-line no-unused-vars
-  const [notificationOpen, setNotificationOpen] = useState(false);
+  // const [notificationOpen, setNotificationOpen] = useState(false);
   const [forceMode, setForceMode] = useState(undefined);
 
   const anchorRef = React.useRef(null);
-  const notificationRef = React.useRef(null);
+  //const notificationRef = React.useRef(null);
   const notify = {
     success: (body, title) => {
       setMsg({ open: true, severity: "success", title, body });
@@ -143,18 +143,18 @@ let App = props => {
 
   }, [])
 
-  const handleNotifClick = () => {
-    if ('safari' in window && 'pushNotification' in window.safari) {
-      let permissionData = window.safari.pushNotification.permission('web.com.atpenn');
-      let token = api.checkSafariRemotePermission(permissionData);
-      if (token) {
-        setNotificationToken(token);
-      }
-    };
-  };
+  // const handleNotifClick = () => {
+  //   if ('safari' in window && 'pushNotification' in window.safari) {
+  //     let permissionData = window.safari.pushNotification.permission('web.com.atpenn');
+  //     let token = api.checkSafariRemotePermission(permissionData);
+  //     if (token) {
+  //       setNotificationToken(token);
+  //     }
+  //   };
+  // };
 
   const isAdminPath = window.location && window.location.pathname && window.location.pathname.endsWith("admin");
-  console.log("adminPath" + (isAdminPath ? " y" : " n"))
+  //console.log("adminPath" + (isAdminPath ? " y" : " n"))
   return (
     <div className="App" dir="rtl" >
       <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left: 0, right: 0, fontSize: 15, zIndex: 1000 }} >
@@ -222,7 +222,7 @@ let App = props => {
             {admin ? <Button style={{ height: "1.5rem" }} variant={"contained"}
               onClick={() => {
                 isAdminPath ? setForceMode(0) : setForceMode(1)
-                console.log("clicl " + (isAdminPath?"0":"1"))
+                //console.log("clicl " + (isAdminPath?"0":"1"))
               }}>{!isAdminPath ? "ניהול" : "משתמשים"}</Button> : null}
           </HBox>
         </Toolbar> : null}
@@ -243,7 +243,7 @@ let App = props => {
                   path="/admin"
                   children={(props) => {
                     if (forceMode !== undefined && forceMode === 0) {
-                      console.log("goto /")
+                      //console.log("goto /")
                       setForceMode(undefined);
                       props.history.push("/")
                     }
@@ -293,7 +293,7 @@ let App = props => {
                 <Route path="/"
                   children={(props) => {
                     if (forceMode !== undefined && forceMode === 1) {
-                      console.log("goto /admin")
+                      //console.log("goto /admin")
                       setForceMode(undefined);
                       props.history.push("/admin")
                     }

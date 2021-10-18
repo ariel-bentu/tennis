@@ -2,19 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, Text, SmallText, SmallText2, HSeparator, HBox } from './elem'
+import { Spacer, Loading, VBox, Text, SmallText, SmallText2, HSeparator, HBox, getBallsIndicator } from './elem'
 import SetResults from './set-results';
 import { getNiceDate } from './utils'
 import * as api from './api'
-import SportsBaseballSharpIcon from '@material-ui/icons/SportsBaseballSharp';
 
 
-const getBallsIndicator = (player) => player.balls && player.balls > 0 ? (
-    <VBox style={{ alignContent: "center" }}>
-        <SportsBaseballSharpIcon style={{ color: '#DAE714', transform: "rotate(45deg)" }} />
-        <SmallText2 textAlign="center" fontSize={10}>{player.balls}</SmallText2>
-    </VBox>) :
-    null
+
 
 export default function MyMatches({ UserInfo, notify, admin }) {
 
@@ -24,6 +18,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
     const [myMatches, setMyMatches] = useState(undefined);
     const [edit, setEdit] = useState(undefined);
     const [reload, setReload] = useState(1);
+    // eslint-disable-next-line no-unused-vars
     const [refresh, setRefresh] = useState(1);
     const [usersWithBalls, setUsersWithBalls] = useState(undefined);
 
@@ -71,7 +66,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                         const oneUserWithBall = usersWithBalls.docs.find(u => u.data().email === m["Player" + i].email);
                         if (oneUserWithBall) {
                             m["Player" + i].balls = oneUserWithBall.data().balls;
-                            console.log("user with balls", m["Player" + i].displayName, m["Player" + i].balls);
+                            //console.log("user with balls", m["Player" + i].displayName, m["Player" + i].balls);
                         }
                     }
                 }

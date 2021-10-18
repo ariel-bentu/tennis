@@ -6,6 +6,8 @@ import {
     Switch, Typography, TextField
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
+import SportsBaseballSharpIcon from '@material-ui/icons/SportsBaseballSharp';
+
 
 export function Spacer(props) {
     return <div style={{ width: props.width || 5, height: props.height || 5 }} />
@@ -55,6 +57,15 @@ export function SmallTableCellEditable(props) {
 export function Text(props) {
     return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 25, padding: 10 }}>{props.children}</div>
 }
+
+export const getBallsIndicator = (player, inMatch) => player.balls && player.balls > 0 ? (
+    <VBox style={{ alignContent: "center" }}>
+        <SportsBaseballSharpIcon style={{ color: inMatch?'red':'#DAE714', transform: "rotate(45deg)", fontSize:inMatch?20:25  }} />
+        <div style={{position:"absolute", width:20, height:20, backgroundColor:"transparent"}}>
+        <SmallText2 textAlign="center" fontSize={inMatch?15:10} fontWeight={inMatch?"bold":"normal"}>{player.balls}</SmallText2>
+        </div>
+    </VBox>) :
+    null
 
 export function BoxInput(props) {
     return <div className="Sunken" style={{
@@ -107,6 +118,7 @@ export function SmallText2(props) {
         width: '100%',
         textAlign: props.textAlign || 'right',
         fontSize: props.fontSize || 12,
+        fontWeight: props.fontWeight,
         padding: 0,
         backgroundColor: props.backgroundColor,
         transform: props.transform || undefined

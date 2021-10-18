@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Button, Divider,
-    TextField, Grid
+    Grid
 } from '@material-ui/core';
 
 import {
@@ -48,7 +48,7 @@ export default function BallsAdmin(props) {
             u.sort(getComparator(sortByBalls));
             setUsers(u);
         });
-
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const setUserBalls = (email, delta) => setUsers(u => u.map(u2 => u2.email === email ? { ...u2, balls: (u2.balls ? u2.balls + delta : delta) } : u2));
@@ -88,7 +88,7 @@ export default function BallsAdmin(props) {
                             <SmallText>{user.displayName}</SmallText>
                         </Grid>
                         <Grid item xs={condense ? 2 : 1} style={{ paddingRight: 2, paddingLeft: 2 }}>
-                            <SmallText><div dir="ltr">{user.balls && user.balls>0?user.balls:""}</div></SmallText>
+                            <SmallText><div dir="ltr">{user.balls && user.balls > 0 ? user.balls : ""}</div></SmallText>
                         </Grid>
                         <Grid item xs={2}>
                             <HBox>

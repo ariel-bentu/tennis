@@ -27,6 +27,7 @@ import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchM
 import * as api from './api'
 
 
+
 const calcChange = (item, user, source, target) => {
 
     if (source === target)
@@ -87,6 +88,9 @@ export default function Match(props) {
             let _users = all[1];
             _users = _users.filter(u => {
                 let uInfo = all[3].find(u1 => u1.email === u.email);
+                if (uInfo) {
+                    u.balls = uInfo.balls;
+                }
                 return uInfo && uInfo.inactive === false
             })
             setUsers(_users)

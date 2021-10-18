@@ -1,5 +1,5 @@
 import { useDrag } from 'react-dnd';
-import { ItemTypes, Spacer } from './elem';
+import { getBallsIndicator, ItemTypes, Spacer } from './elem';
 const style = {
     display: 'flex',
     flexDirection: 'row',
@@ -37,6 +37,7 @@ export const Box = function Box({ user, height, width, onRemove, source, sourceP
         {onRemove ? <Spacer width={15} /> : null}
         <div style={{ display: 'flex', width: onRemove ? '70%' : '70%', verticalAlign: 'text-top' }} title={additionalInfo ? additionalInfo.long : undefined}>
             {user.displayName}
+            {getBallsIndicator(user, true)}
             {additionalInfo ? <sup>{additionalInfo.short}</sup> : ""}
         </div>
         {user.rank ? <div style={{ display: 'flex', width: '23%', verticalAlign: 'text-bottom', backgroundColor: 'green' }}>
