@@ -3,12 +3,18 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isAdmin() {
         let email = request.auth.token.email;
-        return exists(/databases/$(database)/documents/admins/$(email));
+        return get(/databases/$(database)/documents/admins/$(email)).data.admin == true;
     }
     
     function isFinAdmin() {
         let email = request.auth.token.email;
         return get(/databases/$(database)/documents/admins/$(email)).data.finance == true;
+    }
+    
+    function isActiveUser() {
+        let email = request.auth.token.email;
+        let inactive = get(/databases/$(database)/documents/users-info/$(email)).data.inactive;
+        return inactive == false;
     }
     
     match /planned-games/{pgames} {
@@ -17,8 +23,7 @@ service cloud.firestore {
     }
     
     match /users/{user} {
-      allow read: if isAdmin();
-    	allow write: if isAdmin() || user == request.auth.token.email;
+      allow read, write: if isAdmin();
     }
     
     match /users-info/{user} {
@@ -32,16 +37,18 @@ service cloud.firestore {
     }
 
     match /registrations/{reg} {
-    	allow read, write: if request.auth != null;
+    	allow read: if request.auth != null;
+      allow write: if isActiveUser();
     }
 
     match /matches/{m} {
-      allow read: if request.auth != null;
-    	allow write: if isAdmin();
+      allow write: if isAdmin();
+    	allow read: if request.auth != null;
     }
     
     match /matches-archive/{m} {
-    	allow read, write: if isAdmin();
+    	allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
     
     match /registrations-archive/{m} {
@@ -60,19 +67,11 @@ service cloud.firestore {
     match /billing/{m}/payments/{d} {
     	allow read, write: if isFinAdmin();
     }
-
-
-     match /systemInfo/{m} {
+    
+    match /systemInfo/{m} {
       allow read: if request.auth != null;
     	allow read, write: if isAdmin();
     }
     
-    match /test/{tDoc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-		
-
   }
 }

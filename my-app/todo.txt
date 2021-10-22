@@ -1,7 +1,9 @@
 
-- refresh registeration after a while
-- remember password for long time
+# Security
+- (low)remove read systemInfo for non-admin (for registration-open)
+- fix notification by function
 
-
-
+# features
+- (high) compare user to others
 - who to play with
+- bets

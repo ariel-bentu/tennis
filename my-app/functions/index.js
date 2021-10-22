@@ -15,6 +15,9 @@ const fs = require("fs");
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
+const MATCHES_COLLECTION = "matches";
+const USERS_INFO_COLLECTION = "users-info";
+const ADMINS_COLLECTION = "admins";
 
 const express = require("express");
 const app = express();
@@ -66,7 +69,7 @@ const getGameTariff = () => {
 };
 
 const normalizeFactor = (f) => f === undefined ? 1 : f;
-const round = (f) = Math.floor(f*10)/10;
+const round = (f) => Math.floor(f * 10) / 10;
 
 
 const addOneGameDebt = (db, batch, gameTariff,
@@ -243,7 +246,7 @@ const sendSMS = (msg, numbers) => {
     });
 };
 
-const isAdmin = (context) => {
+const isAdmin = (context, isFin) => {
     return new Promise((resolve, reject) => {
         if (!context.auth) {
             reject(new Error("NotAuthenticated"));
@@ -251,8 +254,8 @@ const isAdmin = (context) => {
         }
 
 
-        db.collection("admins").doc(context.auth.token.email).get().then(doc => {
-            if (doc.exists) {
+        db.collection(ADMINS_COLLECTION).doc(context.auth.token.email).get().then(doc => {
+            if (doc.exists && (isFin ? doc.data().finance === true : doc.data().admin === true)) {
                 resolve();
             } else {
                 reject(new Error("NotAnAdmin"));
@@ -271,6 +274,69 @@ const isMatchEventsOn = () => {
     });
 };
 
+exports.updateMatchResults = functions.region("europe-west1").https.onCall((data, context) => {
+    const matchedCancelled = data.matchedCancelled;
+    const isInArchive = data.isInArchive;
+    const sets = data.sets;
+    const matchID = data.matchID;
+    const paymentFactor = data.paymentFactor;
+    const collectionName = isInArchive ? MATCHES_ARCHIVE_COLLECTION : MATCHES_COLLECTION;
+
+    const docsArray = [
+        db.collection(collectionName).doc(matchID).get(),
+        db.collection(USERS_INFO_COLLECTION).doc(context.auth.token.email).get(),
+        db.collection(ADMINS_COLLECTION).doc(context.auth.token.email).get(),
+    ];
+
+    return Promise.all(docsArray).then(all => {
+        const matchDoc = all[0];
+        const userInfoDoc = all[1];
+        const userAdminDoc = all[2];
+
+        if (!matchDoc.exists) {
+            throw new Error("Match not found");
+        }
+
+        if (!userInfoDoc.exists || !(userInfoDoc.data().inactive === false)) {
+            throw new Error("Inactive or unknown user");
+        }
+        let userIsPlayer = false;
+        for (let i = 1; i <= 4; i++) {
+            if (matchDoc.data()["Player" + i] && matchDoc.data()["Player" + i].email === context.auth.token.email) {
+                userIsPlayer = true;
+                break;
+            }
+        }
+        const priorSetResultsOrCancelled = matchDoc.data().sets && matchDoc.data().sets.length > 0 || matchDoc.data().matchedCancelled === true;
+        const isAdmin = userAdminDoc.exists && userAdminDoc.data().admin === true;
+
+        if (paymentFactor >= 0 && paymentFactor !== matchDoc.data().paymentFactor && !isAdmin) {
+            throw new Error("Not Authorized to modify Payment Factor");
+        }
+
+        if (priorSetResultsOrCancelled && !isAdmin) {
+            throw new Error("Only administrators are authorized to modify match results");
+        }
+
+        if (!userIsPlayer && !isAdmin) {
+            throw new Error("Only match players and administrators may add match results");
+        }
+        const update = {};
+        if (matchedCancelled) {
+            update.matchedCancelled = true;
+            update.sets = [];
+        } else {
+            update.matchedCancelled = false;
+            update.sets = sets;
+        }
+
+        if (paymentFactor >= 0 && paymentFactor !== matchDoc.data().paymentFactor) {
+            update.paymentFactor = paymentFactor;
+        }
+
+        return matchDoc.ref.update(update);
+    });
+});
 
 exports.registerUser = functions.region("europe-west1").https.onCall((data, context) => {
     functions.logger.info("register user", data);
@@ -320,7 +386,7 @@ const isMovedToArchive = (change, matchID) => {
         }
 
         // check if the deleted record is now in archive
-        db.collection("matches-archive").doc(matchID).get().then(value => {
+        db.collection(MATCHES_ARCHIVE_COLLECTION).doc(matchID).get().then(value => {
             if (value.exists) {
                 resolve(true);
             } else {
@@ -331,7 +397,7 @@ const isMovedToArchive = (change, matchID) => {
 };
 
 exports.isAdmin = functions.region("europe-west1").https.onCall((data, context) => {
-    return isAdmin(context).catch(err => {
+    return isAdmin(context, false).catch(err => {
         throw new functions.https.HttpsError("permission-denied", "AdminRequired", err.message);
     });
 });
@@ -340,7 +406,7 @@ exports.isAdmin = functions.region("europe-west1").https.onCall((data, context) 
 exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
     const batch = db.batch();
 
-    return isAdmin(context).then(() => {
+    return isAdmin(context, false).then(() => {
         return db.collection("registrations").get().then(regs => {
             // Move to archive
             regs.docs.forEach((reg) => {
@@ -352,7 +418,7 @@ exports.openWeek = functions.region("europe-west1").https.onCall((data, context)
             return batch.commit().then(() => {
                 return Promise.all([
                     db.collection("users").get(),
-                    db.collection("users-info").get(),
+                    db.collection(USERS_INFO_COLLECTION).get(),
                 ]).then(all => {
                     const phones = [];
                     all[0].docs.forEach(user => {
@@ -684,7 +750,7 @@ const handleMatchResultsChange = (change) => {
 exports.notificationAdded = functions.region("europe-west1").firestore
     .document("notifications/{notifID}")
     .onCreate((snapshot, context) => {
-        const usersInfoRef = db.collection("users-info");
+        const usersInfoRef = db.collection(USERS_INFO_COLLECTION);
         // return usersInfoRef.where(FieldPath.documentId(), "in", snapshot.data().to).get().then(users => {
         return usersInfoRef.get().then(users => {
             const to = snapshot.data().to;
@@ -794,7 +860,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                             db.collection("users").get().then(
                                 (u) => {
                                     // load admins to notify too
-                                    return db.collection("admins").where("notifyChanges", "==", true).get().then((adminsToNotify) => {
+                                    return db.collection(ADMINS_COLLECTION).where("notifyChanges", "==", true).get().then((adminsToNotify) => {
                                         const users = u.docs.map((oneUser) => ({
                                             email: oneUser.data().email,
                                             phone: oneUser.data().phone,
@@ -894,7 +960,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
     });
 
 exports.matchArchiveUpdated = functions.region("europe-west1").firestore
-    .document("matches-archive/{matchID}")
+    .document(MATCHES_ARCHIVE_COLLECTION + "/{matchID}")
     .onWrite((change, context) => {
         return isMatchEventsOn().then(eventsOn => {
             if (!eventsOn) {

@@ -88,11 +88,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                 matches ?
                     matches.length === 0 ?
                         <VBox><Text>אין משחקים עדיין</Text></VBox> :
-                        (!myMatches || myMatches.length === 0) && !admin ?
-                            <VBox><Text>אין משחקים מתוכננים</Text></VBox>
-                            :
                             <Grid container spacing={2}>
-                                <SmallText2 fontSize={18} textAlign="center">משחקים שלי</SmallText2>
                                 <Grid container item xs={12} spacing={3} style={{ textAlign: "right" }}>
                                     <Grid item xs={2}>מתי</Grid>
                                     <Grid item xs={3}>איפה</Grid>
@@ -100,8 +96,11 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                                     <Grid item xs={2}></Grid>
                                 </Grid>
                                 <HSeparator />
-                                {myMatches ? myMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} showSetResults={true} />) : null}
-                                {admin ? <HSeparator /> : null}
+                                <SmallText2 fontSize={18} textAlign="center">משחקים שלי</SmallText2>
+                                <HSeparator />
+                                {myMatches && myMatches.length > 0? myMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} showSetResults={true} />) : 
+                                   <SmallText2 fontSize={14} textAlign="center">אין</SmallText2> }
+                                <HSeparator />
                                 <SmallText2 fontSize={18} textAlign="center">שאר המשחקים</SmallText2>
                                 {otherMatches ? otherMatches.map((match, i) => <OneGame match={match} setEdit={setEdit} showSetResults={admin === true} />) : null}
                             </Grid>

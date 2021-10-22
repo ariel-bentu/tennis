@@ -113,7 +113,7 @@ export async function updateUserNotificationToken(email, newNotificationToken, i
     });
 }
 
-
+/*
 export async function migrateDate() {
 
     var db = firebase.firestore();
@@ -149,6 +149,7 @@ export async function migrateDate() {
         return Promise.all(waitFor).then(() => batch.commit());
     }))
 }
+*/
 
 export async function getUserInfo(user, pwd) {
     return firebase.auth().signInWithEmailAndPassword(user, pwd)
@@ -397,33 +398,59 @@ async function getGameTarif() {
 */
 
 export async function saveMatchResults(match, paymentFactor, isArchived) {
-    var db = firebase.firestore();
-    let update = { sets: match.sets, matchCanceled: false }
-    if (!match.sets || match.sets.length === 0 || match.sets[0].pair1 === "") {
-        //remove set Results
-        update = { sets: [], matchCanceled: false };
+
+    const updateMatchResults = app.functions('europe-west1').httpsCallable('updateMatchResults');
+
+    let payload = {
+        matchID: match._ref.id,
+        paymentFactor:paymentFactor?paymentFactor:-1,
+        isInArchive: isArchived,
+        sets: match.sets,
+        matchedCancelled: false,
+    };
+
+    return updateMatchResults(payload);
+
+    // var db = firebase.firestore();
+    // let update = { sets: match.sets, matchCanceled: false }
+    // if (!match.sets || match.sets.length === 0 || match.sets[0].pair1 === "") {
+    //     //remove set Results
+    //     update = { sets: [], matchCanceled: false };
         
-    }
-    if (paymentFactor) {
-        update.paymentFactor = paymentFactor;
-    } else {
-        update.paymentFactor = firebase.firestore.FieldValue.delete();
-    }
-    return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
-        .doc(match._ref.id).update(update);
+    // }
+    // if (paymentFactor) {
+    //     update.paymentFactor = paymentFactor;
+    // } else {
+    //     update.paymentFactor = firebase.firestore.FieldValue.delete();
+    // }
+    // return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
+    //     .doc(match._ref.id).update(update);
 }
 
 export async function saveMatchCanceled(match, paymentFactor, isArchived) {
-    var db = firebase.firestore();
-    let update = { sets: [], matchCanceled: true }
-    if (paymentFactor) {
-        update.paymentFactor = paymentFactor;
-    } else {
-        update.paymentFactor = firebase.firestore.FieldValue.delete();
-    }
+
+    const updateMatchResults = app.functions('europe-west1').httpsCallable('updateMatchResults');
+
+    let payload = {
+        matchID: match._ref.id,
+        paymentFactor:paymentFactor?paymentFactor:-1,
+        isInArchive: isArchived,
+        sets: [],
+        matchedCancelled: true,
+    };
+
+    return updateMatchResults(payload);
+
+    // var db = firebase.firestore();
+    // let update = { sets: [], matchCanceled: true }
+    // if (paymentFactor) {
+    //     update.paymentFactor = paymentFactor;
+    // } else {
+    //     update.paymentFactor = firebase.firestore.FieldValue.delete();
+    // }
     
-    return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
-        .doc(match._ref.id).update(update);
+    // return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
+    //     .doc(match._ref.id).update(update);
 }
 
 export async function getUserBalance(email) {

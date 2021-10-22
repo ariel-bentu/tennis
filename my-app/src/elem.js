@@ -58,7 +58,7 @@ export function Text(props) {
     return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 25, padding: 10 }}>{props.children}</div>
 }
 
-export const getBallsIndicator = (player, inMatch) => player.balls && player.balls > 0 ? (
+export const getBallsIndicator = (player, inMatch) => player && player.balls && player.balls > 0 ? (
     <VBox style={{ alignContent: "center" }}>
         <SportsBaseballSharpIcon style={{ color: inMatch?'red':'#DAE714', transform: "rotate(45deg)", fontSize:inMatch?20:25  }} />
         <div style={{position:"absolute", width:20, height:20, backgroundColor:"transparent"}}>

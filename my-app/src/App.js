@@ -227,7 +227,7 @@ let App = props => {
             
           </HBox>
             <div style={{position:"absolute", left:30, top:0, width:10, height:10}}>
-              <img src="Penn1.png" style={{width:38}} alt=""/>
+              <img src="penn_logo.png" style={{width:38}} alt=""/>
             </div>
         </Toolbar> : null}
       {forgotPwd ? null :
@@ -303,6 +303,9 @@ let App = props => {
                     }
                     let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 0;
                     return [
+                      // <div key="1" style={{position:"absolute", width:"100%", height:30}}>
+                      //   <img src="penn_banner.jpg"  alt="" style={{opacity:.3, zIndex:-1}}/>
+                      // </div>,
                       <Tabs
                         key="100"
                         value={tab}
