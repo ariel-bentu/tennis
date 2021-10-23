@@ -51,7 +51,7 @@ export function cleansePlayer(user) {
 export function newMatch(game) {
     return {
         id: uuidv4(),
-        GameID: game.id,
+        GameID: Math.abs(game.id),
         Day: game.Day,
         date: getMatchDate(game),
         Hour: game.Hour,
@@ -75,6 +75,7 @@ const DaysMap = {
         5,
     "שבת":
         6
+
 };
 
 export const sortByDays = (d1, d2) => DaysMap[d1] - DaysMap[d2];
@@ -100,15 +101,19 @@ export function getShortDay(day) {
     return daysMap[day];
 }
 
-export function getMatchDate(match) {
-    let begin = dayjs()
-    if (begin.day() === 6 && match.Day !== 'שבת') {
-        begin = begin.startOf('week').add(1, 'week');
-    } else {
-        begin = dayjs().startOf('week');
+export function getMatchDate(game) {
+    let begin = dayjs();
+    if (begin.day() === 6 && game.id < 0) {
+        return begin.format("YYYY-MM-DD");
     }
 
-    return begin.add(DaysMap[match.Day], 'day').format("YYYY-MM-DD");
+    begin = begin.startOf('week').add(1, 'week');
+
+    return begin.add(DaysMap[game.Day], 'day').format("YYYY-MM-DD");
+}
+
+export function isToday(match) {
+    return dayjs().format("YYYY-MM-DD") === match.date;
 }
 
 export function getTodayMatchMessage(plannedGames, gameID, matches) {
@@ -201,4 +206,27 @@ const MonthMap = {
 export function getNiceDate(d) {
     const djs = dayjs(d);
     return MonthMap[djs.format("MMM")] + "-" + djs.format("DD");
+}
+
+const Val = (v) => parseInt(v);
+
+export function calcWinner(match) {
+    const wonSets1 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) > Val(curr.pair2) ? 1 : 0), 0) : -1;
+    const wonSets2 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) < Val(curr.pair2) ? 1 : 0), 0) : -1;
+    let winner = 0;
+
+    if (wonSets1 > wonSets2) {
+        winner = 1;
+    } else if (wonSets1 < wonSets2) {
+        winner = 2;
+    } else if (match.sets) {
+        const wonGames1 = match.sets.reduce((prev, curr) => prev + Val(curr.pair1), 0);
+        const wonGames2 = match.sets.reduce((prev, curr) => prev + Val(curr.pair2), 0);
+        if (wonGames1 > wonGames2) {
+            winner = 1;
+        } else if (wonGames1 < wonGames2) {
+            winner = 2;
+        }
+    }
+    return winner;
 }

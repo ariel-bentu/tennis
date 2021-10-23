@@ -22,7 +22,8 @@ import { TouchBackend } from 'react-dnd-touch-backend'
 import { isMobile } from 'react-device-detect';
 import { Delete, ExpandMore } from '@material-ui/icons';
 
-import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, getTodayMatchMessage, getShortDay, sortByDays, getNiceDate } from './utils'
+import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, 
+    getTodayMatchMessage, getShortDay, sortByDays, getNiceDate , isToday} from './utils'
 
 import * as api from './api'
 
@@ -67,23 +68,19 @@ export default function Match(props) {
 
     useEffect(() => {
         Promise.all([
-            getCollection(api.Collections.REGISTRATION_COLLECTION, "utcTime").then(regs => {
-                //order by GameID
-
-                setRegistrations(regs)
-                return regs;
-            }),
+            getCollection(api.Collections.REGISTRATION_COLLECTION, "utcTime"),
             getCollection(api.Collections.USERS_COLLECTION),
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
                 games.sort((g1, g2) => sortByDays(g1.Day, g2.Day));
+
                 setGames(games);
                 if (games && games.length > 0) {
                     setCurrentGame(games[0].id)
                 }
                 return games;
             }),
-            getCollection(api.Collections.USERS_INFO_COLLECTION)
-
+            getCollection(api.Collections.USERS_INFO_COLLECTION),
+            api.thisSatRegistration(),
         ]).then(all => {
             let _users = all[1];
             _users = _users.filter(u => {
@@ -95,8 +92,23 @@ export default function Match(props) {
             })
             setUsers(_users)
 
+
+
+            let regs = all[0];
+            
+            if(all[4].length > 0) {
+                regs = regs.concat(all[4]);
+                setGames(g=>{
+                    const newGames = [
+                        {id:-5, Day:"השבת", Hour:"20:00"},
+                        ...g
+                    ];
+                    return newGames;
+                })
+            }
+
             //add user displayNames names
-            let regs = all[0].map(reg => {
+            regs = regs.map(reg => {
                 let user = _users.find(u => u.email === reg.email);
                 if (!user) {
                     reg.displayName = reg.email;
@@ -191,7 +203,15 @@ export default function Match(props) {
         [currentGame, games]);
 
 
-    let currentMatches = editedMatches ? editedMatches.filter(em => em.GameID === currentGame && !em.deleted) : [];
+    let currentMatches = editedMatches ? editedMatches.filter(em => {
+        if (em.GameID === 5 && isToday(em) && currentGame === 5) {
+            // on Sat, show the today's game in the special pane of this Sat
+            return false;
+        }
+            
+
+        return (em.GameID === currentGame || (currentGame < 0 && isToday(em))) && !em.deleted
+    }) : [];
     let currentRegistrations = registrations ? registrations.filter(em => em.GameID === currentGame) : [];
 
     //currentRegistrations = currentRegistrations.sort((cr1, cr2) => cr1._order - cr2._order);

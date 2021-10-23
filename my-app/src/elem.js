@@ -121,6 +121,7 @@ export function SmallText2(props) {
         fontWeight: props.fontWeight,
         padding: 0,
         backgroundColor: props.backgroundColor,
+        color: props.color,
         transform: props.transform || undefined
     }}>{props.children}</div>
 }

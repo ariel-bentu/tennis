@@ -7,7 +7,7 @@ import 'firebase/functions';
 
 
 import { config } from './config';
-import { cleansePlayer, sortByDays } from './utils';
+import { calcWinner, cleansePlayer, sortByDays } from './utils';
 import dayjs from 'dayjs'
 
 export const Collections = {
@@ -220,7 +220,7 @@ export async function getPlannedGames(currentUser) {
     var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        db.collection(Collections.PLANNED_GAMES_COLLECTION).get().then((planned) => {
+        db.collection(Collections.PLANNED_GAMES_COLLECTION).get().then(async (planned) => {
             let results = []
             planned.forEach((doc) => {
                 if (!doc.data().disabled) {
@@ -231,8 +231,9 @@ export async function getPlannedGames(currentUser) {
 
             db.collection(Collections.REGISTRATION_COLLECTION).get().then(
                 regs => {
-                    regs.docs.forEach(regDoc => {
-                        let reg = regDoc.data();
+                    let regsData = regs.docs.map(doc=>doc.data());
+                    
+                    regsData.forEach(reg => {
                         let game = results.find(g => g.id === reg.GameID);
                         if (!game)
                             return;
@@ -251,6 +252,27 @@ export async function getPlannedGames(currentUser) {
         })
     });
 
+}
+
+export async function thisSatRegistration() {
+    return new Promise((resolve, reject) => {
+        let begin = dayjs()
+        if (begin.day() !== 6) {
+            resolve([]);
+            return;
+        }
+
+        begin = dayjs().startOf('week').subtract(1, 'day');
+        let db = firebase.firestore();
+
+        db.collection("registrations-archive")
+            .where("utcTime", ">=", begin.format("YYYY/MM/DD"))
+            .orderBy("utcTime")
+            .get().then(regs => {
+                let lastSatReg = regs.docs.filter(r => r.data().GameID === 5).map((r2, i) =>({...r2.data(), GameID:-5, _order:i+1}));
+                resolve(lastSatReg);
+            })
+    });
 }
 
 export async function setPlannedGameActive(id, active) {
@@ -403,7 +425,7 @@ export async function saveMatchResults(match, paymentFactor, isArchived) {
 
     let payload = {
         matchID: match._ref.id,
-        paymentFactor:paymentFactor?paymentFactor:-1,
+        paymentFactor: paymentFactor ? paymentFactor : -1,
         isInArchive: isArchived,
         sets: match.sets,
         matchedCancelled: false,
@@ -416,7 +438,7 @@ export async function saveMatchResults(match, paymentFactor, isArchived) {
     // if (!match.sets || match.sets.length === 0 || match.sets[0].pair1 === "") {
     //     //remove set Results
     //     update = { sets: [], matchCanceled: false };
-        
+
     // }
     // if (paymentFactor) {
     //     update.paymentFactor = paymentFactor;
@@ -433,7 +455,7 @@ export async function saveMatchCanceled(match, paymentFactor, isArchived) {
 
     let payload = {
         matchID: match._ref.id,
-        paymentFactor:paymentFactor?paymentFactor:-1,
+        paymentFactor: paymentFactor ? paymentFactor : -1,
         isInArchive: isArchived,
         sets: [],
         matchedCancelled: true,
@@ -448,7 +470,7 @@ export async function saveMatchCanceled(match, paymentFactor, isArchived) {
     // } else {
     //     update.paymentFactor = firebase.firestore.FieldValue.delete();
     // }
-    
+
     // return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
     //     .doc(match._ref.id).update(update);
 }
@@ -1025,7 +1047,7 @@ export async function setBallsAmount(email, curr, delta) {
         throw new Error("ערך קטן מ-0 אינו חוקי");
     }
     var db = firebase.firestore();
-    return db.collection(Collections.USERS_INFO_COLLECTION).doc(email).update({balls:newVal});
+    return db.collection(Collections.USERS_INFO_COLLECTION).doc(email).update({ balls: newVal });
 }
 
 export async function getRegistrationOpen() {
@@ -1045,4 +1067,77 @@ export async function setRegistrationOpen(isOpen) {
     if (docRef) {
         return docRef.update({ open: isOpen })
     }
+}
+
+export async function getDetailedStats(email) {
+    let db = firebase.firestore();
+    let matches = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION)
+    let queries = [
+        matches.where("Player1.email", "==", email).get(),
+        matches.where("Player2.email", "==", email).get(),
+        matches.where("Player3.email", "==", email).get(),
+        matches.where("Player4.email", "==", email).get(),
+    ];
+    const stats = {};
+    return Promise.all(queries).then(all => {
+        let allMatches = all[0].docs.concat(all[1].docs).concat(all[2].docs).concat(all[3].docs);
+
+        allMatches.forEach(matchDoc => {
+            const match = matchDoc.data();
+
+            for (let i = 1; i <= 4; i++) {
+                if (match["Player" + i] && match["Player" + i].email === email) {
+                    if (i < 3) {
+                        match.Player1 = undefined;
+                        match.Player2 = undefined;
+                    } else {
+                        match.Player3 = undefined;
+                        match.Player4 = undefined;
+                    }
+                    break;
+                }
+            }
+            if (!match.sets)
+                return;
+
+            for (let i = 1; i <= 4; i++) {
+                if (match["Player" + i]) {
+                    let winner = calcWinner(match);
+                    let stat = stats[match["Player" + i].email];
+                    if (stat === undefined) {
+                        stat = {
+                            wins: 0,
+                            loses: 0,
+                            ties: 0,
+                        }
+                    }
+                    if (winner === 0) {
+                        stat.ties++;
+                    } else if (i >= 3) {
+                        if (winner === 1) {
+                            stat.wins++;
+                        } else {
+                            stat.loses++;
+                        }
+                    } else {
+                        if (winner === 1) {
+                            stat.loses++;
+                        } else {
+                            stat.wins++;
+                        }
+                    }
+                    stats[match["Player" + i].email] = stat;
+                }
+            }
+        });
+
+        const results = []
+        for (const [statId] of Object.entries(stats)) {
+            results.push({
+                _ref: { id: statId },
+                ...stats[statId],
+            })
+        }
+        return results;
+    });
 }
