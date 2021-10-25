@@ -119,6 +119,8 @@ export function SmallText2(props) {
         textAlign: props.textAlign || 'right',
         fontSize: props.fontSize || 12,
         fontWeight: props.fontWeight,
+        lineHeight: props.lineHeight,
+        marginTop:props.marginTop,
         padding: 0,
         backgroundColor: props.backgroundColor,
         color: props.color,

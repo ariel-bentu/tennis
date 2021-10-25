@@ -140,8 +140,8 @@ function GetOneLine(props) {
         <Grid container spacing={2} style={{ height: 60 }} direction={'row-reverse'}>
             <Grid item xs={4} alignContent={'flex-start'} style={{ padding: 2 }}>
                 <VBox>
-                    {props.P1 ? <SmallText2 textAlign="center" backgroundColor={props.P1.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P1.displayName}</SmallText2> : null}
-                    {props.P2 ? <SmallText2 textAlign="center" backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
+                    {props.P1 ? <SmallText2 marginTop={5} lineHeight={1} textAlign="center" backgroundColor={props.P1.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P1.displayName}</SmallText2> : null}
+                    {props.P2 ? <SmallText2 lineHeight={1}  textAlign="center" backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
                 </VBox>
             </Grid >
             {props.canceled ? null :

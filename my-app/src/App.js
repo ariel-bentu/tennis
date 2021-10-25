@@ -48,8 +48,23 @@ const ResponsiveTab = withStyles({
   root: {
     minWidth: 65,
     width: 65
-  }
+  }, 
+  selected: {
+    
+  },
+  textColorPrimary: {
+    color: "#737373",
+    '&$selected': {
+      color: "#3D95EE",
+      FontFace:"bold",
+      textDecoration: "underline"
+    }
+  },
 })(Tab);
+
+const ResponsiveTabs = withStyles({
+  
+})(Tabs);
 
 let App = props => {
   const [admin, setAdmin] = useState(false);
@@ -224,11 +239,11 @@ let App = props => {
                 isAdminPath ? setForceMode(0) : setForceMode(1)
                 //console.log("clicl " + (isAdminPath?"0":"1"))
               }}>{!isAdminPath ? "ניהול" : "משתמשים"}</Button> : null}
-            
+
           </HBox>
-            <div style={{position:"absolute", left:30, top:0, width:10, height:10}}>
-              <img src="penn_logo.png" style={{width:38}} alt=""/>
-            </div>
+          <div style={{ position: "absolute", left: 30, top: 0, width: 10, height: 10 }}>
+            <img src="penn_logo.png" style={{ width: 38 }} alt="" />
+          </div>
         </Toolbar> : null}
       {forgotPwd ? null :
         changePwd ?
@@ -252,7 +267,7 @@ let App = props => {
                       props.history.push("/")
                     }
                     let adminTab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 1;
-                    return [<Tabs key={"100"}
+                    return [<ResponsiveTabs key={"100"}
                       value={adminTab}
                       onChange={(e, tab) => props.history.push("/admin#" + tab)}
                       indicatorColor="primary"
@@ -260,13 +275,18 @@ let App = props => {
                       scrollButtons="auto"
                       centered
                       style={{ marginTop: 5 }}
+                      TabIndicatorProps={{
+                        style: {
+                          display: "none"
+                        }
+                      }}
                     >
                       <ResponsiveTab label={"ניהול"} />
                       <ResponsiveTab label={"שיבוץ"} />
                       <ResponsiveTab label={"משתמשים"} />
                       <ResponsiveTab label={"חובות"} />
                       <ResponsiveTab label={"כדורים"} />
-                    </Tabs>,
+                    </ResponsiveTabs>,
                     <TabPanel key={"0"} value={adminTab} index={0} >
                       {adminTab === 0 ? <Admin notify={notify} windowSize={windowSize} /> : null}
                     </TabPanel>,
@@ -306,7 +326,7 @@ let App = props => {
                       // <div key="1" style={{position:"absolute", width:"100%", height:30}}>
                       //   <img src="penn_banner.jpg"  alt="" style={{opacity:.3, zIndex:-1}}/>
                       // </div>,
-                      <Tabs
+                      <ResponsiveTabs
                         key="100"
                         value={tab}
                         onChange={(e, tab) => props.history.push("/#" + tab)}
@@ -314,7 +334,11 @@ let App = props => {
                         textColor="primary"
                         scrollButtons="auto"
                         variant="scrollable"
-
+                        TabIndicatorProps={{
+                          style: {
+                            display: "none"
+                          }
+                        }}
                       >
                         <ResponsiveTab label={"רישום"} icon={<PlaylistAdd />} />
                         <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
@@ -322,7 +346,8 @@ let App = props => {
                         <ResponsiveTab label={"לוח"} icon={<BarChart />} />
                         <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
 
-                      </Tabs>,
+
+                      </ResponsiveTabs>,
                       <TabPanel key="0" value={tab} index={0} >
                         <Register notify={notify} UserInfo={userInfo} />
                       </TabPanel>,

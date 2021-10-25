@@ -4,6 +4,6 @@
 - fix notification by function
 
 # features
-- (high) compare user to others
+- new year (XL, high)
 - who to play with
 - bets

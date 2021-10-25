@@ -107,7 +107,11 @@ export function getMatchDate(game) {
         return begin.format("YYYY-MM-DD");
     }
 
-    begin = begin.startOf('week').add(1, 'week');
+    if (begin.day() === 6) {
+        begin = begin.add(1, 'day');
+    }
+    
+    begin = begin.startOf('week');
 
     return begin.add(DaysMap[game.Day], 'day').format("YYYY-MM-DD");
 }

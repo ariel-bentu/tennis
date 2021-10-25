@@ -402,6 +402,14 @@ exports.isAdmin = functions.region("europe-west1").https.onCall((data, context) 
     });
 });
 
+exports.sendMessage = functions.region("europe-west1").https.onCall((data, context) => {
+    return isAdmin(context, false).then(() => {
+        const msg = data.msg;
+        const numbers = data.numbers;
+        return sendSMS(msg, numbers);
+    });
+});
+
 
 exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
     const batch = db.batch();

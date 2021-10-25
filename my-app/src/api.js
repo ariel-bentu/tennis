@@ -340,6 +340,13 @@ export async function openWeekForRegistration() {
     return openWeek();
 }
 
+export async function sendMessage(msg, numbers) {
+    const sendMessage = app.functions('europe-west1').httpsCallable('sendMessage');
+
+    return sendMessage({msg, numbers});
+}
+
+
 export async function isAdmin() {
     const isAdmin = app.functions('europe-west1').httpsCallable('isAdmin');
 

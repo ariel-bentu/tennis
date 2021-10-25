@@ -9,7 +9,7 @@ import {
     Header, Text, SmallText, Search
 } from './elem'
 
-import { Sort } from '@material-ui/icons';
+import { Message, Sort } from '@material-ui/icons';
 import * as api from './api'
 
 export default function Billing(props) {
@@ -139,17 +139,37 @@ export default function Billing(props) {
                             <Grid item xs={2}>
                                 <HBox>
                                     <Button variant="contained"
-                                        style={{ fontSize: 12, height: '1.5rem', width: 100 }}
+                                        style={{ fontSize: 12, height: '1.5rem', minWidth: 50 }}
                                         onClick={() => {
                                             setPaymentUser(user);
                                             setPaymentAmount("");
                                             setPaymentComment("");
                                         }}>תשלום</Button>
-                                    <Spacer width={5} />
+                                    <Spacer width={10} />
                                     <Button variant="contained"
-                                        style={{ fontSize: 12, height: '1.5rem', width: 100 }}
+                                        style={{ fontSize: 12, height: '1.5rem', minWidth: 50 }}
                                         onClick={() => setUserDetails(user)}>פרטים...</Button>
+
                                     <Spacer />
+                                    <Message onClick={() => {
+                                        props.notify.ask(`האם לשלוח הודעה על חוב?`, "הודעה על חוב", [
+                                            {
+                                                caption: "שלח הודעה", callback: () => {
+                                                    const msg = `${user.displayName} היקר.
+יתרת החוב שלך הינה: ${Math.abs(Math.round(user.debt))}
+הנך מתבקש להסדיר התשלום.
+לפרטים: https://tennis.atpenn.com/#4
+טניס טוב`
+
+                                                    api.sendMessage(msg, [user.phone]).then(
+                                                        () => props.notify.success("הודעה נשלחה בהצלחה"),
+                                                        (err) => props.notify.error(err.message)
+                                                    );
+                                                }
+                                            },
+                                            { caption: "בטל", callback: () => { } },
+                                        ])
+                                    }} />
                                 </HBox>
                             </Grid>
                         </Grid>))}
