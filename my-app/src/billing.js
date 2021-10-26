@@ -159,6 +159,9 @@ export default function Billing(props) {
 יתרת החוב שלך הינה: ${Math.abs(Math.round(user.debt))}
 הנך מתבקש להסדיר התשלום.
 לפרטים: https://tennis.atpenn.com/#4
+
+לתשלום: https://preview.page.link/payboxapp.page.link/nUbbPFMPQMeBQ8YB9
+
 טניס טוב`
 
                                                     api.sendMessage(msg, [user.phone]).then(

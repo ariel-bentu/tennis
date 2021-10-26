@@ -68,6 +68,8 @@ const ResponsiveTabs = withStyles({
 
 let App = props => {
   const [admin, setAdmin] = useState(false);
+  const [userBalance, setUserBalance] = useState(undefined);
+
 
   const [userInfo, setUserInfo] = useState(undefined);
   const [userBlocked, setUserBlocked] = useState(false);
@@ -139,6 +141,7 @@ let App = props => {
         uo => {
           setUserInfo(uo);
           api.isAdmin().then(setAdmin);
+          api.getUserBalance(uo.email).then(bal=>setUserBalance(bal));
         },
         (err) => {
           setUserBlocked(true);
@@ -157,6 +160,8 @@ let App = props => {
     window.addEventListener('resize', handleResize)
 
   }, [])
+
+
 
   // const handleNotifClick = () => {
   //   if ('safari' in window && 'pushNotification' in window.safari) {
@@ -349,7 +354,7 @@ let App = props => {
 
                       </ResponsiveTabs>,
                       <TabPanel key="0" value={tab} index={0} >
-                        <Register notify={notify} UserInfo={userInfo} />
+                        <Register notify={notify} UserInfo={userInfo} Balance={userBalance}/>
                       </TabPanel>,
                       <TabPanel key="1" value={tab} index={1} >
                         {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={() => {
@@ -363,7 +368,7 @@ let App = props => {
                         {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
                       </TabPanel>,
                       <TabPanel key="4" value={tab} index={4}>
-                        {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} /> : null}
+                        {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
                       </TabPanel>
                     ]
                   }}

@@ -2,13 +2,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
 
-import { Spacer, Loading, MyTableCell, IOSSwitch } from './elem'
+import { Spacer, Loading, MyTableCell, IOSSwitch, SmallText2 } from './elem'
 
 import * as api from './api'
 import dayjs from 'dayjs'
 
 
 export default function Register(props) {
+
+  let balInt = 0;
+  if (props.Balance) {
+    balInt = Math.round(props.Balance);
+  }
 
   const [plannedGames, setPlannedGames] = useState(undefined);
 
@@ -76,12 +81,16 @@ export default function Register(props) {
     return game.Registered === true;
   }
 
+  const blockedByDebt = balInt< -2000;
 
 
   let nowDirty = isDirty();
   return (
     <div style={{ height: '65vh', width: '100%' }}>
-      <Spacer height={20} />
+      <Spacer height={10} />
+      {!blockedByDebt && balInt< -500?<SmallText2 fontSize={18} textAlign="center" color="orange">{`יש לך חוב גבוה -  ${Math.abs(balInt)} ש״ח. נא להסדירו!`}</SmallText2>:null}
+      {blockedByDebt?<SmallText2 fontSize={18} textAlign="center" color="red">{`יש לך חוב גבוה מידי -  ${Math.abs(balInt)} ש״ח. אין אפשרות להירשם לפני הסדרתו!`}</SmallText2>:null}
+      <Spacer height={10} />
       <Table >
         <TableHead>
           <TableRow>
@@ -142,7 +151,8 @@ export default function Register(props) {
               setSubmitInProcess(false);
             }
           )
-        }}>{registrationOpen ? (nowDirty ? "שלח" : "ללא שינוי") : "הרשמה סגורה"}</Button>
+        }}>{blockedByDebt? "חסום זמנית"
+          :registrationOpen ? (nowDirty ? "שלח" : "ללא שינוי") : "הרשמה סגורה"}</Button>
 
     </div>
   );
