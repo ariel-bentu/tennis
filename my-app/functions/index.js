@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const {
     FieldPath,
+    FieldValue,
     v1,
 } = require("@google-cloud/firestore");
 // Replace BUCKET_NAME
@@ -18,6 +19,7 @@ const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
 const MATCHES_COLLECTION = "matches";
 const USERS_INFO_COLLECTION = "users-info";
 const ADMINS_COLLECTION = "admins";
+const NOTIFICATIONS_COLLECTION = "notifications";
 
 const express = require("express");
 const app = express();
@@ -53,7 +55,7 @@ app.post("/:version/log", (req, res) => {
     res.send("logged");
 });
 
-exports.httpApp = functions.https.onRequest(app);
+exports.httpApp = functions.region("europe-west1").https.onRequest(app);
 
 const getGameTariff = () => {
     const docRef = db.collection("systemInfo").doc("Billing");
@@ -273,6 +275,28 @@ const isMatchEventsOn = () => {
         }
     });
 };
+
+exports.updateNotification = functions.region("europe-west1").https.onCall((data, context) => {
+    const pushNotification = data.pushNotification;
+    const notificationToken = data.notificationToken;
+    return db.collection(USERS_INFO_COLLECTION).doc(context.auth.token.email).get().then(doc => {
+        if (doc.exists) {
+            const update = {};
+            if (pushNotification !== undefined) {
+                update.pushNotification = pushNotification;
+            }
+
+            if (notificationToken != undefined) {
+                if (!doc.data().notificationTokens.find(nt => nt.token === notificationToken.token)) {
+                    update.notificationTokens = FieldValue.arrayUnion(notificationToken);
+                }
+            }
+
+            return doc.ref.update(update);
+        }
+    });
+});
+
 
 exports.updateMatchResults = functions.region("europe-west1").https.onCall((data, context) => {
     const matchedCancelled = data.matchedCancelled;
@@ -539,6 +563,8 @@ const handleMatchResultsChange = (change) => {
         }
         */
 
+        const batch = db.batch();
+
         let winner = 0;
         if (dataBefore.sets !== undefined) {
             // Sets existed before - find changes, calculate and update players stats
@@ -658,6 +684,38 @@ const handleMatchResultsChange = (change) => {
                     tie: winner === 0 ? 1 : 0,
                 });
             }
+
+            // Notify whom ever is interested about the new results:
+            if (dataAfter.Player1 && dataAfter.Player3) {
+                let pair1 = dataAfter.Player1.displayName;
+
+                if (dataAfter.Player2) {
+                    pair1 += " ו" + dataAfter.Player2.displayName;
+                }
+                let msgBody = pair1 + "\n מול \n";
+                let pair2 = dataAfter.Player3.displayName;
+                if (dataAfter.Player4) {
+                    pair2 += " ו" + dataAfter.Player4.displayName;
+                }
+
+                msgBody += pair2;
+
+                if (winner === 0) {
+                    msgBody += "\nתיקו!\n";
+                } else {
+                    msgBody += "\nמנצחים:\n";
+                    msgBody += winner === 1 ? pair1 : pair2;
+                }
+
+                const notifDoc = db.collection(NOTIFICATIONS_COLLECTION).doc();
+                batch.set(notifDoc, {
+                    title: "טניס: תוצאות חדשות",
+                    body: msgBody,
+                    link: "/#2",
+                    createdAt: FieldValue.serverTimestamp(),
+                    to: ["all"],
+                });
+            }
         }
 
         if (updates.length > 0) {
@@ -716,7 +774,6 @@ const handleMatchResultsChange = (change) => {
                 const eloDiff2_p3_4 = Math.abs(newElo2Rating.opponentRating - pair2EloAvg.elo2);
 
 
-                const batch = db.batch();
                 updates.forEach(update => {
                     const eloDiff1 = update._pair == 1 ? eloDiff1_p1_2 : eloDiff1_p3_4;
                     const eloDiff2 = update._pair == 1 ? eloDiff2_p1_2 : eloDiff2_p3_4;
@@ -760,45 +817,77 @@ exports.notificationAdded = functions.region("europe-west1").firestore
     .onCreate((snapshot, context) => {
         const usersInfoRef = db.collection(USERS_INFO_COLLECTION);
         // return usersInfoRef.where(FieldPath.documentId(), "in", snapshot.data().to).get().then(users => {
-        return usersInfoRef.get().then(users => {
-            const to = snapshot.data().to;
-            const webPushDevices = [];
-            const safariPushDevices = [];
-            to.forEach(sentToUser => {
-                if (sentToUser === "all") {
-                    users.docs.forEach(user => {
-                        if (user && user.data().notificationTokens) {
-                            user.data().notificationTokens.forEach(token => {
+        return usersInfoRef.get().then(usersInfo => {
+            const usersRef = db.collection("users");
+            return usersRef.get().then(users => {
+                const to = snapshot.data().to;
+                const webPushDevices = [];
+                const safariPushDevices = [];
+                const smsNumbers = [];
+                to.forEach(sentToUser => {
+                    if (sentToUser === "all") {
+                        usersInfo.docs.forEach(userInfo => {
+                            // let chromeNotifExists = false;
+                            if (userInfo && userInfo.data().pushNotification === true) {
+                                if (userInfo.data().notificationTokens) {
+                                    userInfo.data().notificationTokens.forEach(token => {
+                                        if (token.isSafari) {
+                                            safariPushDevices.push(token.token);
+                                        } else {
+                                            // chromeNotifExists = true;
+                                            webPushDevices.push(token.token);
+                                        }
+                                    });
+                                }
+
+                                // Send SMS
+                                // if (!chromeNotifExists) {
+                                const userDoc = users.docs.find(u => u.ref.id === userInfo.ref.id);
+                                if (userDoc && userDoc.data().phone && userDoc.data().phone.length > 0) {
+                                    smsNumbers.push(userDoc.data().phone);
+                                }
+                                // }
+                            }
+                        });
+                    } else {
+                        const userInfo = usersInfo.docs.find(u => u.ref.id === sentToUser);
+                        // let chromeNotifExists = false;
+                        if (userInfo && userInfo.data().notificationTokens) {
+                            userInfo.data().notificationTokens.forEach(token => {
                                 if (token.isSafari) {
                                     safariPushDevices.push(token.token);
                                 } else {
+                                    // chromeNotifExists = true;
                                     webPushDevices.push(token.token);
                                 }
                             });
                         }
-                    });
-                } else {
-                    const user = users.docs.find(u => u.ref.id === sentToUser);
-                    if (user && user.data().notificationTokens) {
-                        user.data().notificationTokens.forEach(token => {
-                            if (token.isSafari) {
-                                safariPushDevices.push(token.token);
-                            } else {
-                                webPushDevices.push(token.token);
-                            }
-                        });
+                        // Send SMS
+                        // if (!chromeNotifExists) {
+                        const userDoc = users.docs.find(u => u.ref.id === userInfo.ref.id);
+                        if (userDoc && userDoc.data().phone && userDoc.data().phone.length > 0) {
+                            smsNumbers.push(userDoc.data().phone);
+                        }
+                        // }
                     }
-                }
-            });
+                });
 
-            const waitFor = [];
-            if (webPushDevices.length > 0) {
-                waitFor.push(sendNotification(snapshot.data().title, snapshot.data().body, webPushDevices, snapshot.data().link));
-            }
-            if (safariPushDevices.length > 0) {
-                waitFor.push(sendSafaryNotification(snapshot.data().title, snapshot.data().body, safariPushDevices, snapshot.data().link));
-            }
-            return Promise.all(waitFor);
+                const waitFor = [];
+                if (webPushDevices.length > 0) {
+                    waitFor.push(sendNotification(snapshot.data().title, snapshot.data().body, webPushDevices, snapshot.data().link));
+                }
+                if (safariPushDevices.length > 0) {
+                    waitFor.push(sendSafaryNotification(snapshot.data().title, snapshot.data().body, safariPushDevices, snapshot.data().link));
+                }
+
+                if (smsNumbers.length > 0) {
+                    const msg = `${snapshot.data().title}
+    ${snapshot.data().body}
+    ${"https://tennis.atpenn.com" + snapshot.data().link}`;
+                    waitFor.push(sendSMS(msg, smsNumbers));
+                }
+                return Promise.all(waitFor);
+            });
         });
     });
 

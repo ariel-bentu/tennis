@@ -1,5 +1,5 @@
 import './App.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
 
   withStyles
@@ -8,7 +8,7 @@ import {
 import { Alert, AlertTitle } from '@material-ui/lab';
 import {
   Collapse, Button, Tabs, Tab, Paper, Popper, MenuItem, MenuList, Grow,
-  ClickAwayListener, Snackbar
+  ClickAwayListener, Snackbar, ListItemIcon, ListItemText
 } from '@material-ui/core';
 import Register from './register';
 import MyMatches from './myMatches'
@@ -22,10 +22,12 @@ import ForgotPwd from './forgot-pwd'
 import Board from './board';
 import { Notifications } from './notifications';
 
-import { Toolbar, Text, Loading, HBox, Spacer, TabPanel } from './elem'
+import { Toolbar, Text, Loading, VBox, HBox, Spacer, TabPanel, SmallText2 } from './elem'
 
-import { AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart } from '@material-ui/icons';
-
+import {
+  AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart, Check,
+  NotificationsActive, NotificationsOff
+} from '@material-ui/icons';
 import * as api from './api'
 import Login from './login'
 import Admin from './admin';
@@ -48,22 +50,22 @@ const ResponsiveTab = withStyles({
   root: {
     minWidth: 65,
     width: 65
-  }, 
+  },
   selected: {
-    
+
   },
   textColorPrimary: {
     color: "#737373",
     '&$selected': {
       color: "#3D95EE",
-      FontFace:"bold",
+      FontFace: "bold",
       textDecoration: "underline"
     }
   },
 })(Tab);
 
 const ResponsiveTabs = withStyles({
-  
+
 })(Tabs);
 
 let App = props => {
@@ -79,6 +81,8 @@ let App = props => {
   const [msg, setMsg] = useState({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [pushNotification, setPushNotification] = useState(undefined);
   const [allGamesReload, setAllGamesReload] = useState(1);
   const [notificationToken, setNotificationToken] = useState(undefined);
   const [notifications, setNotifications] = useState([]);
@@ -93,16 +97,16 @@ let App = props => {
       setMsg({ open: true, severity: "success", title, body });
       setTimeout(() => setMsg({}), 5000);
     },
-    notification: (id, body, title) => {
-      setNotifications(orig => [...orig, { id, severity: "success", title, body }]);
+    notification: (id, body, title, actionUrlPath) => {
+      setNotifications(orig => [...orig, { id, severity: "success", body:title, details:body , actionUrlPath}]);
     },
     error: (body, title) => {
       setMsg({ open: true, severity: "error", title, body });
       setTimeout(() => setMsg({}), 5000);
 
     },
-    ask: (body, title, buttons) => {
-      setMsg({ open: true, severity: "info", title, body, buttons });
+    ask: (body, title, buttons, details) => {
+      setMsg({ open: true, severity: "info", title, body, buttons, details });
     },
     clear: () => {
       setMsg({});
@@ -123,7 +127,7 @@ let App = props => {
     if (notificationToken && notificationToken !== "" && userInfo && userInfo._user &&
       (!userInfo._user.notificationTokens || !userInfo._user.notificationTokens.find(n => n.token === notificationToken))) {
       const isSafari = 'safari' in window;
-      api.updateUserNotificationToken(userInfo.email, notificationToken, isSafari);
+      api.updateUserNotification(pushNotification, notificationToken, isSafari);
     }
   }, [notificationToken, userInfo]);
 
@@ -131,17 +135,49 @@ let App = props => {
     api.initAPI(
       (msgPayload) => {
         console.log(JSON.stringify(msgPayload, undefined, " "))
-        notify.notification(msgPayload.fcmMessageId, msgPayload.notification.body, msgPayload.notification.title)
+        notify.notification(msgPayload.fcmMessageId, msgPayload.notification.body, msgPayload.notification.title, msgPayload.notification.click_action)
       },
       (notifToken) => setNotificationToken(notifToken));
 
     setTimeout(() => setLoading(false), 1000);
+
     firebase.auth().onAuthStateChanged(function (user) {
       api.getUserObj(user).then(
         uo => {
           setUserInfo(uo);
+          setPushNotification(uo.pushNotification);
+          if (uo.pushNotification === undefined) {
+            setTimeout(() => {
+              notify.ask("מעוניין לקבל הודעות בדחיפה?", undefined, [
+                {
+                  caption: "כן", callback: () => {
+                    api.updateUserNotification(true).then(
+                      () => {
+                        notify.success("עודכן בהצלחה")
+                        setPushNotification(true);
+                      },
+                      (err) => notify.error(err.message));
+
+                  }
+                },
+                {
+                  caption: "לא", callback: () => {
+                    api.updateUserNotification(false).then(
+                      () => {
+                        setPushNotification(false);
+                      });
+                  },
+                },
+                
+                
+                { caption: "הזכר לי מאוחר יותר", callback: () => { } },
+              ],
+              "הודעות עבור תוצאות משחקים וכדו׳.\n בכל שלב בהמשך תוכל לשנות את בחירתך על ידי לחיצה על הפעמון"
+              )
+            }, 3000);
+          }
           api.isAdmin().then(setAdmin);
-          api.getUserBalance(uo.email).then(bal=>setUserBalance(bal));
+          api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
         },
         (err) => {
           setUserBlocked(true);
@@ -161,6 +197,22 @@ let App = props => {
 
   }, [])
 
+  const handlePushNotificationClick = useCallback(() => {
+    notify.ask(`האם ל${pushNotification === true ? "בטל" : "אפשר"} הודעות בדחיפה?`, undefined, [
+      {
+        caption: "כן", callback: () => {
+          api.updateUserNotification(!pushNotification).then(
+            () => {
+              notify.success("עודכן בהצלחה")
+              setPushNotification(!pushNotification);
+            },
+            (err) => notify.error(err.message));
+
+        }
+      },
+      { caption: "לא", callback: () => { } },
+    ])
+  }, [pushNotification]);
 
 
   // const handleNotifClick = () => {
@@ -181,7 +233,8 @@ let App = props => {
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
           <Text>{msg.body}</Text>
-
+          {msg.details?msg.details.split("\n").map(d=><SmallText2 fontSize={15}>{d}</SmallText2>):null}
+          {msg.details?<Spacer height={10}/>:null}
           {msg.buttons && msg.buttons.length > 0 ?
             <HBox>
               {msg.buttons.map(btn => ([
@@ -200,12 +253,11 @@ let App = props => {
         userBlocked || userInfo ? <Toolbar>
           <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 10 }}>
             <Menu ref={anchorRef} onClick={() => setMenuOpen(prev => !prev)} />
-            <Spacer width={10} />
-            {/* <Badge badgeContent={notifications.length} color="primary">
-              {notificationToken ?
-                <NotificationsActive ref={notificationRef} /> :
-                <NotificationsNone ref={notificationRef} onClick={handleNotifClick} />}
-            </Badge> */}
+            <Spacer width={15} />
+            {pushNotification === true ?
+              <NotificationsActive onClick={handlePushNotificationClick} /> :
+              <NotificationsOff onClick={handlePushNotificationClick} />
+            }
             <Popper open={menuOpen} anchorEl={anchorRef.current} role={undefined} transition disablePortal style={{ zIndex: 1000, backgroundColor: 'white' }}>
               {({ TransitionProps, placement }) => (
                 <Grow
@@ -219,6 +271,14 @@ let App = props => {
                           setChangePwd(true);
                           setMenuOpen(false);
                         }}>שנה סיסמא</MenuItem>
+                        <MenuItem onClick={() => setMenuOpen(false)}>
+                          <ListItemText>קבל הודעות push</ListItemText>
+                          <Spacer width={20} />
+                          <ListItemIcon>
+                            <Check fontSize="small" />
+                          </ListItemIcon>
+                        </MenuItem>
+
                         <MenuItem onClick={() => {
                           setUserBlocked(false);
                           setMsg({});
@@ -238,7 +298,9 @@ let App = props => {
             </HBox> */}
             {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
             {/* <Text>{window.innerWidth}</Text> */}
-            <Spacer width={100} />
+            
+            
+            <Spacer width={40} />
             {admin ? <Button style={{ height: "1.5rem" }} variant={"contained"}
               onClick={() => {
                 isAdminPath ? setForceMode(0) : setForceMode(1)
@@ -354,7 +416,7 @@ let App = props => {
 
                       </ResponsiveTabs>,
                       <TabPanel key="0" value={tab} index={0} >
-                        <Register notify={notify} UserInfo={userInfo} Balance={userBalance}/>
+                        <Register notify={notify} UserInfo={userInfo} Balance={userBalance} />
                       </TabPanel>,
                       <TabPanel key="1" value={tab} index={1} >
                         {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={() => {
@@ -395,7 +457,13 @@ let App = props => {
           {notifications.filter((n => n.closed !== true)).map((notif) => (
             <Alert key={notif.id} onClose={() => hideNotification(notif.id)} severity={notif.severity} style={{ width: '100%' }} >
               {notif.title ? <AlertTitle>{notif.title}</AlertTitle> : null}
-              {notif.body}
+              <VBox>
+                {notif.body?<SmallText2>{notif.body}</SmallText2>:null}
+                {notif.details?notif.details.split("\n").map(d=><SmallText2>{d}</SmallText2>):null}
+                {/* {notif.actionUrlPath && notif.actionUrlPath.length > 0 ?<Button onClick={()=>{
+                  props.history.push(notif.actionUrlPath)
+                }}>צפה</Button>:null} */}
+              </VBox>
             </Alert>
           ))}
         </div>

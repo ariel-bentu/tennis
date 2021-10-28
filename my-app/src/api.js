@@ -100,17 +100,35 @@ export const checkSafariRemotePermission = (permissionData) => {
     return undefined;
 };
 
-export async function updateUserNotificationToken(email, newNotificationToken, isSafari) {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(email);
+export async function updateUserNotification(pushNotification, newNotificationToken, isSafari) {
+    const updateNotification = app.functions('europe-west1').httpsCallable('updateNotification');
 
-    return docRef.update({
-        notificationTokens: firebase.firestore.FieldValue.arrayUnion({
+    const payload = {};
+    if (pushNotification !== undefined) {
+        payload.pushNotification = pushNotification;
+    }
+
+    if (newNotificationToken !== undefined) {
+        payload.notificationToken = {
             isSafari,
             token: newNotificationToken,
             ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        }),
-    });
+        };
+    }
+
+    return updateNotification(payload);
+
+    // var db = firebase.firestore();
+    // let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(email);
+
+    // return docRef.update({
+    //     notificationTokens: firebase.firestore.FieldValue.arrayUnion({
+    //         isSafari,
+    //         token: newNotificationToken,
+    //         ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+    //     }),
+    //     pushNotification
+    // });
 }
 
 /*
@@ -186,7 +204,7 @@ export async function getUserObj(user) {
                 } else if (data.inactive) {
                     throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
                 }
-                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: data };
+                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: data, pushNotification: data.pushNotification };
             },
             (err) => {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
@@ -231,8 +249,8 @@ export async function getPlannedGames(currentUser) {
 
             db.collection(Collections.REGISTRATION_COLLECTION).get().then(
                 regs => {
-                    let regsData = regs.docs.map(doc=>doc.data());
-                    
+                    let regsData = regs.docs.map(doc => doc.data());
+
                     regsData.forEach(reg => {
                         let game = results.find(g => g.id === reg.GameID);
                         if (!game)
@@ -269,7 +287,7 @@ export async function thisSatRegistration() {
             .where("utcTime", ">=", begin.format("YYYY/MM/DD"))
             .orderBy("utcTime")
             .get().then(regs => {
-                let lastSatReg = regs.docs.filter(r => r.data().GameID === 5).map((r2, i) =>({...r2.data(), GameID:-5, _order:i+1}));
+                let lastSatReg = regs.docs.filter(r => r.data().GameID === 5).map((r2, i) => ({ ...r2.data(), GameID: -5, _order: i + 1 }));
                 resolve(lastSatReg);
             })
     });
@@ -343,7 +361,7 @@ export async function openWeekForRegistration() {
 export async function sendMessage(msg, numbers) {
     const sendMessage = app.functions('europe-west1').httpsCallable('sendMessage');
 
-    return sendMessage({msg, numbers});
+    return sendMessage({ msg, numbers });
 }
 
 
