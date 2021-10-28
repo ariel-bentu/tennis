@@ -133,7 +133,7 @@ export default function Register(props) {
         size={"large"}
         fullWidth={true}
         variant="contained"
-        disabled={submitInProcess || !nowDirty || !registrationOpen} onClick={() => {
+        disabled={blockedByDebt || submitInProcess || !nowDirty || !registrationOpen} onClick={() => {
           setSubmitInProcess(true);
           let newReg = plannedGames.map(game => { return { id: game.id, Registered: getChecked(game) } });
           api.submitRegistration(newReg, props.UserInfo.email).then(
