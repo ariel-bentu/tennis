@@ -2,7 +2,7 @@ import { Grid } from '@material-ui/core';
 import { Check, Close, EmojiEventsOutlined } from '@material-ui/icons';
 import { ToggleButton, ToggleButtonGroup } from '@material-ui/lab';
 import React, { useState, useEffect, useCallback } from 'react';
-import { HBox, HThinSeparator, SmallText2, Spacer, Card, SVGIcon } from './elem';
+import { HBox, HThinSeparator, SmallText2, Spacer, Card, SVGIcon, HBoxC } from './elem';
 import * as api from './api'
 
 
@@ -145,11 +145,11 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                         </Grid>
                         <Grid item xs={4} alignContent={'flex-start'} >
                             <Spacer />
-                            <HBox style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <HBoxC>
                                 <SVGIcon svg="betPlus" onClick={() => setMyAmount(true)} size={20} />
                                 <SmallText2 textAlign="center" width={40}>{actualMyBet ? actualMyBet.amount : ""}</SmallText2>
                                 <SVGIcon svg="betMinus" onClick={() => setMyAmount(false)} size={20} />
-                            </HBox>
+                            </HBoxC>
                             <Spacer />
                         </Grid>
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator } from './elem'
+import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator, HBoxC } from './elem'
 
 import * as api from './api'
 import { DragHandle, EmojiEvents, SportsTennis, ThumbDown, ArrowBackIos } from '@material-ui/icons';
@@ -76,7 +76,7 @@ export default function Board({ UserInfo, notify }) {
     const statsToShow = detailsFor ? detailedStats : stats
 
     return (<VBox style={{ margin: 10 }}>
-        {detailsFor ? <HBox style={{ width: "100%" }}>
+        {detailsFor ? <HBoxC>
             <SmallText2
                 textAlign="center"
                 fontSize={20}
@@ -85,7 +85,7 @@ export default function Board({ UserInfo, notify }) {
                 fontWeight="bold">{detailsFor.displayName}</SmallText2>
             <ArrowBackIos style={{ position: 'relative', left: 20, top: 0, width: 15, height: 30, color: 'white' }}
                 onClick={() => setDetailsFor(undefined)} />
-        </HBox> : null}
+        </HBoxC> : null}
         <Spacer height={5} />
         <Grid container spacing={1} >
             <Grid key={0} container spacing={1} style={{ fontSize: 12 }}>

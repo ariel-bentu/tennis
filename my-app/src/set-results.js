@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, TextField } from '@material-ui/core';
-import { HBox, VBox, Spacer, SmallText, SmallText2, BoxInput, IOSSwitch } from './elem';
+import { HBox, VBox, Spacer, SmallText, SmallText2, BoxInput, IOSSwitch, HBoxC } from './elem';
 import { getNiceDate } from './utils';
 import * as api from './api'
 import { Paper1 } from './elem';
@@ -140,7 +140,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
             <Spacer height={20} />
             <SmallText textAlign='center' fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
             <Spacer height={20} />
-            <HBox style={{ width: '100%', alignItems: 'center' }}>
+            <HBoxC>
                 <Spacer width={75} />
                 {editedSets.map((s, i) => (
                     <HBox style={{ width: 50 }}>
@@ -148,13 +148,13 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     </HBox>
                 )
                 )}
-            </HBox>
+            </HBoxC>
 
             {tieBreak ?
                 <TieBreakLine editedSets={editedSets} pairIndex={1} setEditedSets={setEditedSets} />
                 : null}
 
-            <HBox style={{ width: '100%', alignItems: 'center' }}>
+            <HBoxC>
                 <VBox style={{ backgroundColor: 'gold', width: 75 }}>
                     {match.Player1 ? <SmallText textAlign='center'>{match.Player1.displayName}</SmallText> : null}
                     {match.Player2 ? <SmallText textAlign='center'>{match.Player2.displayName}</SmallText> : null}
@@ -174,12 +174,12 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     />
                 )
                 ) : null}
-            </HBox>
+            </HBoxC>
             <HBox>
                 <Spacer width={25} />
                 <SmallText fontSize={12}>vs</SmallText>
             </HBox>
-            <HBox style={{ width: '100%', alignItems: 'center' }}>
+            <HBoxC>
                 <VBox style={{ width: 75 }}>
                     {match.Player3 ? <SmallText textAlign='center'>{match.Player3.displayName}</SmallText> : null}
                     {match.Player4 ? <SmallText textAlign='center'>{match.Player4.displayName}</SmallText> : null}
@@ -195,7 +195,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     />
                 )
                 ) : null}
-            </HBox>
+            </HBoxC>
 
             {tieBreak ?
                 <TieBreakLine editedSets={editedSets} pairIndex={2} setEditedSets={setEditedSets} />
@@ -231,7 +231,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 /> : null}
             </HBox>
             <Spacer height={30} />
-            <HBox style={{ width: '100%', justifyContent: 'center' }}>
+            <HBoxC>
                 <Button variant="contained" onClick={() => {
                     //Check if changed
                     let pf = parseFloat(paymentFactor);
@@ -275,7 +275,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 }}>שמור</Button>
                 <Spacer width={25} />
                 <Button variant="contained" onClick={() => onCancel()}>בטל</Button>
-            </HBox>
+            </HBoxC>
         </Paper1 >);
 }
 

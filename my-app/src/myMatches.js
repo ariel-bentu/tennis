@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 import {
     Spacer, Loading, VBox, Text, SmallText, SmallText2,
-    HThinSeparator, HBox, getBallsIndicator, Card, SVGIcon
+    HThinSeparator, HBox, getBallsIndicator, Card, SVGIcon, HBoxC
 } from './elem'
 import SetResults from './set-results';
 import { getNiceDate } from './utils'
@@ -171,7 +171,7 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
     return <Card>
         <SmallText color="gray">{match.Day + ", " + getNiceDate(match.date)}</SmallText>
         <HThinSeparator />
-        <HBox style={{ width: "100%", justifyContent: "center" }}>
+        <HBoxC>
             <VBox>
                 <AccessTime style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Hour}</SmallText2>
@@ -188,7 +188,7 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
                     <Person style={{ color: foreColor }} />
                     <Person style={{ color: foreColor }} />
                 </HBox>
-                <HBox style={{ width: "100%", justifyContent: "center" }}>
+                <HBoxC>
                     {getBallsIndicator(match.Player1)}
                     <SmallText textAlign='center'>
                         {match.Player1 ? match.Player1.displayName : ""}
@@ -198,9 +198,9 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
                         {match.Player2 ? match.Player2.displayName : ""}
                     </SmallText>
                     {getBallsIndicator(match.Player2)}
-                </HBox>
+                </HBoxC>
                 <SmallText2 textAlign='center'>vs</SmallText2>
-                <HBox style={{ width: "100%", justifyContent: "center" }}>
+                <HBoxC>
                     {getBallsIndicator(match.Player3)}
                     <SmallText textAlign='center'>
                         {match.Player3 ? match.Player3.displayName : ""}
@@ -210,9 +210,9 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
                         {match.Player4 ? match.Player4.displayName : ""}
                     </SmallText>
                     {getBallsIndicator(match.Player4)}
-                </HBox>
+                </HBoxC>
             </VBox>
-        </HBox>
+        </HBoxC>
 
         <VBox style={{ width: "100%" }}>
             <HThinSeparator />

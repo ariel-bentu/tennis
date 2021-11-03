@@ -180,8 +180,8 @@ export function VBox(props) {
     </Box>
 }
 
-export const HBoxC = (props) => (<HBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} />);
-export const HBoxSB = (props) => (<HBox style={{alignItems:"center", justifyContent: "space-between", width:"100%", ...props.style}} />);
+export const HBoxC = (props) => (<HBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} >{props.children}</HBox>);
+export const HBoxSB = (props) => (<HBox style={{alignItems:"center", justifyContent: "space-between", width:"100%", ...props.style}} >{props.children}</HBox>);
 
 
 export function HBox(props) {

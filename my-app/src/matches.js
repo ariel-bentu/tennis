@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, HBox, SmallText2, SVGIcon, Card, HThinSeparator } from './elem'
+import { Spacer, Loading, VBox, HBox, SmallText2, SVGIcon, Card, HThinSeparator, HBoxC } from './elem'
 import { getNiceDate } from './utils'
 
 import * as api from './api'
@@ -180,7 +180,7 @@ function GetOneLine(props) {
                     }
 
                     return <Grid item xs={1} style={{ padding: 2 }}>
-                        <HBox style={{
+                        <HBoxC style={{
                             backgroundColor: (props.firstPair && result.pair1 > result.pair2) ||
                                 (!props.firstPair && result.pair1 < result.pair2) ?
                                 'lightgreen' : result.pair1 === "-" ? 'white' :
@@ -188,13 +188,12 @@ function GetOneLine(props) {
                                         'lightpink'
                             ,
                             width: 22, height: 35,
-                            justifyContent: 'center',
-                            alignItems: 'center'
+                            
                         }}>
                             <SmallText2 lineHeight={30} textAlign='center'>{setValue}</SmallText2>
                             {tbValue ? <SmallText2 transform="translateY(-8px)" fontSize={8} textAlign='center'>{tbValue}</SmallText2> : null}
 
-                        </HBox>
+                        </HBoxC>
                     </Grid>
                 })
             }

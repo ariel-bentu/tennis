@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    Header, Text, SmallText, Search, SmallText2
+    Header, Text, SmallText, Search, SmallText2, HBoxSB
 } from './elem'
 
 import { Sort } from '@material-ui/icons';
@@ -109,7 +109,7 @@ export default function Users(props) {
     return <Paper1 width={'100%'} height={'90%'}>
         {!addMode && !paymentUser ?
             <VBox style={{ width: '100%', margin: 10 }}>
-                <HBox style={{ width: '100%', justifyContent: 'space-between' }}>
+                <HBoxSB>
                     <Search value={filter} onChange={val => setFilter(val)} />
                     <VBox>
                         <Button variant="contained"
@@ -136,19 +136,19 @@ export default function Users(props) {
                             }
                             }>שמור</Button>
                     </VBox>
-                </HBox>
+                </HBoxSB>
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
-                            <HBox style={{ justifyContent: 'space-between' }}>
+                            <HBoxSB>
                                 <SmallText>שם</SmallText>
                                 <Sort style={{ color: sortBy === 0 ? "red" : "black" }} onClick={() => setSortBy(0)} />
-                            </HBox>
+                            </HBoxSB>
                         </Grid>
                         {condense ? null : <Grid item xs={4}>אימייל</Grid>}
                         <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
                         <Grid item xs={condense ? 2 : 1}>
-                            <HBox style={{ justifyContent: 'space-between' }}>
+                            <HBoxSB>
                                 <SmallText>{"דירוג" + (sortBy === 3 ? "(e)" : sortBy === 2 ? "(e.n)" : "")}</SmallText>
                                 <Sort style={{ color: sortBy > 0 ? "red" : "black" }} onClick={() => setSortBy(oldSort => {
                                     let newSort = oldSort + 1;
@@ -157,7 +157,7 @@ export default function Users(props) {
                                     }
                                     return newSort;
                                 })} />
-                            </HBox>
+                            </HBoxSB>
                         </Grid>
                         
                     </Grid>

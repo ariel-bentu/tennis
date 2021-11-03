@@ -12,7 +12,7 @@ import {
 import dayjs from 'dayjs'
 
 
-import { Spacer, Header, Loading, HBox, VBox, Text, SmallText } from './elem'
+import { Spacer, Header, Loading, HBox, VBox, Text, SmallText, HBoxSB, HBoxC } from './elem'
 import { Dustbin } from './drop-box';
 import { Box } from './drag-box'
 import { DndProvider } from 'react-dnd'
@@ -286,7 +286,7 @@ export default function Match(props) {
         <MuiPickersUtilsProvider utils={DateFnsUtils}>
             <div style={{ height: '65vh', width: '100%' }}>
 
-                <HBox style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <HBoxSB>
                     <Header>שיבוץ משחקים</Header>
 
                     <HBox>
@@ -320,7 +320,7 @@ export default function Match(props) {
                                 {msgTodayButton}
                             </HBox>}
                     </HBox>
-                </HBox>
+                </HBoxSB>
                 {
                     matchText ?
                         <VBox>
@@ -485,7 +485,7 @@ export default function Match(props) {
 
                                     <VBox>
                                         <Text fontSize={15}>שחקנים שנירשמו</Text>
-                                        <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <HBoxC style={{flexWrap: 'wrap'}}>
 
                                             {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
                                                 <Box key={reg.email} user={reg}
@@ -493,14 +493,14 @@ export default function Match(props) {
                                                     additionalInfo={reg._otherRegistrations}
                                                 />
                                             )}
-                                        </HBox>
+                                        </HBoxC>
                                         <Text fontSize={15}>כל שאר השחקנים</Text>
-                                        <HBox style={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <HBoxC style={{flexWrap: 'wrap'}}>
 
                                             {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
                                                 <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} width={dragWidth} />
                                             )}
-                                        </HBox>
+                                        </HBoxC>
                                     </VBox>
 
 

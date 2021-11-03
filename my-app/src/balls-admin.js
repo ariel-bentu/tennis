@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    SmallText, Search
+    SmallText, Search, HBoxSB
 } from './elem'
 
 import { Sort } from '@material-ui/icons';
@@ -64,18 +64,18 @@ export default function BallsAdmin(props) {
             <Grid container spacing={2} >
                 <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                     <Grid item xs={condense ? 5 : 3}>
-                        <HBox style={{ justifyContent: 'space-between' }}>
+                        <HBoxSB>
                             <SmallText>שם</SmallText>
                             <Sort onClick={() => setSortByBalls(false)} />
-                        </HBox>
+                        </HBoxSB>
                     </Grid>
 
 
                     <Grid item xs={condense ? 2 : 2}>
-                        <HBox style={{ justifyContent: 'space-between' }}>
+                        <HBoxSB>
                             <SmallText>כדורים</SmallText>
                             <Sort onClick={() => setSortByBalls(true)} />
-                        </HBox>
+                        </HBoxSB>
                     </Grid>
 
                 </Grid>

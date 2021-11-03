@@ -6,7 +6,7 @@ import {
 
 import {
     Paper1, VBox, HBox, Spacer,
-    Header, Text, SmallText, Search
+    Header, Text, SmallText, Search, HBoxSB
 } from './elem'
 
 import { Message, Sort } from '@material-ui/icons';
@@ -109,18 +109,18 @@ export default function Billing(props) {
                 <Grid container spacing={2} >
                     <Grid container item xs={12} spacing={2} style={{ textAlign: "right" }}>
                         <Grid item xs={condense ? 5 : 3}>
-                            <HBox style={{ justifyContent: 'space-between' }}>
+                            <HBoxSB>
                                 <SmallText>שם</SmallText>
                                 <Sort onClick={() => setSortByDebt(false)} />
-                            </HBox>
+                            </HBoxSB>
                         </Grid>
 
 
                         <Grid item xs={condense ? 2 : 1}>
-                            <HBox style={{ justifyContent: 'space-between' }}>
+                            <HBoxSB>
                                 <SmallText>חוב</SmallText>
                                 <Sort onClick={() => setSortByDebt(true)} />
-                            </HBox>
+                            </HBoxSB>
                         </Grid>
                         <Grid item xs={2}>
                         </Grid>
