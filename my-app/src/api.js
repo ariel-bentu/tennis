@@ -18,6 +18,7 @@ export const Collections = {
     DEBTS_SUB_COLLECTION: "debts",
     PAYMENTS_SUB_COLLECTION: "payments",
     STATS_COLLECTION: "stats",
+    BETS_COLLECTION: "bets",
 
     USERS_COLLECTION: "users",
     USERS_INFO_COLLECTION: "users-info",
@@ -904,6 +905,31 @@ export async function getPaginatedCollection(collName, orderBy, orderDesc, limit
     });
 }
 
+export async function getCollectionWithWhere(collName, whereField, op, value, orderBy, orderDesc) {
+    var db = firebase.firestore();
+    let colRef = db.collection(collName);
+    if (whereField) {
+        colRef = colRef.where(whereField, op, value);
+    }
+    if (orderBy) {
+        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+    }
+
+    let i = 1;
+    return colRef.get().then((items) => {
+        return items.docs.map(docObj => {
+            let obj = docObj.data();
+            if (orderBy)
+                obj._order = i++;
+
+
+            obj._ref = docObj.ref;
+
+            return obj;
+        })
+    });
+}
+
 export async function saveMatches(matches, isTest) {
     var db = firebase.firestore();
     var batch = db.batch();
@@ -1165,4 +1191,15 @@ export async function getDetailedStats(email) {
         }
         return results;
     });
+}
+
+
+
+export async function placeBet(bet) {
+
+    delete bet._ref;
+    
+    const placeBetFunction = app.functions('europe-west1').httpsCallable('placeBet'); 
+
+    return placeBetFunction(bet);
 }

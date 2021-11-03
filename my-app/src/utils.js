@@ -52,7 +52,9 @@ export function newMatch(game) {
     return {
         id: uuidv4(),
         GameID: Math.abs(game.id),
-        Day: game.Day,
+        Day: game.Day === "השבת" ?
+            "שבת" :
+            game.Day,
         date: getMatchDate(game),
         Hour: game.Hour,
         Location: game.Location || "רמת השרון",
@@ -110,7 +112,7 @@ export function getMatchDate(game) {
     if (begin.day() === 6) {
         begin = begin.add(1, 'day');
     }
-    
+
     begin = begin.startOf('week');
 
     return begin.add(DaysMap[game.Day], 'day').format("YYYY-MM-DD");

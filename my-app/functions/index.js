@@ -20,6 +20,7 @@ const MATCHES_COLLECTION = "matches";
 const USERS_INFO_COLLECTION = "users-info";
 const ADMINS_COLLECTION = "admins";
 const NOTIFICATIONS_COLLECTION = "notifications";
+const BETS_COLLECTION = "bets";
 
 const express = require("express");
 const app = express();
@@ -287,13 +288,51 @@ exports.updateNotification = functions.region("europe-west1").https.onCall((data
             }
 
             if (notificationToken != undefined) {
-                if (!doc.data().notificationTokens.find(nt => nt.token === notificationToken.token)) {
+                if (doc.data().notificationTokens === undefined || !doc.data().notificationTokens.find(nt => nt.token === notificationToken.token)) {
                     update.notificationTokens = FieldValue.arrayUnion(notificationToken);
                 }
             }
 
             return doc.ref.update(update);
         }
+    });
+});
+
+exports.placeBet = functions.region("europe-west1").https.onCall((data, context) => {
+    const matchID = data.matchID;
+    const winner = data.winner;
+    const amount = data.amount;
+    return db.collection(USERS_INFO_COLLECTION).doc(context.auth.token.email).get().then(userInfo => {
+        if (userInfo.exists && userInfo.data().inactive !== true) {
+            return db.collection(BETS_COLLECTION)
+                .where("matchID", "==", matchID)
+                .where("email", "==", context.auth.token.email).get().then(bet => {
+                    if (bet.docs.length == 0) {
+                        if (amount > 0) {
+                            const docRef = db.collection(BETS_COLLECTION).doc();
+                            return docRef.set({
+                                email: context.auth.token.email,
+                                matchID,
+                                amount,
+                                winner,
+                                displayName: userInfo.data().displayName,
+                            });
+                        }
+                    } else {
+                        if (amount > 0) {
+                            // Update the bet
+                            return bet.docs[0].ref.update({
+                                amount,
+                                winner,
+                            });
+                        } else {
+                            // Delete the bet
+                            return bet.docs[0].ref.delete();
+                        }
+                    }
+                });
+        }
+        throw new functions.https.HttpsError("permission-denied", "UserNotFound ", "User does not exist or locked");
     });
 });
 
@@ -882,8 +921,8 @@ exports.notificationAdded = functions.region("europe-west1").firestore
 
                 if (smsNumbers.length > 0) {
                     const msg = `${snapshot.data().title}
-    ${snapshot.data().body}
-    ${"https://tennis.atpenn.com" + snapshot.data().link}`;
+${snapshot.data().body}
+${"https://tennis.atpenn.com" + snapshot.data().link}`;
                     waitFor.push(sendSMS(msg, smsNumbers));
                 }
                 return Promise.all(waitFor);

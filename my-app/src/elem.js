@@ -60,9 +60,9 @@ export function Text(props) {
 
 export const getBallsIndicator = (player, inMatch) => player && player.balls && player.balls > 0 ? (
     <VBox style={{ alignContent: "center" }}>
-        <SportsBaseballSharpIcon style={{ color: inMatch?'red':'#DAE714', transform: "rotate(45deg)", fontSize:inMatch?20:25  }} />
-        <div style={{position:"absolute", width:20, height:20, backgroundColor:"transparent"}}>
-        <SmallText2 textAlign="center" fontSize={inMatch?15:10} fontWeight={inMatch?"bold":"normal"}>{player.balls}</SmallText2>
+        <SportsBaseballSharpIcon style={{ color: inMatch ? 'red' : '#DAE714', transform: "rotate(45deg)", fontSize: inMatch ? 20 : 25 }} />
+        <div style={{ position: "absolute", width: 20, height: 20, backgroundColor: "transparent" }}>
+            <SmallText2 textAlign="center" fontSize={inMatch ? 15 : 10} fontWeight={inMatch ? "bold" : "normal"}>{player.balls}</SmallText2>
         </div>
     </VBox>) :
     null
@@ -73,7 +73,7 @@ export function BoxInput(props) {
         justifyItem: 'center',
         width: 40, height: 50, margin: 5
     }}>
-        {props.tieBreak?<SmallText2 textAlign={'center'} fontSize={8}>שובר שוויון</SmallText2>:null}
+        {props.tieBreak ? <SmallText2 textAlign={'center'} fontSize={8}>שובר שוויון</SmallText2> : null}
         <InputBase
             inputRef={ref => props && props.focus ? (ref && ref.focus ? ref.focus() : {}) : {}}
             onChange={(e) => {
@@ -90,7 +90,9 @@ export function BoxInput(props) {
 };
 
 
-
+export function HThinSeparator() {
+    return <div style={{ height: 1, width: '95%', borderTop: "1px solid lightgray " }}></div>
+}
 
 export function HSeparator() {
     return <div style={{ height: 4, width: '100%', borderTop: "2px solid lightgray " }}></div>
@@ -110,17 +112,17 @@ export function CircledValue(props) {
 }
 
 export function SmallText(props) {
-    return <div style={{ textAlign: props.textAlign || 'right', fontSize: props.fontSize || 15, padding: 2 }}>{props.children}</div>
+    return <div style={{ textAlign: props.textAlign || 'right', color: props.color, fontSize: props.fontSize || 15, padding: 2 }}>{props.children}</div>
 }
 
 export function SmallText2(props) {
     return <div style={{
-        width: '100%',
+        width: props.width || '100%',
         textAlign: props.textAlign || 'right',
         fontSize: props.fontSize || 12,
         fontWeight: props.fontWeight,
         lineHeight: props.lineHeight,
-        marginTop:props.marginTop,
+        marginTop: props.marginTop,
         padding: 0,
         backgroundColor: props.backgroundColor,
         color: props.color,
@@ -130,6 +132,24 @@ export function SmallText2(props) {
 
 export function ltr(props) {
     return <div dir="ltr">{props.children}</div>
+}
+
+export function Card(props) {
+    return <Box style={{
+        display: 'flex',
+        width: '94%',
+        marginRight: '3%',
+        marginLeft: '3%',
+        marginBottom: 10,
+        borderRadius: 4,
+        flexDirection: 'column',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        boxShadow: "1px 2px 1px #9E9E9E",
+        ...props.style
+    }}>
+        {props.children}
+    </Box>
 }
 
 export function VBox(props) {

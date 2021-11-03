@@ -41,6 +41,7 @@ import {
 import firebase from 'firebase/app'
 import 'firebase/auth';
 import BallsAdmin from './balls-admin';
+import dayjs from 'dayjs'
 
 //import { config } from "./config";
 
@@ -67,6 +68,11 @@ const ResponsiveTab = withStyles({
 const ResponsiveTabs = withStyles({
 
 })(Tabs);
+
+function getDefaultTab() {
+  const today = dayjs();
+  return today.day === 6 ? 0:1;
+}
 
 let App = props => {
   const [admin, setAdmin] = useState(false);
@@ -111,7 +117,6 @@ let App = props => {
     clear: () => {
       setMsg({});
     }
-
   }
 
   const hideNotification = (id) => {
@@ -388,7 +393,8 @@ let App = props => {
                       setForceMode(undefined);
                       props.history.push("/admin")
                     }
-                    let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 0;
+                    let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 
+                      getDefaultTab();
                     return [
                       // <div key="1" style={{position:"absolute", width:"100%", height:30}}>
                       //   <img src="penn_banner.jpg"  alt="" style={{opacity:.3, zIndex:-1}}/>
