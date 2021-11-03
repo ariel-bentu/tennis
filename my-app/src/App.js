@@ -1,5 +1,5 @@
 import './App.css';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, } from 'react';
 import {
 
   withStyles
@@ -71,7 +71,7 @@ const ResponsiveTabs = withStyles({
 
 function getDefaultTab() {
   const today = dayjs();
-  return today.day === 6 ? 0:1;
+  return today.day === 6 ? 0 : 1;
 }
 
 let App = props => {
@@ -100,24 +100,24 @@ let App = props => {
   //const notificationRef = React.useRef(null);
   const notify = {
     success: (body, title) => {
-      setMsg({ open: true, severity: "success", title, body, progress:false });
+      setMsg({ open: true, severity: "success", title, body, progress: false });
       setTimeout(() => setMsg({}), 5000);
     },
     notification: (id, body, title, actionUrlPath) => {
-      setNotifications(orig => [...orig, { id, severity: "success", body:title, details:body , actionUrlPath}]);
+      setNotifications(orig => [...orig, { id, severity: "success", body: title, details: body, actionUrlPath }]);
     },
     error: (body, title) => {
-      setMsg({ open: true, severity: "error", title, body, progress:false });
+      setMsg({ open: true, severity: "error", title, body, progress: false });
       setTimeout(() => setMsg({}), 5000);
 
     },
     ask: (body, title, buttons, details) => {
-      setMsg({ open: true, severity: "info", title, body, buttons, details, progress:false });
+      setMsg({ open: true, severity: "info", title, body, buttons, details, progress: false });
     },
     clear: () => {
       setMsg({});
     },
-    progress: () => setMsg({ progress:true}),
+    progress: () => setMsg({ progress: true }),
 
   }
 
@@ -136,6 +136,7 @@ let App = props => {
       const isSafari = 'safari' in window;
       api.updateUserNotification(pushNotification, notificationToken, isSafari);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationToken, userInfo]);
 
   useEffect(() => {
@@ -152,39 +153,42 @@ let App = props => {
       api.getUserObj(user).then(
         uo => {
           setUserInfo(uo);
-          setPushNotification(uo.pushNotification);
-          if (uo.pushNotification === undefined) {
-            setTimeout(() => {
-              notify.ask("מעוניין לקבל הודעות בדחיפה?", undefined, [
-                {
-                  caption: "כן", callback: () => {
-                    api.updateUserNotification(true).then(
-                      () => {
-                        notify.success("עודכן בהצלחה")
-                        setPushNotification(true);
-                      },
-                      (err) => notify.error(err.message));
+          if (uo) {
+            setPushNotification(uo.pushNotification);
 
-                  }
-                },
-                {
-                  caption: "לא", callback: () => {
-                    api.updateUserNotification(false).then(
-                      () => {
-                        setPushNotification(false);
-                      });
+            if (uo.pushNotification === undefined) {
+              setTimeout(() => {
+                notify.ask("מעוניין לקבל הודעות בדחיפה?", undefined, [
+                  {
+                    caption: "כן", callback: () => {
+                      api.updateUserNotification(true).then(
+                        () => {
+                          notify.success("עודכן בהצלחה")
+                          setPushNotification(true);
+                        },
+                        (err) => notify.error(err.message));
+
+                    }
                   },
-                },
-                
-                
-                { caption: "הזכר לי מאוחר יותר", callback: () => { } },
-              ],
-              "הודעות עבור תוצאות משחקים וכדו׳.\n בכל שלב בהמשך תוכל לשנות את בחירתך על ידי לחיצה על הפעמון"
-              )
-            }, 3000);
+                  {
+                    caption: "לא", callback: () => {
+                      api.updateUserNotification(false).then(
+                        () => {
+                          setPushNotification(false);
+                        });
+                    },
+                  },
+
+
+                  { caption: "הזכר לי מאוחר יותר", callback: () => { } },
+                ],
+                  "הודעות עבור תוצאות משחקים וכדו׳.\n בכל שלב בהמשך תוכל לשנות את בחירתך על ידי לחיצה על הפעמון"
+                )
+              }, 3000);
+            }
+            api.isAdmin().then(setAdmin);
+            api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
           }
-          api.isAdmin().then(setAdmin);
-          api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
         },
         (err) => {
           setUserBlocked(true);
@@ -219,6 +223,7 @@ let App = props => {
       },
       { caption: "לא", callback: () => { } },
     ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pushNotification]);
 
 
@@ -234,19 +239,34 @@ let App = props => {
 
   const isAdminPath = window.location && window.location.pathname && window.location.pathname.endsWith("admin");
   //console.log("adminPath" + (isAdminPath ? " y" : " n"))
+
+  if (forgotPwd) return <ForgotPwd notify={notify} onCancel={() => setForgotPwd(false)} />;
+
+  if (changePwd) return <ChangePwd notify={notify} userInfo={userInfo} onCancel={() => setChangePwd(false)} onPwdChanged={() => {
+    notify.success("סיסמא שונתה בהצלחה");
+    setChangePwd(false);
+  }}
+  />;
+
+
+
   return (
     <div className="App" dir="rtl" >
-      {msg.progress === true ?
-      <div style={{display:"flex", position:"absolute", top:0,left:0, width:"100%", height:"100%", 
-      backgroundColor:"white", opacity:0.6, zIndex:1000,
-        alignItems:"center", justifyContent:"center"}}><CircularProgress /></div>
-      :null}
+      {// ---- Progress indicator ----
+        msg.progress === true && <div style={{
+          display: "flex", position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          backgroundColor: "white", opacity: 0.6, zIndex: 1000,
+          alignItems: "center", justifyContent: "center"
+        }}><CircularProgress /></div>
+      }
+      {// ---- Alert (notify) -----
+      }
       <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left: 0, right: 0, fontSize: 15, zIndex: 1000 }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}
           <Text>{msg.body}</Text>
-          {msg.details?msg.details.split("\n").map(d=><SmallText2 fontSize={15}>{d}</SmallText2>):null}
-          {msg.details?<Spacer height={10}/>:null}
+          {msg.details ? msg.details.split("\n").map(d => <SmallText2 fontSize={15}>{d}</SmallText2>) : null}
+          {msg.details ? <Spacer height={10} /> : null}
           {msg.buttons && msg.buttons.length > 0 ?
             <HBox>
               {msg.buttons.map(btn => ([
@@ -260,9 +280,21 @@ let App = props => {
             </HBox> : null}
         </Alert>
       </Collapse>
-      {forgotPwd ? <ForgotPwd notify={notify} onCancel={() => setForgotPwd(false)} />
-        :
-        userBlocked || userInfo ? <Toolbar>
+
+
+      {// ---- Login -----
+      !loading && !userInfo && !userBlocked && <Login
+        onLogin={(userInfo) => {
+          
+        }}
+        onError={(err) => notify.error(err.toString())}
+        onForgotPwd={() => setForgotPwd(true)}
+        notify={notify}
+      />
+      }
+
+      {(userBlocked || userInfo) &&
+        <Toolbar>
           <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 10 }}>
             <Menu ref={anchorRef} onClick={() => setMenuOpen(prev => !prev)} />
             <Spacer width={15} />
@@ -304,166 +336,142 @@ let App = props => {
               )}
             </Popper>
             <Spacer width={10} />
-            {/* <HBox style={{ alignItems: 'center' }}>
-              <PowerSettingsNew onClick={() => api.logout().then(() => setUserInfo(undefined))} />
-              <Button onClick={() => setChangePwd(true)}>שנה סיסמא</Button>
-            </HBox> */}
-            {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
-            {/* <Text>{window.innerWidth}</Text> */}
             
+            {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
             
             <Spacer width={40} />
             {admin ? <Button style={{ height: "1.5rem" }} variant={"contained"}
               onClick={() => {
                 isAdminPath ? setForceMode(0) : setForceMode(1)
-                //console.log("clicl " + (isAdminPath?"0":"1"))
               }}>{!isAdminPath ? "ניהול" : "משתמשים"}</Button> : null}
 
           </HBox>
           <div style={{ position: "absolute", left: 30, top: 0, width: 10, height: 10 }}>
             <img src="penn_logo.png" style={{ width: 38 }} alt="" />
           </div>
-        </Toolbar> : null}
-      {forgotPwd ? null :
-        changePwd ?
-          <ChangePwd notify={notify} userInfo={userInfo} onCancel={() => setChangePwd(false)} onPwdChanged={() => {
-            notify.success("סיסמא שונתה בהצלחה");
-            setChangePwd(false);
-          }} />
-          :
-          userInfo ?
-            <Router>
-              <Switch>
-                <Route path="/notifications">
-                  <Notifications notify={notify} windowSize={windowSize} />
-                </Route>
-                <Route
-                  path="/admin"
-                  children={(props) => {
-                    if (forceMode !== undefined && forceMode === 0) {
-                      //console.log("goto /")
-                      setForceMode(undefined);
-                      props.history.push("/")
+        </Toolbar>
+      }
+
+      {userInfo && <Router>
+        <Switch>
+          <Route path="/notifications">
+            <Notifications notify={notify} windowSize={windowSize} />
+          </Route>
+          <Route
+            path="/admin"
+            children={(props) => {
+              if (forceMode !== undefined && forceMode === 0) {
+                //console.log("goto /")
+                setForceMode(undefined);
+                props.history.push("/")
+              }
+              let adminTab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 1;
+              return [<ResponsiveTabs key={"100"}
+                value={adminTab}
+                onChange={(e, tab) => props.history.push("/admin#" + tab)}
+                indicatorColor="primary"
+                textColor="primary"
+                scrollButtons="auto"
+                centered
+                style={{ marginTop: 5 }}
+                TabIndicatorProps={{
+                  style: {
+                    display: "none"
+                  }
+                }}
+              >
+                <ResponsiveTab label={"ניהול"} />
+                <ResponsiveTab label={"שיבוץ"} />
+                <ResponsiveTab label={"משתמשים"} />
+                <ResponsiveTab label={"חובות"} />
+                <ResponsiveTab label={"כדורים"} />
+              </ResponsiveTabs>,
+              <TabPanel key={"0"} value={adminTab} index={0} >
+                {adminTab === 0 ? <Admin notify={notify} windowSize={windowSize} /> : null}
+              </TabPanel>,
+              <TabPanel key={"1"} value={adminTab} index={1} >
+                <Match notify={notify} windowSize={windowSize} />
+              </TabPanel>,
+              <TabPanel key={"2"} value={adminTab} index={2} >
+                {adminTab === 2 ? <Users notify={notify} windowSize={windowSize} /> : null}
+              </TabPanel>,
+              <TabPanel key={"3"} value={adminTab} index={3} >
+                {adminTab === 3 ? <Billing notify={notify} windowSize={windowSize} /> : null}
+              </TabPanel>,
+              <TabPanel key={"4"} value={adminTab} index={4} >
+                {adminTab === 4 ? <BallsAdmin notify={notify} windowSize={windowSize} /> : null}
+              </TabPanel>
+              ]
+            }}
+          />
+          <Route path="/match-test">
+            <Match notify={notify} test={true} windowSize={windowSize} />
+          </Route>
+          <Route path="/match">
+            <Match notify={notify} windowSize={windowSize} />
+          </Route>
+          <Route path="/users">
+            <Users notify={notify} windowSize={windowSize} />
+          </Route>
+          <Route path="/"
+            children={(props) => {
+              if (forceMode !== undefined && forceMode === 1) {
+                //console.log("goto /admin")
+                setForceMode(undefined);
+                props.history.push("/admin")
+              }
+              let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) :
+                getDefaultTab();
+              return [
+                // <div key="1" style={{position:"absolute", width:"100%", height:30}}>
+                //   <img src="penn_banner.jpg"  alt="" style={{opacity:.3, zIndex:-1}}/>
+                // </div>,
+                <ResponsiveTabs
+                  key="100"
+                  value={tab}
+                  onChange={(e, tab) => props.history.push("/#" + tab)}
+                  indicatorColor="primary"
+                  textColor="primary"
+                  scrollButtons="auto"
+                  variant="scrollable"
+                  TabIndicatorProps={{
+                    style: {
+                      display: "none"
                     }
-                    let adminTab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 1;
-                    return [<ResponsiveTabs key={"100"}
-                      value={adminTab}
-                      onChange={(e, tab) => props.history.push("/admin#" + tab)}
-                      indicatorColor="primary"
-                      textColor="primary"
-                      scrollButtons="auto"
-                      centered
-                      style={{ marginTop: 5 }}
-                      TabIndicatorProps={{
-                        style: {
-                          display: "none"
-                        }
-                      }}
-                    >
-                      <ResponsiveTab label={"ניהול"} />
-                      <ResponsiveTab label={"שיבוץ"} />
-                      <ResponsiveTab label={"משתמשים"} />
-                      <ResponsiveTab label={"חובות"} />
-                      <ResponsiveTab label={"כדורים"} />
-                    </ResponsiveTabs>,
-                    <TabPanel key={"0"} value={adminTab} index={0} >
-                      {adminTab === 0 ? <Admin notify={notify} windowSize={windowSize} /> : null}
-                    </TabPanel>,
-                    <TabPanel key={"1"} value={adminTab} index={1} >
-                      <Match notify={notify} windowSize={windowSize} />
-                    </TabPanel>,
-                    <TabPanel key={"2"} value={adminTab} index={2} >
-                      {adminTab === 2 ? <Users notify={notify} windowSize={windowSize} /> : null}
-                    </TabPanel>,
-                    <TabPanel key={"3"} value={adminTab} index={3} >
-                      {adminTab === 3 ? <Billing notify={notify} windowSize={windowSize} /> : null}
-                    </TabPanel>,
-                    <TabPanel key={"4"} value={adminTab} index={4} >
-                      {adminTab === 4 ? <BallsAdmin notify={notify} windowSize={windowSize} /> : null}
-                    </TabPanel>
-                    ]
                   }}
-                />
-                <Route path="/match-test">
-                  <Match notify={notify} test={true} windowSize={windowSize} />
-                </Route>
-                <Route path="/match">
-                  <Match notify={notify} windowSize={windowSize} />
-                </Route>
-                <Route path="/users">
-                  <Users notify={notify} windowSize={windowSize} />
-                </Route>
-                <Route path="/"
-                  children={(props) => {
-                    if (forceMode !== undefined && forceMode === 1) {
-                      //console.log("goto /admin")
-                      setForceMode(undefined);
-                      props.history.push("/admin")
-                    }
-                    let tab = props.location.hash ? parseInt(props.location.hash.substr(1)) : 
-                      getDefaultTab();
-                    return [
-                      // <div key="1" style={{position:"absolute", width:"100%", height:30}}>
-                      //   <img src="penn_banner.jpg"  alt="" style={{opacity:.3, zIndex:-1}}/>
-                      // </div>,
-                      <ResponsiveTabs
-                        key="100"
-                        value={tab}
-                        onChange={(e, tab) => props.history.push("/#" + tab)}
-                        indicatorColor="primary"
-                        textColor="primary"
-                        scrollButtons="auto"
-                        variant="scrollable"
-                        TabIndicatorProps={{
-                          style: {
-                            display: "none"
-                          }
-                        }}
-                      >
-                        <ResponsiveTab label={"רישום"} icon={<PlaylistAdd />} />
-                        <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
-                        <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
-                        <ResponsiveTab label={"לוח"} icon={<BarChart />} />
-                        <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
+                >
+                  <ResponsiveTab label={"רישום"} icon={<PlaylistAdd />} />
+                  <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
+                  <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
+                  <ResponsiveTab label={"לוח"} icon={<BarChart />} />
+                  <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
 
 
-                      </ResponsiveTabs>,
-                      <TabPanel key="0" value={tab} index={0} >
-                        <Register notify={notify} UserInfo={userInfo} Balance={userBalance} />
-                      </TabPanel>,
-                      <TabPanel key="1" value={tab} index={1} >
-                        {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={() => {
-                          setAllGamesReload(i => i + 1);
-                        }} /> : null}
-                      </TabPanel>,
-                      <TabPanel key="2" value={tab} index={2} >
-                        {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} admin={admin} reload={allGamesReload} /> : null}
-                      </TabPanel>,
-                      <TabPanel key="3" value={tab} index={3} >
-                        {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
-                      </TabPanel>,
-                      <TabPanel key="4" value={tab} index={4}>
-                        {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
-                      </TabPanel>
-                    ]
-                  }}
-                />
-              </Switch>
-            </Router> :
+                </ResponsiveTabs>,
+                <TabPanel key="0" value={tab} index={0} >
+                  <Register notify={notify} UserInfo={userInfo} Balance={userBalance} />
+                </TabPanel>,
+                <TabPanel key="1" value={tab} index={1} >
+                  {tab === 1 ? <MyMatches notify={notify} UserInfo={userInfo} admin={admin} reloadMatches={() => {
+                    setAllGamesReload(i => i + 1);
+                  }} /> : null}
+                </TabPanel>,
+                <TabPanel key="2" value={tab} index={2} >
+                  {tab === 2 ? <Matches notify={notify} UserInfo={userInfo} admin={admin} reload={allGamesReload} /> : null}
+                </TabPanel>,
+                <TabPanel key="3" value={tab} index={3} >
+                  {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
+                </TabPanel>,
+                <TabPanel key="4" value={tab} index={4}>
+                  {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
+                </TabPanel>
+              ]
+            }}
+          />
+        </Switch>
+      </Router>}
 
-            loading ? <Loading msg={"מאמת זהות"} /> :
-              userBlocked ?
-                null
-                :
-                <Login
-                  onLogin={(userInfo) => {
-                    //setUserInfo(userInfo)
-                    //todo
-                  }}
-                  onError={(err) => notify.error(err.toString())}
-                  onForgotPwd={() => setForgotPwd(true)}
-                  notify={notify}
-                />}
+      {loading && <Loading msg={"מאמת זהות"} />}
 
       <Snackbar open={notifications.length > 0 || true} onClose={() => { }}>
         <div style={{ width: '90%' }} >
@@ -471,8 +479,8 @@ let App = props => {
             <Alert key={notif.id} onClose={() => hideNotification(notif.id)} severity={notif.severity} style={{ width: '100%' }} >
               {notif.title ? <AlertTitle>{notif.title}</AlertTitle> : null}
               <VBox>
-                {notif.body?<SmallText2>{notif.body}</SmallText2>:null}
-                {notif.details?notif.details.split("\n").map(d=><SmallText2>{d}</SmallText2>):null}
+                {notif.body ? <SmallText2>{notif.body}</SmallText2> : null}
+                {notif.details ? notif.details.split("\n").map(d => <SmallText2>{d}</SmallText2>) : null}
                 {/* {notif.actionUrlPath && notif.actionUrlPath.length > 0 ?<Button onClick={()=>{
                   props.history.push(notif.actionUrlPath)
                 }}>צפה</Button>:null} */}
@@ -481,7 +489,7 @@ let App = props => {
           ))}
         </div>
       </Snackbar>
-    </div>
+    </div >
   );
 }
 // App = withOrientationChange(App);

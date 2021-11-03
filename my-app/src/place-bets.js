@@ -24,7 +24,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
             }
             setMatchBets(_matchBets);
         }
-    }, [match, bets]);
+    }, [match, bets, UserInfo.email]);
 
 
     const getNames = useCallback((pairNum) => {
@@ -63,7 +63,8 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
             }
         }
         setMyEditedBet({ ...editedBet, winner });
-    }, [myBet, myEditedBet])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [myBet, myEditedBet, UserInfo, match])
 
     const setMyAmount = useCallback((increase) => {
         let editedBet = myEditedBet;
@@ -85,7 +86,8 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
         }
 
         setMyEditedBet({ ...editedBet, amount: newAmount });
-    }, [myBet, myEditedBet])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [myBet, myEditedBet, UserInfo])
     const actualMyBet = myEditedBet ? myEditedBet : myBet;
     const whoWins = actualMyBet ? actualMyBet.winner : 0;
 
@@ -99,7 +101,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                     color="white"
                     fontWeight="bold">הימורים - preview</SmallText2>
                 <Close style={{ position: 'relative', left: 10, width: 15, height: 30, color: 'white' }}
-                    onClick={()=>onDone(myBet)} />
+                    onClick={() => onDone(myBet)} />
             </HBox>
 
 
