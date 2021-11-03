@@ -8,7 +8,7 @@ import {
 import { Alert, AlertTitle } from '@material-ui/lab';
 import {
   Collapse, Button, Tabs, Tab, Paper, Popper, MenuItem, MenuList, Grow,
-  ClickAwayListener, Snackbar, ListItemIcon, ListItemText
+  ClickAwayListener, Snackbar, ListItemIcon, ListItemText, CircularProgress
 } from '@material-ui/core';
 import Register from './register';
 import MyMatches from './myMatches'
@@ -100,23 +100,25 @@ let App = props => {
   //const notificationRef = React.useRef(null);
   const notify = {
     success: (body, title) => {
-      setMsg({ open: true, severity: "success", title, body });
+      setMsg({ open: true, severity: "success", title, body, progress:false });
       setTimeout(() => setMsg({}), 5000);
     },
     notification: (id, body, title, actionUrlPath) => {
       setNotifications(orig => [...orig, { id, severity: "success", body:title, details:body , actionUrlPath}]);
     },
     error: (body, title) => {
-      setMsg({ open: true, severity: "error", title, body });
+      setMsg({ open: true, severity: "error", title, body, progress:false });
       setTimeout(() => setMsg({}), 5000);
 
     },
     ask: (body, title, buttons, details) => {
-      setMsg({ open: true, severity: "info", title, body, buttons, details });
+      setMsg({ open: true, severity: "info", title, body, buttons, details, progress:false });
     },
     clear: () => {
       setMsg({});
-    }
+    },
+    progress: () => setMsg({ progress:true}),
+
   }
 
   const hideNotification = (id) => {
@@ -234,6 +236,11 @@ let App = props => {
   //console.log("adminPath" + (isAdminPath ? " y" : " n"))
   return (
     <div className="App" dir="rtl" >
+      {msg.progress === true ?
+      <div style={{display:"flex", position:"absolute", top:0,left:0, width:"100%", height:"100%", 
+      backgroundColor:"white", opacity:0.6, zIndex:1000,
+        alignItems:"center", justifyContent:"center"}}><CircularProgress /></div>
+      :null}
       <Collapse in={msg.open} timeout={500} style={{ position: 'Fixed', top: msg.top || 0, left: 0, right: 0, fontSize: 15, zIndex: 1000 }} >
         <Alert severity={msg.severity}>
           {msg.title ? <AlertTitle>{msg.title}</AlertTitle> : null}

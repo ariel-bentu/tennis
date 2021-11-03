@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
-import { Spacer, Loading, VBox, HBox, SmallText, SmallText2, HSeparator } from './elem'
+import { Spacer, Loading, VBox, HBox, SmallText2, SVGIcon, Card, HThinSeparator } from './elem'
 import { getNiceDate } from './utils'
 
 import * as api from './api'
-import { Edit, EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
+import {  EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
 import SetResults from './set-results';
 
 const Val = (v) => parseInt(v);
@@ -27,7 +27,7 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
 
 
     return (
-        <div style={{ height: '100%', width: '100%' }}>
+        <div style={{ height: '100%', width: '100%', backgroundColor: "#F3F3F3" }}>
             <Spacer width={10} />
             {edit ?
                 <SetResults match={edit} notify={notify} onCancel={() => setEdit(undefined)}
@@ -36,7 +36,6 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
                         setEdit(undefined);
                     })} isArchived={true} Admin={admin} />
                 : <VBox>
-                    <HSeparator />
                     {matches ?
                         matches.map(match => (
                             <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin} />
@@ -94,31 +93,33 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
         })
     }
     //alert(match.date + "-"+ getNiceDate(match.date));
+    const userInM = userInMatch(match, UserInfo);
+    const showEdit = admin || (userInM && !match.sets);
 
-    return <VBox style={{ width: '80%', height: 100 }}>
-        <Grid container spacing={2} style={{ height: 60 }} direction={'row-reverse'}>
-            <Grid item xs={4} >
+    return <Card>
+        <Grid container spacing={2} style={{ height: 50 }} direction={'row-reverse'}>
+            <Grid item xs={12} >
+                <SmallText2 textAlign="center" fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText2>
+                <HThinSeparator width="100%"/>
             </Grid>
-            <Grid item xs={7}>
-            <SmallText textAlign="center" fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
-               
-            </Grid>
+            
         </Grid>
         <Spacer />
-
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
             firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner === 0}
             canceled={match.matchCanceled}
-            button={admin || (userInMatch(match, UserInfo) && !match.sets) ?
-                <Edit onClick={() => setEdit(match)} />
-                : undefined} />
+        />
         <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
             wins={winner === 2} tie={winner === 0}
             UserInfo={UserInfo}
             canceled={match.matchCanceled}
         />
-        <HSeparator />
-    </VBox>
+        {showEdit ? <HThinSeparator /> : null}
+        {showEdit ?
+            <SVGIcon svg="editResults" size={25} onClick={() => setEdit(match)} />
+            : null}
+
+    </Card>
 }
 
 function userInMatch(match, UserInfo) {
@@ -135,13 +136,14 @@ function userInMatch(match, UserInfo) {
 
 
 function GetOneLine(props) {
-
+    const p1IsMe = props.P1 && props.P1.email === props.UserInfo.email;
+    const p2IsMe = props.P2 && props.P2.email === props.UserInfo.email;
     return (
         <Grid container spacing={2} style={{ height: 60 }} direction={'row-reverse'}>
             <Grid item xs={4} alignContent={'flex-start'} style={{ padding: 2 }}>
                 <VBox>
-                    {props.P1 ? <SmallText2 marginTop={5} lineHeight={1} textAlign="center" backgroundColor={props.P1.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P1.displayName}</SmallText2> : null}
-                    {props.P2 ? <SmallText2 lineHeight={1}  textAlign="center" backgroundColor={props.P2.email === props.UserInfo.email ? 'yellow' : undefined}>{props.P2.displayName}</SmallText2> : null}
+                    {props.P1 ? <SmallText2 marginTop={5} lineHeight={1} textAlign="center" textDecoration={p1IsMe ? 'underline' : undefined} fontWeight={p1IsMe ? 'bold' : undefined}>{props.P1.displayName}</SmallText2> : null}
+                    {props.P2 ? <SmallText2 lineHeight={1} textAlign="center" textDecoration={p2IsMe ? 'underline' : undefined} fontWeight={p2IsMe ? 'bold' : undefined}>{props.P2.displayName}</SmallText2> : null}
                 </VBox>
             </Grid >
             {props.canceled ? null :
@@ -158,7 +160,7 @@ function GetOneLine(props) {
                         :
                         <HBox >
                             <SmallText2 textAlign="center">משחק בוטל</SmallText2>
-                            
+
 
 
                         </HBox>

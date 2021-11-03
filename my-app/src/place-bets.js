@@ -2,11 +2,9 @@ import { Grid } from '@material-ui/core';
 import { Check, Close, EmojiEventsOutlined } from '@material-ui/icons';
 import { ToggleButton, ToggleButtonGroup } from '@material-ui/lab';
 import React, { useState, useEffect, useCallback } from 'react';
-import { HBox, HThinSeparator, SmallText2, Spacer, Card } from './elem';
+import { HBox, HThinSeparator, SmallText2, Spacer, Card, SVGIcon } from './elem';
 import * as api from './api'
 
-const betPlus = require("./bet+.svg").default;
-const betMinus = require("./bet-.svg").default;
 
 
 export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
@@ -32,7 +30,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
     const getNames = useCallback((pairNum) => {
         if (!match) return "";
 
-        const firstId = pairNum == 1 ? 1 : 3;
+        const firstId = pairNum === 1 ? 1 : 3;
         let names = "";
         if (match["Player" + firstId]) {
             names += match["Player" + firstId].displayName;
@@ -48,7 +46,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
         if (!myEditedBet) return false;
         if (!myBet) return (myEditedBet.amount > 0);
 
-        return myBet.amount != myEditedBet.amount || myBet.winner != myEditedBet.winner;
+        return myBet.amount !== myEditedBet.amount || myBet.winner !== myEditedBet.winner;
     }
 
     const setMyWinner = useCallback((winner) => {
@@ -148,9 +146,9 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                         <Grid item xs={4} alignContent={'flex-start'} >
                             <Spacer />
                             <HBox style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                <img src={betPlus} onClick={() => setMyAmount(true)} style={{ width: 20, height: 20, stroke: "gold" }} />
+                                <SVGIcon svg="betPlus" onClick={() => setMyAmount(true)} size={20} />
                                 <SmallText2 textAlign="center" width={40}>{actualMyBet ? actualMyBet.amount : ""}</SmallText2>
-                                <img src={betMinus} onClick={() => setMyAmount(false)} style={{ width: 20, height: 20, stroke: "gold" }} />
+                                <SVGIcon svg="betMinus" onClick={() => setMyAmount(false)} size={20} />
                             </HBox>
                             <Spacer />
                         </Grid>
@@ -159,6 +157,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                             {isDirty() ? <Check onClick={() => {
                                 if (!submitInProcess) {
                                     setSubmitInProcess(true);
+                                    notify.progress();
                                     api.placeBet(myEditedBet).then(
                                         () => {
                                             notify.success("נשמר בהצלחה");

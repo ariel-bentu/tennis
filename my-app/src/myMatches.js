@@ -3,17 +3,15 @@ import React, { useState, useEffect } from 'react';
 
 import {
     Spacer, Loading, VBox, Text, SmallText, SmallText2,
-    HThinSeparator, HBox, getBallsIndicator, Card
+    HThinSeparator, HBox, getBallsIndicator, Card, SVGIcon
 } from './elem'
 import SetResults from './set-results';
 import { getNiceDate } from './utils'
 import * as api from './api'
-import { AccessTime, EmojiEventsOutlined, LocationOn, Person } from '@material-ui/icons'
+import { AccessTime, LocationOn, Person } from '@material-ui/icons'
 import { ToggleButtonGroup, ToggleButton } from '@material-ui/lab';
 import PlaceBets from './place-bets';
-import { match } from 'assert';
 
-const betPlus = require("./bet+.svg").default;
 
 
 export default function MyMatches({ UserInfo, notify, admin }) {
@@ -158,7 +156,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                                     <SmallText2 fontSize={14} textAlign="center">אין</SmallText2> : null}
                                 {/* <SmallText2 fontSize={18} textAlign="center">שאר המשחקים</SmallText2> */}
                                 {!showMineOnly && matches ? matches.map((match, i) => (
-                                    <OneGame key={i} match={match} setEdit={setEdit} showSetResults={admin === true} notify={notify}
+                                    <OneGame key={i} match={match} setEdit={setEdit} showSetResults={admin === true || (myMatches && myMatches.find(mm=>mm._ref.id === match._ref.id))} notify={notify}
                                         setPlaceBets={setPlaceBets} />)) : null}
                             </VBox>
                         : <Loading msg="טוען משחקים" />
@@ -221,11 +219,12 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
             <HBox style={{ alignItems: "center" }}>
                 {
                     showSetResults ?
-                        [<EmojiEventsOutlined key="1" onClick={() => setEdit(match)} style={{ color: "gold" }} />,
+                        [<SVGIcon key="1" svg="editResults" size={25}  onClick={() => setEdit(match)}  />,
                         <Spacer key="2" width={20} />] : null
                 }
                 <div style={{ display: 'flex', alignItems: "center" }}>
-                    <img src={betPlus} onClick={() => setPlaceBets(match)} style={{position:'relative', right:14, width: 20, height: 20, stroke: "gold" }} />
+                <SVGIcon svg="bet" onClick={() => setPlaceBets(match)} size={20} style={{position:'relative', right:14}}/>
+                    {/* <img src={betPlus} onClick={() => setPlaceBets(match)} style={{position:'relative', right:14, width: 20, height: 20, stroke: "gold" }} /> */}
                     {match._numOfBets && match._numOfBets > 0 ? <SmallText2>{match._numOfBets}</SmallText2> : null}
                 </div>
             </HBox>

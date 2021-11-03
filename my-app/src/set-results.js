@@ -211,24 +211,24 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 
             </HBox>
             <HBox>
-            {Admin ? <TextField
-                variant="outlined"
-                margin="normal"
-                label="מקדם חיוב"
-                autoComplete="number"
-                value={paymentFactor === undefined ? "" : paymentFactor}
-                onFocus={() => setNextFocus(-1)}
-                onChange={(e) => {
-                    const val = e.currentTarget.value;
-                    const floatVal = parseFloat(val);
-                    if (val && val.trim() !== "" && val.trim() !== ".") {
-                        if (isNaN(floatVal) || floatVal < 0 || floatVal > 1) {
-                            notify.error("מקדם תשלום: ערך חייב להיות בין 0 ל-1");
+                {Admin ? <TextField
+                    variant="outlined"
+                    margin="normal"
+                    label="מקדם חיוב"
+                    autoComplete="number"
+                    value={paymentFactor === undefined ? "" : paymentFactor}
+                    onFocus={() => setNextFocus(-1)}
+                    onChange={(e) => {
+                        const val = e.currentTarget.value;
+                        const floatVal = parseFloat(val);
+                        if (val && val.trim() !== "" && val.trim() !== ".") {
+                            if (isNaN(floatVal) || floatVal < 0 || floatVal > 1) {
+                                notify.error("מקדם תשלום: ערך חייב להיות בין 0 ל-1");
+                            }
                         }
-                    }
-                    setPaymentFactor(val);
-                }}
-            /> : null}
+                        setPaymentFactor(val);
+                    }}
+                /> : null}
             </HBox>
             <Spacer height={30} />
             <HBox style={{ width: '100%', justifyContent: 'center' }}>
@@ -240,6 +240,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     }
                     if (isDirty(match, editedSets, gameCanceled)) {
                         if (gameCanceled) {
+                            notify.progress();
                             return api.saveMatchCanceled(match, pf, isArchived).then(
                                 () => {
                                     notify.success("משחק סומן כבוטל");
@@ -256,7 +257,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         }
                         //save changes
                         match.sets = editedSets.filter(s => s.pair1 !== "");
-                        api.saveMatchResults(match, pf, isArchived).then(
+                        notify.progress();
+                        return api.saveMatchResults(match, pf, isArchived).then(
                             () => {
                                 if (!isArchived) {
                                     notify.success("תוצאות נשמרו בהצלחה. המשחק יוסר מלשונית ׳מתוכנן׳ ויופיע בלשונית ׳משחקים׳");
@@ -268,8 +270,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                             (err) => notify.error(err.message)
                         );
                     }
-
                     onDone(editedSets);
+
                 }}>שמור</Button>
                 <Spacer width={25} />
                 <Button variant="contained" onClick={() => onCancel()}>בטל</Button>

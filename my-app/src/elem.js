@@ -90,8 +90,8 @@ export function BoxInput(props) {
 };
 
 
-export function HThinSeparator() {
-    return <div style={{ height: 1, width: '95%', borderTop: "1px solid lightgray " }}></div>
+export function HThinSeparator(props) {
+    return <div style={{ height: 1, width: props.width || '95%', borderTop: "1px solid lightgray " }}></div>
 }
 
 export function HSeparator() {
@@ -121,6 +121,7 @@ export function SmallText2(props) {
         textAlign: props.textAlign || 'right',
         fontSize: props.fontSize || 12,
         fontWeight: props.fontWeight,
+        textDecoration: props.textDecoration,
         lineHeight: props.lineHeight,
         marginTop: props.marginTop,
         padding: 0,
@@ -132,6 +133,27 @@ export function SmallText2(props) {
 
 export function ltr(props) {
     return <div dir="ltr">{props.children}</div>
+}
+
+export function SVGIcon(props) {
+    let src = "";
+    switch (props.svg) {
+        case "editResults":
+            src = require("./edit-results.svg").default;
+            break;
+        case "betPlus":
+            src = require("./bet+.svg").default;
+            break;
+        case "betMinus":
+            src = require("./bet-.svg").default;
+            break;
+        case "bet":
+            src = require("./bet.svg").default;
+            break;
+        default:
+    }
+
+    return <img src={src} alt="" {...props} style={{ ...props.style, height: props.size, width: props.size }}  />
 }
 
 export function Card(props) {
@@ -157,6 +179,10 @@ export function VBox(props) {
         {props.children}
     </Box>
 }
+
+export const HBoxC = (props) => (<HBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} />);
+export const HBoxSB = (props) => (<HBox style={{alignItems:"center", justifyContent: "space-between", width:"100%", ...props.style}} />);
+
 
 export function HBox(props) {
     return <Box style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', ...props.style }}>
