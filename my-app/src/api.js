@@ -1,11 +1,18 @@
-import firebase from 'firebase/app'
-import 'firebase/auth';
-import 'firebase/messaging';
-import 'firebase/firestore';
-import 'firebase/functions';
+import { initializeApp } from 'firebase/app'
+import {
+    getFirestore, collection, getDocs, getDoc, doc,
+    query, where, orderBy, limit, startAfter,
+    updateDoc, setDoc,
+    writeBatch
+} from 'firebase/firestore/lite';
 
+import {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+    sendPasswordResetEmail, signOut, updatePassword
+} from "firebase/auth";
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { config } from './config';
 import { calcWinner, cleansePlayer, sortByDays } from './utils';
 import dayjs from 'dayjs'
@@ -32,20 +39,28 @@ export const Collections = {
 const SYSTEM_RECORD_REGISTRATION = "registration"
 
 let app = undefined;
+let db = undefined;
+let auth = undefined;
+let functions = undefined;
 
-export function initAPI(onPushNotification, onNotificationToken) {
+export function initAPI(onAuth, onPushNotification, onNotificationToken) {
     if (!app) {
-        app = firebase.initializeApp({ ...config });
+        app = initializeApp({ ...config });
+        db = getFirestore(app);
+        db.collection = (collName, ...args) => collection(db, collName, ...args);
+        auth = getAuth(app);
+        functions = getFunctions(app, 'europe-west1');
+
 
         try {
             if ('safari' in window && 'pushNotification' in window.safari) {
                 // requires user gesture...
             } else {
-                const messaging = firebase.messaging(app);
+                const messaging = getMessaging(app);
                 Notification.requestPermission().then(perm => {
                     if (perm === "granted") {
                         console.log("permission granted");
-                        messaging.getToken({ vapidKey: 'BFMK8mjTcp6ArpTF4QNhnXwo387CzIADR9WmybUvlf5yXI2NExGdTFsvD4_KHZ-3CWLF4gRq19VQTngTsREWYl8' }).then((currentToken) => {
+                        getToken(messaging, { vapidKey: 'BFMK8mjTcp6ArpTF4QNhnXwo387CzIADR9WmybUvlf5yXI2NExGdTFsvD4_KHZ-3CWLF4gRq19VQTngTsREWYl8' }).then((currentToken) => {
                             if (currentToken) {
                                 // Send the token to your server and update the UI if necessary
                                 console.log("Web notification", currentToken);
@@ -65,7 +80,7 @@ export function initAPI(onPushNotification, onNotificationToken) {
                         console.log("Permission denied to notifications");
                     }
 
-                    messaging.onMessage((payload) => {
+                    onMessage(messaging, (payload) => {
                         console.log('Message received. ', JSON.stringify(payload));
                         if (onPushNotification) {
                             onPushNotification(payload);
@@ -77,6 +92,7 @@ export function initAPI(onPushNotification, onNotificationToken) {
             console.log("Cannot initialize messaging", err.message);
         }
     }
+    onAuthStateChanged(auth, onAuth);
 }
 
 export const checkSafariRemotePermission = (permissionData) => {
@@ -102,7 +118,7 @@ export const checkSafariRemotePermission = (permissionData) => {
 };
 
 export async function updateUserNotification(pushNotification, newNotificationToken, isSafari) {
-    const updateNotification = app.functions('europe-west1').httpsCallable('updateNotification');
+    const updateNotification = httpsCallable(functions, 'updateNotification');
 
     const payload = {};
     if (pushNotification !== undefined) {
@@ -118,60 +134,10 @@ export async function updateUserNotification(pushNotification, newNotificationTo
     }
 
     return updateNotification(payload);
-
-    // var db = firebase.firestore();
-    // let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(email);
-
-    // return docRef.update({
-    //     notificationTokens: firebase.firestore.FieldValue.arrayUnion({
-    //         isSafari,
-    //         token: newNotificationToken,
-    //         ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-    //     }),
-    //     pushNotification
-    // });
 }
-
-/*
-export async function migrateDate() {
-
-    var db = firebase.firestore();
-    let batch = db.batch();
-
-
-    return getCollection("matches-archive").then(ma => getCollection("billing").then(srcData => {
-        let waitFor = []
-        srcData.forEach((srcItem) => {
-            // waitFor.push(
-            //     srcItem._ref.collection("payments").get().then(pmts=>{
-            //         pmts.forEach(p=>{
-            //             let d = dayjs(p.date);
-            //             batch.update(p.ref, {date: d.format("YYYY-MM-DD")});
-            //         })
-            //     })
-            // )
-            waitFor.push(
-                srcItem._ref.collection("debts").get().then(dts => {
-                    dts.forEach(p => {
-                        //find date:
-                        let match = ma.find(m => m._ref.id === p.data().matchID)
-                        if (match) {
-                            //console.log(match.date)
-                            let d = dayjs(match.date);
-                            batch.update(p.ref, { date: d.format("YYYY-MM-DD") });
-                        }
-                    })
-                })
-            )
-
-        })
-        return Promise.all(waitFor).then(() => batch.commit());
-    }))
-}
-*/
 
 export async function getUserInfo(user, pwd) {
-    return firebase.auth().signInWithEmailAndPassword(user, pwd)
+    return signInWithEmailAndPassword(auth, user, pwd)
         .then((userCredential) => {
             // Signed in
             return userCredential.user;
@@ -181,32 +147,41 @@ export async function getUserInfo(user, pwd) {
         });
 }
 
-export async function changePwd(user, newPwd) {
-    return user.updatePassword(newPwd);
+export async function changePwd(user,  newPwd) {
+    return updatePassword(user, newPwd).catch(err=>{
+        if (err.message.includes("auth/requires-recent-login")) {
+            return new Error("יש לרענן את ההתחברות לפני שינוי הסיסמא. נא להתנתק ולהתחבר שוב, ואז לנסות בשנית");
+        }
+        return err;
+    });
 }
 
 export async function logout() {
-    return firebase.auth().signOut()
+    return signOut(auth);
 }
 
 export async function forgotPwd(email) {
-    return firebase.auth().sendPasswordResetEmail(email)
+    return sendPasswordResetEmail(auth, email);
 }
 
 export async function getUserObj(user) {
-    var db = firebase.firestore();
     if (user && user.email) {
-        let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email.toLowerCase());
-        return docRef.get().then(
-            u => {
-                let data = u.data();
-                if (!data) {
-                    throw new Error("חשבונך מחכה לאישור - יש לפנות למנהל המערכת");
-                } else if (data.inactive) {
-                    throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
-                }
-                return { displayName: data.displayName, email: user.email.toLowerCase(), _user: data, pushNotification: data.pushNotification };
-            },
+        let docRef = doc(db, Collections.USERS_INFO_COLLECTION, user.email.toLowerCase());
+        return getDoc(docRef).then(u => {
+            let data = u.data();
+            if (!data) {
+                throw new Error("חשבונך מחכה לאישור - יש לפנות למנהל המערכת");
+            } else if (data.inactive) {
+                throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
+            }
+            return { 
+                displayName: data.displayName, 
+                email: user.email.toLowerCase(),
+                _user: user,
+                _userInfo: data, 
+                pushNotification: data.pushNotification 
+            };
+        },
             (err) => {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת")
             });
@@ -214,32 +189,12 @@ export async function getUserObj(user) {
     return undefined;
 }
 
-// export function temp() {
-//     return getCollection(Collections.USERS_COLLECTION).then(srcData => {
-//         var db = firebase.firestore();
-//         let batch = db.batch();
-//         srcData.forEach(({ _ref, ...item }) => {
-//             let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(_ref.id);
-
-//             batch.set(docRef, {
-//                 email: item.email,
-//                 displayName: item.displayName,
-//                 inactive: false
-//             });
-
-//         })
-//         batch.commit();
-//     })
-// }
-
-
 
 export async function getPlannedGames(currentUser) {
 
-    var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        db.collection(Collections.PLANNED_GAMES_COLLECTION).get().then(async (planned) => {
+        getDocs(db.collection(Collections.PLANNED_GAMES_COLLECTION)).then(async (planned) => {
             let results = []
             planned.forEach((doc) => {
                 if (!doc.data().disabled) {
@@ -248,7 +203,7 @@ export async function getPlannedGames(currentUser) {
             });
             results.sort((a, b) => sortByDays(a.Day, b.Day));
 
-            db.collection(Collections.REGISTRATION_COLLECTION).get().then(
+            getDocs(db.collection(Collections.REGISTRATION_COLLECTION)).then(
                 regs => {
                     let regsData = regs.docs.map(doc => doc.data());
 
@@ -273,32 +228,38 @@ export async function getPlannedGames(currentUser) {
 
 }
 
+/**
+ * 
+ * @returns undefined if not Saterday, [] or array of reg if exists from last week's Sat
+ */
+
 export async function thisSatRegistration() {
     return new Promise((resolve, reject) => {
         let begin = dayjs()
         if (begin.day() !== 6) {
-            resolve([]);
+            resolve(undefined);
             return;
         }
 
         begin = dayjs().startOf('week').subtract(1, 'day');
-        let db = firebase.firestore();
+        // let db = firebase.firestore();
 
-        db.collection("registrations-archive")
-            .where("utcTime", ">=", begin.format("YYYY/MM/DD"))
-            .orderBy("utcTime")
-            .get().then(regs => {
-                let lastSatReg = regs.docs.filter(r => r.data().GameID === 5).map((r2, i) => ({ ...r2.data(), GameID: -5, _order: i + 1 }));
-                resolve(lastSatReg);
-            })
+        const coll = db.collection("registrations-archive");
+        const q = query(coll,
+            where("utcTime", ">=", begin.format("YYYY/MM/DD")),
+            orderBy("utcTime"));
+
+        getDocs(q).then(regs => {
+            let lastSatReg = regs.docs.filter(r => r.data().GameID === 5).map((r2, i) => ({ ...r2.data(), GameID: -5, _order: i + 1 }));
+            resolve(lastSatReg);
+        })
     });
 }
 
 export async function setPlannedGameActive(id, active) {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.PLANNED_GAMES_COLLECTION).doc(id);
+    let docRef = doc(db, Collections.PLANNED_GAMES_COLLECTION, id)
     if (docRef) {
-        return docRef.update({ disabled: !active });
+        return updateDoc(docRef, { disabled: !active });
     }
     throw new Error("Invalid ID");
 }
@@ -306,11 +267,11 @@ export async function setPlannedGameActive(id, active) {
 
 export async function submitRegistration(newRegs, currentUser) {
 
-    var db = firebase.firestore();
+    // var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        db.collection(Collections.REGISTRATION_COLLECTION).get().then((data) => {
-            let batch = db.batch();
+        getDocs(db.collection(Collections.REGISTRATION_COLLECTION)).then((data) => {
+            let batch = writeBatch(db);
             let dirty = false;
 
             newRegs.forEach(reg => {
@@ -323,7 +284,7 @@ export async function submitRegistration(newRegs, currentUser) {
                     // Verify registered
                     if (!data.docs.some(match)) {
                         //not found
-                        var docRef = db.collection(Collections.REGISTRATION_COLLECTION).doc();
+                        var docRef = doc(db.collection(Collections.REGISTRATION_COLLECTION));
                         batch.set(docRef, { GameID: reg.id, email: currentUser, utcTime: getTimestamp() });
                         dirty = true;
                     }
@@ -354,20 +315,20 @@ function getTimestamp() {
 
 
 export async function openWeekForRegistration() {
-    const openWeek = app.functions('europe-west1').httpsCallable('openWeek');
+    const openWeek = httpsCallable(functions, 'openWeek');
 
     return openWeek();
 }
 
 export async function sendMessage(msg, numbers) {
-    const sendMessage = app.functions('europe-west1').httpsCallable('sendMessage');
+    const sendMessage = httpsCallable(functions, 'sendMessage');
 
     return sendMessage({ msg, numbers });
 }
 
 
 export async function isAdmin() {
-    const isAdmin = app.functions('europe-west1').httpsCallable('isAdmin');
+    const isAdmin = httpsCallable(functions, 'isAdmin');
 
     return isAdmin().then(
         () => {
@@ -377,77 +338,10 @@ export async function isAdmin() {
     );
 }
 
-/*
-export async function openWeekForMatch() {
-  let gameTarif = await getGameTarif();
- 
-    return getCollection(Collections.MATCHES_COLLECTION).then(srcData => {
-        var db = firebase.firestore();
-        var batch = db.batch();
-        let debtUpdateMap = {}
- 
-        return getCollection(Collections.BILLING_COLLECTION).then(billing => {
- 
-            //Add Debt for each player
-            srcData.forEach((match) => {
-                let isSingles = !match.Player2 && !match.Player4;
-                for (let i = 1; i <= 4; i++) {
-                    if (match["Player" + i]) {
-                        let email = match["Player" + i].email
-                        addOneGameDebt(db, batch, gameTarif, email,
-                            match._ref.id,
-                            isSingles, match.date);
-                        if (!debtUpdateMap[email]) {
-                            debtUpdateMap[email] = 0;
-                        }
-                        debtUpdateMap[email] += gameTarif * (isSingles ? 1 : 1); //no difference for singles
-                    }
-                }
-            });
- 
- 
-            //update the balance field
-            for (const [email, addToBalance] of Object.entries(debtUpdateMap)) {
-                let billingRecord = billing.find(b => b._ref.id === email);
- 
-                if (billingRecord) {
-                    batch.update(billingRecord._ref, { balance: billingRecord.balance - addToBalance });
-                } else {
-                    let newBillingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email);
-                    batch.set(newBillingRecord, { balance: -addToBalance });
-                }
-            }
- 
-            //move to archive
-            srcData.forEach(({ _ref, ...item }) => {
-                let docRef = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION).doc(_ref.id);
-                let newItem = { ...item };
-                batch.set(docRef, newItem);
-                batch.delete(_ref);
-            })
- 
-            return batch.commit();
-        })
-    });
-}
- 
- 
- 
-async function getGameTarif() {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_BILLING);
-    if (docRef) {
-        return docRef.get().then(doc => {
-            return doc.data().PricePerGame
-        })
-    }
-    throw new Error("Cannot obtain price per game");
-}
-*/
 
 export async function saveMatchResults(match, paymentFactor, isArchived) {
 
-    const updateMatchResults = app.functions('europe-west1').httpsCallable('updateMatchResults');
+    const updateMatchResults = httpsCallable(functions, 'updateMatchResults');
 
     let payload = {
         matchID: match._ref.id,
@@ -458,26 +352,11 @@ export async function saveMatchResults(match, paymentFactor, isArchived) {
     };
 
     return updateMatchResults(payload);
-
-    // var db = firebase.firestore();
-    // let update = { sets: match.sets, matchCanceled: false }
-    // if (!match.sets || match.sets.length === 0 || match.sets[0].pair1 === "") {
-    //     //remove set Results
-    //     update = { sets: [], matchCanceled: false };
-
-    // }
-    // if (paymentFactor) {
-    //     update.paymentFactor = paymentFactor;
-    // } else {
-    //     update.paymentFactor = firebase.firestore.FieldValue.delete();
-    // }
-    // return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
-    //     .doc(match._ref.id).update(update);
 }
 
 export async function saveMatchCanceled(match, paymentFactor, isArchived) {
 
-    const updateMatchResults = app.functions('europe-west1').httpsCallable('updateMatchResults');
+    const updateMatchResults = httpsCallable(functions, 'updateMatchResults');
 
     let payload = {
         matchID: match._ref.id,
@@ -488,62 +367,39 @@ export async function saveMatchCanceled(match, paymentFactor, isArchived) {
     };
 
     return updateMatchResults(payload);
-
-    // var db = firebase.firestore();
-    // let update = { sets: [], matchCanceled: true }
-    // if (paymentFactor) {
-    //     update.paymentFactor = paymentFactor;
-    // } else {
-    //     update.paymentFactor = firebase.firestore.FieldValue.delete();
-    // }
-
-    // return db.collection(isArchived ? Collections.MATCHES_ARCHIVE_COLLECTION : Collections.MATCHES_COLLECTION)
-    //     .doc(match._ref.id).update(update);
 }
 
 export async function getUserBalance(email) {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.BILLING_COLLECTION).doc(email);
-    if (docRef) {
-        return docRef.get().then(doc => {
+    let docRef = doc(db, Collections.BILLING_COLLECTION, email);
+
+    return getDoc(docRef).then(doc => {
+        if (doc.exists) {
             let data = doc.data();
-            if (data) {
-                let initialBalance = data.initialBalance ? data.initialBalance : 0;
-                return data.balance + initialBalance;
-            } else
-                return undefined
-        })
-    }
-    throw new Error("Not able to obtaining Billing");
+            let initialBalance = data.initialBalance ? data.initialBalance : 0;
+            return data.balance + initialBalance;
+        } else
+            return undefined;
+    })
 }
 
 export async function getUserPayments(email) {
-    var db = firebase.firestore();
-    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION).orderBy('date', 'desc');
-    if (subColRef) {
-        return subColRef.get().then((payments) => {
-            return payments.docs.map(docObj => docObj.data());
-        });
-    }
-    throw new Error("Not able to obtaining Payments info");
+    const subColRef = db.collection(Collections.BILLING_COLLECTION, email, Collections.PAYMENTS_SUB_COLLECTION);
+    const q = query(subColRef, orderBy('date', 'desc'));
+    return getDocs(q).then((payments) => {
+        return payments.docs.map(docObj => docObj.data());
+    });
 }
 
 export async function getUserDebts(email) {
-    var db = firebase.firestore();
-    let subColRef = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION).orderBy('date', 'desc');
-    if (subColRef) {
-        return subColRef.get().then((dents) => {
-            return dents.docs.map(docObj => docObj.data());
-        });
-    }
-    throw new Error("Not able to obtaining Dents info");
+    const subColRef = db.collection(Collections.BILLING_COLLECTION, email, Collections.DEBTS_SUB_COLLECTION);
+    const q = query(subColRef, orderBy('date', 'desc'));
+    return getDocs(q).then((debts) => {
+        return debts.docs.map(docObj => docObj.data());
+    });
 }
 
-
-
-
 export async function addPayment(email, amountStr, comment) {
-    var db = firebase.firestore();
+    // var db = firebase.firestore();
     const amount = Number(amountStr);
     if (isNaN(amount)) {
         throw new Error("ערך תשלום לא חוקי");
@@ -551,18 +407,19 @@ export async function addPayment(email, amountStr, comment) {
     if (!comment) {
         comment = "";
     }
-    let billingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email);
-    return billingRecord.get().then(rec => {
-        var batch = db.batch();
-        if (rec && rec.data()) {
+    let billingRecord = doc(db, Collections.BILLING_COLLECTION, email);
+    return getDoc(billingRecord).then(rec => {
+        var batch = writeBatch(db);
+
+        if (rec.exists) {
             batch.update(billingRecord, { balance: rec.data().balance + amount });
         } else {
             batch.set(billingRecord, { balance: amount })
         }
 
         //insert record in payments
-        let paymentRec = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.PAYMENTS_SUB_COLLECTION).doc();
-        batch.set(paymentRec, {
+        let paymentRec = db.collection(Collections.BILLING_COLLECTION, email, Collections.PAYMENTS_SUB_COLLECTION);
+        batch.set(doc(paymentRec), {
             date: dayjs().format("YYYY-MM-DD"),
             amount,
             comment
@@ -571,297 +428,15 @@ export async function addPayment(email, amountStr, comment) {
     })
 }
 
-/*
-function addOneGameDebt(db, batch, gameTarif, email, matchID, isSingles, date) {
-    let newBillingRecord = db.collection(Collections.BILLING_COLLECTION).doc(email).collection(Collections.DEBTS_SUB_COLLECTION).doc();
-    batch.set(newBillingRecord, {
-        date,
-        matchID,
-        amount: gameTarif, // *(isSingles ? 1:1), //no difference for singles
-        singles: isSingles
-    });
-}
-*/
-
-
-
-export async function getCollectionTest(collName, orderBy, noObjRef) {
-    if (collName === Collections.REGISTRATION_COLLECTION) {
-        return [
-            {
-                "email": "1@gmail.com",
-                "GameID": 4,
-                "_order": 1
-            },
-            {
-                "email": "2@gmail.com",
-                "GameID": 5,
-                "_order": 2
-            },
-            {
-                "email": "3@gmail.com",
-                "GameID": 2,
-                "_order": 3
-            },
-            {
-                "email": "4@gmail.com",
-                "GameID": 2,
-                "_order": 4
-            },
-            {
-                "email": "5@gmail.com",
-                "GameID": 2,
-                "_order": 5
-            },
-            {
-                "email": "6@gmail.com",
-                "GameID": 4,
-                "_order": 6
-            },
-            {
-                "email": "7@gmail.com",
-                "GameID": 1,
-                "_order": 7
-            },
-            {
-                "email": "8@gmail.com",
-                "GameID": 2,
-                "_order": 8
-            },
-            {
-                "email": "9@gmail.com",
-                "GameID": 3,
-                "_order": 9
-            },
-            {
-                "email": "10@gmail.com",
-                "GameID": 2,
-                "_order": 10
-            },
-            {
-                "email": "11@gmail.com",
-                "GameID": 3,
-                "_order": 11
-            },
-            {
-                "email": "12@gmail.com",
-                "GameID": 3,
-                "_order": 12
-            },
-            {
-                "email": "13@gmail.com",
-                "GameID": 2,
-                "_order": 13
-            },
-            {
-                "email": "14@gmail.com",
-                "GameID": 3,
-                "_order": 14
-            },
-            {
-                "email": "15@gmail.com",
-                "GameID": 4,
-                "_order": 15
-            },
-            {
-                "email": "16@gmail.com",
-                "GameID": 3,
-                "_order": 16
-            },
-            {
-                "email": "17@gmail.com",
-                "GameID": 3,
-                "_order": 17
-            },
-            {
-                "email": "18@gmail.com",
-                "GameID": 1,
-                "_order": 18
-            },
-            {
-                "email": "19@gmail.com",
-                "GameID": 3,
-                "_order": 19
-            },
-            {
-                "email": "20@gmail.com",
-                "GameID": 2,
-                "_order": 20
-            },
-            {
-                "email": "21@gmail.com",
-                "GameID": 4,
-                "_order": 21
-            },
-            {
-                "email": "22@gmail.com",
-                "GameID": 2,
-                "_order": 22
-            },
-            {
-                "email": "23@gmail.com",
-                "GameID": 1,
-                "_order": 23
-            },
-            {
-                "email": "24@gmail.com",
-                "GameID": 4,
-                "_order": 24
-            },
-            {
-                "email": "25@gmail.com",
-                "GameID": 5,
-                "_order": 25
-            }
-        ]
-    }
-
-    if (collName === Collections.USERS_COLLECTION) {
-        return [
-            {
-                "email": "1@gmail.com",
-                "displayName": "Dalton Ross",
-                "rank": 53
-            },
-            {
-                "email": "2@gmail.com",
-                "displayName": "Granville Solis",
-                "rank": 74
-            },
-            {
-                "email": "3@gmail.com",
-                "displayName": "Oliver Mueller",
-                "rank": 39
-            },
-            {
-                "email": "4@gmail.com",
-                "displayName": "Sean Manning",
-                "rank": 95
-            },
-            {
-                "email": "5@gmail.com",
-                "displayName": "Brady Espinoza",
-                "rank": 71
-            },
-            {
-                "email": "6@gmail.com",
-                "displayName": "Alec Boyle",
-                "rank": 18
-            },
-            {
-                "email": "7@gmail.com",
-                "displayName": "Gavin Drake",
-                "rank": 45
-            },
-            {
-                "email": "8@gmail.com",
-                "displayName": "Brooks Montoya",
-                "rank": 56
-            },
-            {
-                "email": "9@gmail.com",
-                "displayName": "Geraldo Holloway",
-                "rank": 34
-            },
-            {
-                "email": "10@gmail.com",
-                "displayName": "Vincent Bender",
-                "rank": 4
-            },
-            {
-                "email": "11@gmail.com",
-                "displayName": "Isreal Morales",
-                "rank": 90
-            },
-            {
-                "email": "12@gmail.com",
-                "displayName": "Sebastian Clay",
-                "rank": 6
-            },
-            {
-                "email": "13@gmail.com",
-                "displayName": "Joe Howe",
-                "rank": 81
-            },
-            {
-                "email": "14@gmail.com",
-                "displayName": "Chris Aguirre",
-                "rank": 73
-            },
-            {
-                "email": "15@gmail.com",
-                "displayName": "Curtis Sweeney",
-                "rank": 87
-            },
-            {
-                "email": "16@gmail.com",
-                "displayName": "Theron Vargas",
-                "rank": 79
-            },
-            {
-                "email": "17@gmail.com",
-                "displayName": "Erik Stanton",
-                "rank": 95
-            },
-            {
-                "email": "18@gmail.com",
-                "displayName": "Dudley Burke",
-                "rank": 63
-            },
-            {
-                "email": "19@gmail.com",
-                "displayName": "Nathaniel Crawford",
-                "rank": 94
-            },
-            {
-                "email": "20@gmail.com",
-                "displayName": "Francisco Ellison",
-                "rank": 9
-            },
-            {
-                "email": "21@gmail.com",
-                "displayName": "Martin Terrell",
-                "rank": 59
-            },
-            {
-                "email": "22@gmail.com",
-                "displayName": "Lorenzo Maynard",
-                "rank": 77
-            },
-            {
-                "email": "23@gmail.com",
-                "displayName": "Herman Reid",
-                "rank": 10
-            },
-            {
-                "email": "24@gmail.com",
-                "displayName": "Tony Hale",
-                "rank": 27
-            },
-            {
-                "email": "25@gmail.com",
-                "displayName": "Myles Mcgee",
-                "rank": 58
-            }
-        ]
-
-
-    }
-    if (collName === Collections.MATCHES_COLLECTION) {
-        return [];
-    }
-    return getCollection(collName, orderBy, noObjRef);
-}
-
-export async function getCollection(collName, orderBy, orderDesc) {
-    var db = firebase.firestore();
+export async function getCollection(collName, oBy, orderDesc) {
     let colRef = db.collection(collName);
-    if (orderBy) {
-        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+    const constraints = []
+    if (oBy) {
+        constraints.push(orderDesc ? orderBy(oBy, "desc") : orderBy(oBy));
     }
 
     let i = 1;
-    return colRef.get().then((items) => {
+    return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
             if (orderBy)
@@ -875,22 +450,22 @@ export async function getCollection(collName, orderBy, orderDesc) {
     });
 }
 
-export async function getPaginatedCollection(collName, orderBy, orderDesc, limit, startAfter) {
-    var db = firebase.firestore();
+export async function getPaginatedCollection(collName, oBy, orderDesc, lim, sAfter) {
     let colRef = db.collection(collName);
-    if (orderBy) {
-        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+    const constraints = []
+    if (oBy) {
+        constraints.push(orderDesc ? orderBy(oBy, "desc") : orderBy(oBy));
     }
 
-    if (limit) {
-        colRef = colRef.limit(limit);
+    if (lim) {
+        constraints.push(limit(lim));
     }
 
-    if (startAfter) {
-        colRef = colRef.startAfter(startAfter);
+    if (sAfter) {
+        constraints.push(startAfter(sAfter));
     }
     let i = 1;
-    return colRef.get().then((items) => {
+    return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
             if (orderBy)
@@ -905,18 +480,19 @@ export async function getPaginatedCollection(collName, orderBy, orderDesc, limit
     });
 }
 
-export async function getCollectionWithWhere(collName, whereField, op, value, orderBy, orderDesc) {
-    var db = firebase.firestore();
+export async function getCollectionWithWhere(collName, whereField, op, value, oBy, orderDesc) {
     let colRef = db.collection(collName);
+    const constraints = []
     if (whereField) {
-        colRef = colRef.where(whereField, op, value);
+        constraints.push(where(whereField, op, value));
     }
-    if (orderBy) {
-        colRef = orderDesc ? colRef.orderBy(orderBy, "desc") : colRef.orderBy(orderBy);
+    if (oBy) {
+        constraints.push(orderDesc ? orderBy(oBy, "desc") : orderBy(oBy));
     }
 
+
     let i = 1;
-    return colRef.get().then((items) => {
+    return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
             if (orderBy)
@@ -931,8 +507,7 @@ export async function getCollectionWithWhere(collName, whereField, op, value, or
 }
 
 export async function saveMatches(matches, isTest) {
-    var db = firebase.firestore();
-    var batch = db.batch();
+    var batch = writeBatch(db);
 
     matches.forEach(m => {
         if (m.deleted) {
@@ -948,7 +523,7 @@ export async function saveMatches(matches, isTest) {
             batch.set(m._ref, cleanseMatch(dataOnly));
         } else {
             //new match
-            var docRef = db.collection(Collections.MATCHES_COLLECTION).doc();
+            var docRef = doc(db.collection(Collections.MATCHES_COLLECTION));
             let newMatch = cleanseMatch(m);
 
             batch.set(docRef, newMatch);
@@ -1020,11 +595,9 @@ export async function initGames() {
         }
     ]
 
-    var db = firebase.firestore();
-    var batch = db.batch();
-
+    var batch = writeBatch(db);
     games.forEach(g => {
-        var docRef = db.collection(Collections.PLANNED_GAMES_COLLECTION).doc();
+        var docRef = doc(db.collection(Collections.PLANNED_GAMES_COLLECTION));
         batch.set(docRef, g);
     })
 
@@ -1033,7 +606,7 @@ export async function initGames() {
 
 
 export async function addUser(user) {
-    const registerUser = app.functions('europe-west1').httpsCallable('registerUser');
+    const registerUser = httpsCallable(functions, 'registerUser');
 
     return registerUser(user);
 }
@@ -1043,17 +616,16 @@ export async function deleteUser(user) {
 }
 
 export async function activateUser(user, inactive, newUser) {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+    let docRef = doc(db.collection(Collections.USERS_INFO_COLLECTION), user.email);
 
     if (newUser) {
-        return docRef.set({
+        return setDoc(docRef, {
             email: user.email,
             displayName: user.displayName,
             inactive: inactive
-        })
+        });
     } else {
-        return docRef.update({
+        return updateDoc(docRef, {
             email: user.email,
             displayName: user.displayName,
             inactive: inactive
@@ -1062,17 +634,16 @@ export async function activateUser(user, inactive, newUser) {
 }
 
 export async function saveUsers(users) {
-    var db = firebase.firestore();
     return new Promise((resolve, reject) => {
 
-        let batch = db.batch();
+        let batch = writeBatch(db);
 
         users.forEach(({ dirty, _ref, _inactive, _waitForApproval, _origDisplayName, _elo1, _elo2, ...user }) => {
             if (dirty) {
                 user.displayName = user.displayName.trim();
                 batch.set(_ref, user);
                 if (user.displayName !== _origDisplayName && !_waitForApproval) {
-                    let userInfo = db.collection(Collections.USERS_INFO_COLLECTION).doc(user.email);
+                    let userInfo = doc(db.collection(Collections.USERS_INFO_COLLECTION), user.email);
                     batch.update(userInfo, { displayName: user.displayName });
                 }
             }
@@ -1085,8 +656,8 @@ export async function saveUsers(users) {
 }
 
 export async function getUsersWithBalls() {
-    var db = firebase.firestore();
-    return db.collection(Collections.USERS_INFO_COLLECTION).where("balls", ">", 0).get();
+    const q = query(db.collection(Collections.USERS_INFO_COLLECTION), where("balls", ">", 0));
+    return getDocs(q);
 }
 
 export async function setBallsAmount(email, curr, delta) {
@@ -1097,37 +668,32 @@ export async function setBallsAmount(email, curr, delta) {
     if (newVal < 0) {
         throw new Error("ערך קטן מ-0 אינו חוקי");
     }
-    var db = firebase.firestore();
-    return db.collection(Collections.USERS_INFO_COLLECTION).doc(email).update({ balls: newVal });
+    // var db = firebase.firestore();
+    return updateDoc(doc(db, Collections.USERS_INFO_COLLECTION, email), { balls: newVal });
 }
 
 export async function getRegistrationOpen() {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_REGISTRATION);
-    if (docRef) {
-        return docRef.get().then(doc => {
-            return doc.data().open
-        })
-    }
-    return false;
+    let docRef = doc(db, Collections.SYSTEM_INFO, SYSTEM_RECORD_REGISTRATION);
+    return getDoc(docRef).then(doc => {
+        return doc.exists && doc.data().open
+    })
+
 }
 
 export async function setRegistrationOpen(isOpen) {
-    var db = firebase.firestore();
-    let docRef = db.collection(Collections.SYSTEM_INFO).doc(SYSTEM_RECORD_REGISTRATION);
-    if (docRef) {
-        return docRef.update({ open: isOpen })
-    }
+    let docRef = doc(db, Collections.SYSTEM_INFO, SYSTEM_RECORD_REGISTRATION);
+    return updateDoc(docRef, { open: isOpen });
 }
 
 export async function getDetailedStats(email) {
-    let db = firebase.firestore();
-    let matches = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION)
+    // let db = firebase.firestore();
+    let matches = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION);
+
     let queries = [
-        matches.where("Player1.email", "==", email).get(),
-        matches.where("Player2.email", "==", email).get(),
-        matches.where("Player3.email", "==", email).get(),
-        matches.where("Player4.email", "==", email).get(),
+        getDocs(query(matches, where("Player1.email", "==", email))),
+        getDocs(query(matches, where("Player2.email", "==", email))),
+        getDocs(query(matches, where("Player3.email", "==", email))),
+        getDocs(query(matches, where("Player4.email", "==", email))),
     ];
     const stats = {};
     return Promise.all(queries).then(all => {
@@ -1198,8 +764,8 @@ export async function getDetailedStats(email) {
 export async function placeBet(bet) {
 
     delete bet._ref;
-    
-    const placeBetFunction = app.functions('europe-west1').httpsCallable('placeBet'); 
+
+    const placeBetFunction = httpsCallable(functions, 'placeBet');
 
     return placeBetFunction(bet);
 }

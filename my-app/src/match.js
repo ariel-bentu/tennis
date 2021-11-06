@@ -50,7 +50,7 @@ const calcChange = (item, user, source, target) => {
 
 export default function Match(props) {
 
-    const getCollection = props.test ? api.getCollectionTest : api.getCollection;
+    const getCollection = props.test ? api.getCollection : api.getCollection;
 
     const [games, setGames] = useState([]);
     const [dirty, setDirty] = useState(false);
@@ -96,7 +96,7 @@ export default function Match(props) {
 
             let regs = all[0];
             
-            if(all[4].length > 0) {
+            if(all[4] !== undefined) {
                 regs = regs.concat(all[4]);
                 setGames(g=>{
                     const newGames = [

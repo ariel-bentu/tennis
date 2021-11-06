@@ -38,14 +38,9 @@ import {
   Route
 } from "react-router-dom";
 
-import firebase from 'firebase/app'
-import 'firebase/auth';
 import BallsAdmin from './balls-admin';
 import dayjs from 'dayjs'
 
-//import { config } from "./config";
-
-//firebase.initializeApp(config);
 
 const ResponsiveTab = withStyles({
   root: {
@@ -131,8 +126,8 @@ let App = props => {
 
   useEffect(() => {
     //Update server with notification info if needed
-    if (notificationToken && notificationToken !== "" && userInfo && userInfo._user &&
-      (!userInfo._user.notificationTokens || !userInfo._user.notificationTokens.find(n => n.token === notificationToken))) {
+    if (notificationToken && notificationToken !== "" && userInfo && userInfo._userInfo &&
+      (!userInfo._userInfo.notificationTokens || !userInfo._userInfo.notificationTokens.find(n => n.token === notificationToken))) {
       const isSafari = 'safari' in window;
       api.updateUserNotification(pushNotification, notificationToken, isSafari);
     }
@@ -141,6 +136,55 @@ let App = props => {
 
   useEffect(() => {
     api.initAPI(
+      // Callback for AuthStateChanged
+      (user) => {
+        api.getUserObj(user).then(
+          uo => {
+            setUserInfo(uo);
+            if (uo) {
+              setPushNotification(uo.pushNotification);
+
+              if (uo.pushNotification === undefined) {
+                setTimeout(() => {
+                  notify.ask("מעוניין לקבל הודעות בדחיפה?", undefined, [
+                    {
+                      caption: "כן", callback: () => {
+                        api.updateUserNotification(true).then(
+                          () => {
+                            notify.success("עודכן בהצלחה")
+                            setPushNotification(true);
+                          },
+                          (err) => notify.error(err.message));
+
+                      }
+                    },
+                    {
+                      caption: "לא", callback: () => {
+                        api.updateUserNotification(false).then(
+                          () => {
+                            setPushNotification(false);
+                          });
+                      },
+                    },
+
+
+                    { caption: "הזכר לי מאוחר יותר", callback: () => { } },
+                  ],
+                    "הודעות עבור תוצאות משחקים וכדו׳.\n בכל שלב בהמשך תוכל לשנות את בחירתך על ידי לחיצה על הפעמון"
+                  )
+                }, 3000);
+              }
+              api.isAdmin().then(setAdmin);
+              api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
+            }
+          },
+          (err) => {
+            setUserBlocked(true);
+            setMsg({ open: true, severity: "error", title: "", body: err.message, top: 100 })
+          }
+        )
+      },
+
       (msgPayload) => {
         console.log(JSON.stringify(msgPayload, undefined, " "))
         notify.notification(msgPayload.fcmMessageId, msgPayload.notification.body, msgPayload.notification.title, msgPayload.notification.click_action)
@@ -149,53 +193,6 @@ let App = props => {
 
     setTimeout(() => setLoading(false), 1000);
 
-    firebase.auth().onAuthStateChanged(function (user) {
-      api.getUserObj(user).then(
-        uo => {
-          setUserInfo(uo);
-          if (uo) {
-            setPushNotification(uo.pushNotification);
-
-            if (uo.pushNotification === undefined) {
-              setTimeout(() => {
-                notify.ask("מעוניין לקבל הודעות בדחיפה?", undefined, [
-                  {
-                    caption: "כן", callback: () => {
-                      api.updateUserNotification(true).then(
-                        () => {
-                          notify.success("עודכן בהצלחה")
-                          setPushNotification(true);
-                        },
-                        (err) => notify.error(err.message));
-
-                    }
-                  },
-                  {
-                    caption: "לא", callback: () => {
-                      api.updateUserNotification(false).then(
-                        () => {
-                          setPushNotification(false);
-                        });
-                    },
-                  },
-
-
-                  { caption: "הזכר לי מאוחר יותר", callback: () => { } },
-                ],
-                  "הודעות עבור תוצאות משחקים וכדו׳.\n בכל שלב בהמשך תוכל לשנות את בחירתך על ידי לחיצה על הפעמון"
-                )
-              }, 3000);
-            }
-            api.isAdmin().then(setAdmin);
-            api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
-          }
-        },
-        (err) => {
-          setUserBlocked(true);
-          setMsg({ open: true, severity: "error", title: "", body: err.message, top: 100 })
-        }
-      )
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -240,16 +237,6 @@ let App = props => {
   const isAdminPath = window.location && window.location.pathname && window.location.pathname.endsWith("admin");
   //console.log("adminPath" + (isAdminPath ? " y" : " n"))
 
-  if (forgotPwd) return <ForgotPwd notify={notify} onCancel={() => setForgotPwd(false)} />;
-
-  if (changePwd) return <ChangePwd notify={notify} userInfo={userInfo} onCancel={() => setChangePwd(false)} onPwdChanged={() => {
-    notify.success("סיסמא שונתה בהצלחה");
-    setChangePwd(false);
-  }}
-  />;
-
-
-
   return (
     <div className="App" dir="rtl" >
       {// ---- Progress indicator ----
@@ -281,19 +268,31 @@ let App = props => {
         </Alert>
       </Collapse>
 
-
       {// ---- Login -----
-      !loading && !userInfo && !userBlocked && <Login
-        onLogin={(userInfo) => {
-          
-        }}
-        onError={(err) => notify.error(err.toString())}
-        onForgotPwd={() => setForgotPwd(true)}
-        notify={notify}
-      />
+        !loading && !userInfo && !userBlocked && !forgotPwd && !changePwd && <Login
+          onLogin={(userInfo) => {
+
+          }}
+          onError={(err) => notify.error(err.toString())}
+          onForgotPwd={() => setForgotPwd(true)}
+          notify={notify}
+        />
       }
 
-      {(userBlocked || userInfo) &&
+      {// ---- Forgot pwd -----
+        forgotPwd && <ForgotPwd notify={notify} onCancel={() => setForgotPwd(false)} />
+      }
+
+      {// ---- Forgot pwd -----
+        changePwd && <ChangePwd notify={notify} userInfo={userInfo} onCancel={() => setChangePwd(false)} onPwdChanged={() => {
+          notify.success("סיסמא שונתה בהצלחה");
+          setChangePwd(false);
+        }}
+        />
+      }
+
+
+      {(userBlocked || userInfo) && !forgotPwd && !changePwd &&
         <Toolbar>
           <HBox style={{ backgroundColor: 'lightgrey', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 10 }}>
             <Menu ref={anchorRef} onClick={() => setMenuOpen(prev => !prev)} />
@@ -336,9 +335,9 @@ let App = props => {
               )}
             </Popper>
             <Spacer width={10} />
-            
+
             {userInfo ? <Text fontSize={15}>{userInfo.displayName}</Text> : null}
-            
+
             <Spacer width={40} />
             {admin ? <Button style={{ height: "1.5rem" }} variant={"contained"}
               onClick={() => {
@@ -352,7 +351,7 @@ let App = props => {
         </Toolbar>
       }
 
-      {userInfo && <Router>
+      {userInfo && !forgotPwd && !changePwd && <Router>
         <Switch>
           <Route path="/notifications">
             <Notifications notify={notify} windowSize={windowSize} />

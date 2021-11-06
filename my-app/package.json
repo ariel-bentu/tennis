@@ -18,7 +18,7 @@
     "axios": "^0.21.1",
     "date-fns": "^2.23.0",
     "dayjs": "^1.10.6",
-    "firebase": "^8.9.0",
+    "firebase": "^9.2.0",
     "firebase-admin": "^9.11.1",
     "react": "^17.0.2",
     "react-device-detect": "^1.17.0",

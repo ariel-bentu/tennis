@@ -62,21 +62,28 @@ export default function ForgotPwd(props) {
                             variant="contained"
                             color="primary"
                             className={classes.submit}
-                            onClick={() => api.forgotPwd(email).then(
-                                ()=>props.notify.success("מייל ישלח אליך להמשך תהליך"),
-                                (err)=>props.notify.error(err.message)
-                            )}
+                            onClick={() => {
+                                console.log("send reset request");
+                                api.forgotPwd(email).then(
+                                    () => {
+                                    props.notify.success("מייל ישלח אליך להמשך תהליך")
+                                    },
+
+                                    (err) => props.notify.error(err.message)
+                                );
+                            }
+                            }
                         >
                             שלח מייל לשינוי סיסמא
                         </Button>
-                        <Spacer width={20}/>
+                        <Spacer width={20} />
                         <Button
                             variant="contained"
                             color="primary"
                             className={classes.submit}
                             onClick={() => props.onCancel()}
                         >
-                            בטל
+                            סגור
                         </Button>
                     </HBox>
                 </form>
