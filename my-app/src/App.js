@@ -241,7 +241,7 @@ let App = props => {
     <div className="App" dir="rtl" >
       {// ---- Progress indicator ----
         msg.progress === true && <div style={{
-          display: "flex", position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          display: "flex", position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
           backgroundColor: "white", opacity: 0.6, zIndex: 1000,
           alignItems: "center", justifyContent: "center"
         }}><CircularProgress /></div>

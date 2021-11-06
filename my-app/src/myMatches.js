@@ -6,7 +6,7 @@ import {
     HThinSeparator, HBox, getBallsIndicator, Card, SVGIcon, HBoxC
 } from './elem'
 import SetResults from './set-results';
-import { getNiceDate } from './utils'
+import { filterByPlayer, getNiceDate } from './utils'
 import * as api from './api'
 import { AccessTime, LocationOn, Person } from '@material-ui/icons'
 import { ToggleButtonGroup, ToggleButton } from '@material-ui/lab';
@@ -35,13 +35,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                 mtchs => {
                     setMatches(mtchs);
 
-                    let myM = mtchs.filter(m => {
-                        for (let i = 1; i <= 4; i++) {
-                            if (m["Player" + i] && m["Player" + i].email === UserInfo.email)
-                                return true;
-                        }
-                        return false;
-                    })
+                    let myM = filterByPlayer(mtchs, UserInfo.email);
                     setMyMatches(myM);
 
                     api.getCollectionWithWhere(api.Collections.BETS_COLLECTION,

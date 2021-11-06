@@ -3,27 +3,43 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
 import { Spacer, Loading, VBox, HBox, SmallText2, SVGIcon, Card, HThinSeparator, HBoxC } from './elem'
-import { getNiceDate } from './utils'
+import { filterByPlayer, getNiceDate } from './utils'
 
 import * as api from './api'
-import {  EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
+import { EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
 import SetResults from './set-results';
+import { ToggleButton, ToggleButtonGroup } from '@material-ui/lab';
 
 const Val = (v) => parseInt(v);
 
 
 export default function Matches({ UserInfo, notify, reload, admin }) {
     const [matches, setMatches] = useState(undefined);
+    const [myMatches, setMyMatches] = useState(undefined);
+    const [showMineOnly, setShowMineOnly] = useState(false);
+
     const [edit, setEdit] = useState(undefined);
     const [more, setMore] = useState(true);
 
     useEffect(() => {
         if (UserInfo) {
             api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15).then(matches => {
-                setMatches(matches)
+                setMatches(matches);
+                let myM = filterByPlayer(matches, UserInfo.email);
+                setMyMatches(myM);
+
             })
         }
     }, [UserInfo, reload])
+
+    useEffect(() => {
+        if (matches) {
+            let myM = filterByPlayer(matches, UserInfo.email);
+            setMyMatches(myM);
+        } else {
+            setMyMatches(undefined);
+        }
+    }, [matches, UserInfo])
 
 
     return (
@@ -37,24 +53,45 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
                     })} isArchived={true} Admin={admin} />
                 : <VBox>
                     {matches ?
-                        matches.map(match => (
-                            <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin} />
-                        ))
+                        <div style={{ height: '100%', width: '100%' }}>
+                            <Spacer height={10} />
+                            <div dir="ltr">
+                                <ToggleButtonGroup
+                                    color="primary"
+                                    value={showMineOnly ? "mine" : "all"}
+                                    exclusive
+                                    onChange={() => setShowMineOnly(old => !old)}
+                                >
+                                    <ToggleButton value="mine">שלי</ToggleButton>
+                                    <ToggleButton value="all">הכל</ToggleButton>
+                                </ToggleButtonGroup>
+                            </div>
+                            <Spacer height={10} />
+                            {(showMineOnly && myMatches ? myMatches : matches).map(match => (
+                                <GetMatch match={match} UserInfo={UserInfo} setEdit={setEdit} admin={admin} />
+                            ))
+                            }
+                        </div>
                         :
                         <Loading msg="טוען משחקים" />
                     }
-                    {matches && matches.length > 0 && more ? <Button variant="contained" onClick={() =>
+                    {matches && matches.length > 0 && more ? <Button variant="contained" onClick={() => {
+                        notify.progress();
                         api.getPaginatedCollection(api.Collections.MATCHES_ARCHIVE_COLLECTION, "date", true, 15, matches[matches.length - 1]._doc).then(ms => {
                             if (ms.length === 0) {
                                 setMore(false);
+                                notify.clear();
                                 return;
                             }
                             setMatches(oldMatches => [...oldMatches, ...ms]);
                             if (ms.length < 15) {
                                 setMore(false);
                             }
-                        })
-                    }>טען עוד...</Button> : null}
+                            notify.clear();
+                        },
+                            (err) => notify.error(err.message)
+                        );
+                    }}>טען עוד...</Button> : null}
                 </VBox>
             }
 
@@ -100,9 +137,9 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
         <Grid container spacing={2} style={{ height: 50 }} direction={'row-reverse'}>
             <Grid item xs={12} >
                 <SmallText2 textAlign="center" fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText2>
-                <HThinSeparator width="100%"/>
+                <HThinSeparator width="100%" />
             </Grid>
-            
+
         </Grid>
         <Spacer />
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
@@ -188,7 +225,7 @@ function GetOneLine(props) {
                                         'lightpink'
                             ,
                             width: 22, height: 35,
-                            
+
                         }}>
                             <SmallText2 lineHeight={30} textAlign='center'>{setValue}</SmallText2>
                             {tbValue ? <SmallText2 transform="translateY(-8px)" fontSize={8} textAlign='center'>{tbValue}</SmallText2> : null}

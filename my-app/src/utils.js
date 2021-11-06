@@ -48,6 +48,16 @@ export function cleansePlayer(user) {
     return cPlayer;
 }
 
+export function filterByPlayer(matches, email) {
+    return matches.filter(m => {
+        for (let i = 1; i <= 4; i++) {
+            if (m["Player" + i] && m["Player" + i].email === email)
+                return true;
+        }
+        return false;
+    })
+}
+
 export function newMatch(game) {
     return {
         id: uuidv4(),
