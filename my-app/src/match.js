@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@material-ui/core';
-import { List, ListItem, ListItemText, TextareaAutosize, InputBase, Grid, Divider } from '@material-ui/core';
+import { List, ListItem, ListItemText, TextareaAutosize, InputBase, Grid } from '@material-ui/core';
 import 'date-fns';
 import DateFnsUtils from '@date-io/date-fns';
 import {
@@ -12,7 +12,10 @@ import {
 import dayjs from 'dayjs'
 
 
-import { Spacer, Header, Loading, HBox, VBox, Text, SmallText, HBoxSB, HBoxC } from './elem'
+import {
+    Spacer, Card, Loading, HBox, VBox, Text, SmallText,
+    HBoxSB, HBoxC, SmallText2, HSeparator, VBoxC, HThinSeparator
+} from './elem'
 import { Dustbin } from './drop-box';
 import { Box } from './drag-box'
 import { DndProvider } from 'react-dnd'
@@ -20,13 +23,16 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 
 import { isMobile } from 'react-device-detect';
-import { Delete, ExpandMore } from '@material-ui/icons';
+import { AccessTime, Delete, ExpandMore, LocationOn, Person } from '@material-ui/icons';
 
-import { newMatch, isNotInMatches, suggestMatch, getMatchMessage, 
-    getTodayMatchMessage, getShortDay, sortByDays, getNiceDate , isToday} from './utils'
+import {
+    newMatch, isNotInMatches, suggestMatch, getMatchMessage,
+    getTodayMatchMessage, getShortDay, sortByDays, getNiceDate, isToday
+} from './utils'
 
 import * as api from './api'
 
+const foreColor = "#136BC4";
 
 
 const calcChange = (item, user, source, target) => {
@@ -81,6 +87,7 @@ export default function Match(props) {
             }),
             getCollection(api.Collections.USERS_INFO_COLLECTION),
             api.thisSatRegistration(),
+            getCollection(api.Collections.STATS_COLLECTION),
         ]).then(all => {
             let _users = all[1];
             _users = _users.filter(u => {
@@ -88,6 +95,12 @@ export default function Match(props) {
                 if (uInfo) {
                     u.balls = uInfo.balls;
                 }
+                let uStat = all[5].find(u1 => u1._ref.id === u.email);
+                if (uStat) {
+                    u.elo1 = uStat.elo1;
+                }
+
+
                 return uInfo && uInfo.inactive === false
             })
             setUsers(_users)
@@ -95,12 +108,12 @@ export default function Match(props) {
 
 
             let regs = all[0];
-            
-            if(all[4] !== undefined) {
+
+            if (all[4] !== undefined) {
                 regs = regs.concat(all[4]);
-                setGames(g=>{
+                setGames(g => {
                     const newGames = [
-                        {id:-5, Day:"השבת", Hour:"20:00"},
+                        { id: -5, Day: "השבת", Hour: "20:00" },
                         ...g
                     ];
                     return newGames;
@@ -208,7 +221,7 @@ export default function Match(props) {
             // on Sat, show the today's game in the special pane of this Sat
             return false;
         }
-            
+
 
         return (em.GameID === currentGame || (currentGame < 0 && isToday(em))) && !em.deleted
     }) : [];
@@ -284,43 +297,21 @@ export default function Match(props) {
 
     return (
         <MuiPickersUtilsProvider utils={DateFnsUtils}>
-            <div style={{ height: '65vh', width: '100%' }}>
-
+            <div style={{ height: '65vh', width: '100%', backgroundColor: "#F3F3F3" }}>
+                <SmallText2 textAlign="center" fontSize={25}>שיבוץ משחקים</SmallText2>
                 <HBoxSB>
-                    <Header>שיבוץ משחקים</Header>
-
-                    <HBox>
-                        {condense ? [
-                            <VBox key={0}>
-                                {plusButton}
-                                <Spacer />
-                                {matchButton}
-                            </VBox>,
-                            <Spacer key={1} width={10} />,
-                            <VBox key={2}>
-                                {saveButton}
-                                <Spacer />
-                                {msgButton}
-                            </VBox>,
-                            <Spacer key={3} width={10} />,
-                            <VBox key={4}>
-                                {msgTodayButton}
-                            </VBox>
-                        ] :
-                            <HBox>
-                                {plusButton}
-                                <Spacer />
-                                {matchButton}
-
-                                <Spacer />
-                                {saveButton}
-                                <Spacer />
-                                {msgButton}
-                                <Spacer />
-                                {msgTodayButton}
-                            </HBox>}
-                    </HBox>
+                    {plusButton}
+                    <Spacer />
+                    {matchButton}
+                    <Spacer />
+                    {saveButton}
+                    <Spacer />
+                    {msgButton}
+                    <Spacer />
+                    {msgTodayButton}
                 </HBoxSB>
+                <Spacer />
+                <HSeparator />
                 {
                     matchText ?
                         <VBox>
@@ -333,7 +324,7 @@ export default function Match(props) {
                         </VBox>
                         :
 
-                        <Grid container spacing={3} >
+                        <Grid container spacing={0} >
                             <Grid item xs={condense ? 3 : 2}  >
                                 <List style={{ margin: 5, height: '30%' }}>
                                     {games.map((game) => (
@@ -350,96 +341,76 @@ export default function Match(props) {
                                     ))}
                                 </List>
                             </Grid>
-                            <Divider orientation="vertical" flexItem style={{ marginRight: "-8px", width: 2 }} />
-                            <Grid item xs style={{ textAlign: "right" }}>
+                            {/* <Divider orientation="vertical" flexItem style={{ marginRight: "-1px", width: 1 }} /> */}
+                            <Grid item xs={condense ? 9 : 10}  >
                                 <DndProvider backend={isMobile ? TouchBackend : HTML5Backend}>
-                                    <Spacer />
-                                    <Grid container spacing={2}>
-                                        <Grid container item xs={12} spacing={3}>
-                                            <Grid item xs={condense ? 2 : 2}>מתי</Grid>
-                                            <Grid item xs={condense ? 4 : 2}>מיקום</Grid>
-                                            {condense ? null : <Grid item xs={1}>מגרש</Grid>}
-                                            <Grid item xs={condense ? 5 : 3}>{condense ? "צוותים" : "זוג 1"}</Grid>
-                                            {condense ? null : <Grid item xs={3}>זוג 2</Grid>}
-
-                                        </Grid>
+                                    {currentMatches?.map((match, i) => (
+                                        <Card width={'100%'} key={match.id}>
+                                            <VBox>
+                                                {!match._collapse && <HBox style={{ justifyContent: "space-between" }} >
+                                                    <VBoxC>
+                                                        <AccessTime style={{ color: foreColor }} />
+                                                        <Spacer />
+                                                        <div dir="ltr">
 
 
-                                        {currentGame ?
-                                            currentMatches.map((match, i) => {
-                                                let court = <InputBase
-                                                    fullWidth={true}
-                                                    value={match.Court}
-                                                    onChange={e => updateMatchValue(match.id, { Court: e.currentTarget.value })}
-                                                />
+                                                            <InputBase
+                                                                inputProps={{ style: { textAlign: 'center' } }}
+                                                                style={{ backgroundColor: '#F3F3F3', width: 50 }}
+                                                                value={match.Hour}
+                                                                onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })}
+                                                            />
+                                                            <HBoxC>
+                                                                <SmallText fontSize={12}>{getNiceDate(match.date)}</SmallText>
+                                                                <KeyboardDatePicker
+                                                                    InputProps={{
+                                                                        disableUnderline: true,
 
-                                                let player3 = < Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3}
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 3)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 3)}
-                                                    width={dragWidth}
-                                                />
-                                                let player4 = <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4}
-                                                    AddPlayer={(user, source) => updateMatch(match.id, user, source, 4)}
-                                                    onRemove={() => updateMatch(match.id, undefined, 0, 4)}
-                                                    width={dragWidth}
-                                                />
-
-
-
-                                                return <Grid container item xs={12} spacing={3} style={{ fontSize: 13 }} key={match.id}>
-                                                    <Grid item xs={2} style={{ paddingRight: 2, paddingLeft: 2 }}>
-                                                        <VBox>
-                                                            <div dir="ltr">
-                                                                <HBox>
-
-                                                                    <InputBase
-                                                                        style={{ backgroundColor: '#F3F3F3' }}
-
-                                                                        value={match.Hour}
-                                                                        onChange={e => updateMatchValue(match.id, { Hour: e.currentTarget.value })}
-                                                                    />
-                                                                    <ExpandMore
-                                                                        style={match._collapse ? { transform: "rotate(90deg)" } : null}
-                                                                        onClick={() => updateMatchValue(match.id, { _collapse: !match._collapse }, true)} />
-                                                                </HBox>
-                                                                <Spacer />
-                                                                {match._collapse ? null : <KeyboardDatePicker
-                                                                    margin="normal"
+                                                                    }}
+                                                                    style={{ width: 0, right:20 }}
+                                                                    // labelFunc={(value, errString)=>getNiceDate(value)}
+                                                                    
+                                                                    margin="dense"
                                                                     variant="inline"
-                                                                    style={{ width: 50 }}
                                                                     autoOk
-                                                                    //open={true}
-                                                                    keyboardIcon={undefined}
                                                                     format={"yyyy-MM-dd"}
                                                                     inputValue={match.date}
-                                                                    onChange={d => {
-                                                                        updateMatchValue(match.id, { date: dayjs(d).format("YYYY-MM-DD") })
-                                                                    }
-                                                                    }
-                                                                />}
-                                                                {match._collapse ? null : <SmallText fontSize={12}>{getNiceDate(match.date)}</SmallText>}
-                                                                {/* <InputBase
-                                                                style={{ backgroundColor: '#F3F3F3', fontSize: 12 }}
-                                                                fullWidth={true}
-                                                                value={match.date}
-                                                                onChange={e => updateMatchValue(match.id, { date: e.currentTarget.value })}
-                                                            /> */}
-                                                            </div>
-                                                        </VBox>
-                                                    </Grid>
-                                                    <Grid item xs={condense ? 4 : 2}>
-                                                        <InputBase
+                                                                    onChange={d => updateMatchValue(match.id, { date: dayjs(d).format("YYYY-MM-DD") })}
+                                                                />
+                                                            </HBoxC>
+                                                        </div>
+                                                    </VBoxC>
 
+                                                    <VBoxC>
+                                                        <LocationOn style={{ color: foreColor }} />
+                                                        <Spacer />
+                                                        <InputBase
+                                                            inputProps={{ style: { textAlign: 'center' } }}
                                                             fullWidth={true}
+                                                            style={{ backgroundColor: '#F3F3F3' }}
                                                             value={match.Location}
                                                             onChange={e => updateMatchValue(match.id, { Location: e.currentTarget.value })}
                                                         />
-                                                        {condense && !match._collapse ? court : null}
-                                                    </Grid>
-                                                    {condense ? null : <Grid item xs={1}>{court}</Grid>}
-                                                    {match._collapse ? <Grid item xs={condense ? 5 : 3} /> :
-                                                        <Grid item xs={condense ? 5 : 3}>
+                                                        <Spacer />
+                                                        <InputBase
+                                                            inputProps={{ style: { textAlign: 'center'} }}
+                                                            style={{ backgroundColor: '#F3F3F3' , width: 50 }}
+                                                            fullWidth={true}
+                                                            value={match.Court}
+                                                            onChange={e => updateMatchValue(match.id, { Court: e.currentTarget.value })}
+                                                        />
+                                                    </VBoxC>
 
+                                                </HBox>}
+
+                                                {!match._collapse && <VBoxC>
+                                                    <HBox>
+                                                        <Person style={{ color: foreColor }} />
+                                                        <Person style={{ color: foreColor }} />
+                                                    </HBox>
+                                                    <Spacer />
+                                                    <HBox>
+                                                        <VBox>
                                                             <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
                                                                 AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 1)}
@@ -450,18 +421,33 @@ export default function Match(props) {
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 2)}
                                                                 width={dragWidth}
                                                             />
-                                                            {condense ? "vs" : null}
+                                                        </VBox>
+                                                        <SmallText2 textAlign="center" width={30}>vs</SmallText2>
+                                                        <VBox>
+                                                            < Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3}
+                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 3)}
+                                                                onRemove={() => updateMatch(match.id, undefined, 0, 3)}
+                                                                width={dragWidth}
+                                                            />
+                                                            <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4}
+                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 4)}
+                                                                onRemove={() => updateMatch(match.id, undefined, 0, 4)}
+                                                                width={dragWidth}
+                                                            />
+                                                        </VBox>
+                                                    </HBox>
 
-                                                            {condense ? player3 : null}
-                                                            {condense ? player4 : null}
-                                                        </Grid>}
-                                                    {match._collapse ? <Grid item xs={3} /> : null}
-                                                    {condense || match._collapse ? null : <Grid item xs={3}>
-                                                        {player3}
-                                                        {player4}
-                                                    </Grid>}
-                                                    {match._collapse ? null : <Grid xs={1}>
-                                                        <Delete onClick={() => {
+                                                </VBoxC>}
+
+
+                                                <Spacer />
+                                                {!match._collapse &&<HThinSeparator />}
+                                                <HBox>
+                                                    <ExpandMore
+                                                        style={match._collapse ? null : { transform: "rotate(180deg)" }}
+                                                        onClick={() => updateMatchValue(match.id, { _collapse: !match._collapse }, true)} />
+                                                    {!match._collapse && <Delete style={{ color: foreColor }}
+                                                        onClick={() => {
                                                             props.notify.ask("האם למחוק משחקון זה?", "מחיקה", [
                                                                 {
                                                                     caption: "מחק",
@@ -470,22 +456,16 @@ export default function Match(props) {
                                                                 { caption: "בטל", callback: () => { } }
                                                             ])
 
-                                                        }} />
-                                                    </Grid>}
-                                                </Grid>
-                                            })
-                                            : null}
-
-
-                                    </Grid>
-
-
-
+                                                        }} />}
+                                                </HBox>
+                                            </VBox>
+                                        </Card>))
+                                    }
 
 
                                     <VBox>
                                         <Text fontSize={15}>שחקנים שנירשמו</Text>
-                                        <HBoxC style={{flexWrap: 'wrap'}}>
+                                        <HBoxC style={{ flexWrap: 'wrap' }}>
 
                                             {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
                                                 <Box key={reg.email} user={reg}
@@ -495,7 +475,7 @@ export default function Match(props) {
                                             )}
                                         </HBoxC>
                                         <Text fontSize={15}>כל שאר השחקנים</Text>
-                                        <HBoxC style={{flexWrap: 'wrap'}}>
+                                        <HBoxC style={{ flexWrap: 'wrap' }}>
 
                                             {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
                                                 <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} width={dragWidth} />
@@ -509,7 +489,7 @@ export default function Match(props) {
 
                                 </DndProvider >
                             </Grid >
-                        </Grid >
+                        </Grid>
                 }
 
                 {games ? null : <Loading msg="טוען משחקים" />}

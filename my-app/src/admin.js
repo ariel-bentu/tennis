@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, CssBaseline, FormControlLabel, Table, TableHead, TableRow, TableBody } from '@material-ui/core';
 import Container from '@material-ui/core/Container';
 
-import { IOSSwitch, Loading, Spacer, VBox, MyTableCell } from './elem';
+import { IOSSwitch, Loading, Spacer, VBox, MyTableCell, SmallText2 } from './elem';
 import { sortByDays } from './utils';
 
 import * as api from './api'
@@ -11,6 +11,7 @@ import * as api from './api'
 export default function Admin(props) {
     const [games, setGames] = useState([]);
     const [reload, setReload] = useState(1);
+    const [balanceInfo, setBalanceInfo] = useState(undefined);
 
     const [registrationOpen, setRegistrationOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -22,6 +23,10 @@ export default function Admin(props) {
             games.sort((a, b) => sortByDays(a.Day, b.Day));
             setGames(games);
         });
+
+        api.getSMSBalance().then((res)=>{
+            setBalanceInfo(res);
+        })
     }, [reload]);
 
 
@@ -115,8 +120,9 @@ export default function Admin(props) {
 
         }}>סגירת ופתיחת שבוע</Button> */}
         </VBox>
-        {loading ? <Loading msg="מעדכן..." /> : null}
-
+        {loading && <Loading msg="מעדכן..." />}
+        <Spacer />
+        {balanceInfo && <SmallText2 fontSize={18}>יתרת סמסים: {balanceInfo?.data?.sms?.credits}</SmallText2>}
 
     </Container>
     );

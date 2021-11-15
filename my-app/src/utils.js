@@ -23,7 +23,7 @@ export function suggestMatch(plannedGame, matches, registrations) {
     //take only multiple of 4
     let numOfMatches = Math.floor(unassignedRegsForGame.length / 4);
 
-    let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches * 4).sort((r1, r2) => r1.rank - r2.rank)
+    let unassignedRegsByRank = unassignedRegsForGame.slice(0, numOfMatches * 4).sort((r1, r2) => r1.elo1 - r2.elo1)
 
     for (let j = 0; j < numOfMatches * 4; j += 4) {
         let newM = newMatch(plannedGame);

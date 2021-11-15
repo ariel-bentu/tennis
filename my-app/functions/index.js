@@ -465,6 +465,24 @@ exports.isAdmin = functions.region("europe-west1").https.onCall((data, context) 
     });
 });
 
+exports.smsBalance = functions.region("europe-west1").https.onCall((data, context) => {
+    return isAdmin(context, false).then(() => {
+        const headers = {
+            "Authorization": functions.config().sms.apikey,
+        };
+
+        return axios.get("https://webapi.mymarketing.co.il/api/account/balance", {
+            headers,
+        }).then((response) => {
+            return {
+                data: response.data,
+                status: response.status,
+            };
+        });
+    });
+});
+
+
 exports.sendMessage = functions.region("europe-west1").https.onCall((data, context) => {
     return isAdmin(context, false).then(() => {
         const msg = data.msg;

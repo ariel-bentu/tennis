@@ -175,10 +175,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 )
                 ) : null}
             </HBoxC>
-            <HBox>
+            <HBoxC>
                 <Spacer width={25} />
                 <SmallText fontSize={12}>vs</SmallText>
-            </HBox>
+                <Spacer width={300} />
+            </HBoxC>
             <HBoxC>
                 <VBox style={{ width: 75 }}>
                     {match.Player3 ? <SmallText textAlign='center'>{match.Player3.displayName}</SmallText> : null}
@@ -203,14 +204,13 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 
 
             <Spacer height={30} />
-            <HBox>
+            <HBoxC>
                 <SmallText fontSize={15}>משחק בוטל</SmallText>
                 <IOSSwitch checked={gameCanceled} onChange={() => {
                     setGameCanceled(canc => !canc);
                 }} />
 
-            </HBox>
-            <HBox>
+            
                 {Admin ? <TextField
                     variant="outlined"
                     margin="normal"
@@ -229,7 +229,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         setPaymentFactor(val);
                     }}
                 /> : null}
-            </HBox>
+            </HBoxC>
             <Spacer height={30} />
             <HBoxC>
                 <Button variant="contained" onClick={() => {
@@ -281,7 +281,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 
 function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
     return (
-        <HBox>
+        <HBoxC>
             <Spacer width={90} />
             {editedSets.map((set, i) => (
                 isTieBreakSet(set) ?
@@ -297,6 +297,6 @@ function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
                     : <Spacer width={50} height={50} />
             ))
             }
-        </HBox>
+        </HBoxC>
     )
 }

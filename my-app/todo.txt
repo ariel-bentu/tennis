@@ -1,7 +1,8 @@
 
+- singles do not change stats
+
 # Security
 - (low)remove read systemInfo for non-admin (for registration-open)
-- fix notification by function
 
 # features
 - new year (XL, high)

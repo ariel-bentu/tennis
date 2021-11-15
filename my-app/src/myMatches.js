@@ -165,19 +165,18 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
     return <Card>
         <SmallText color="gray">{match.Day + ", " + getNiceDate(match.date)}</SmallText>
         <HThinSeparator />
-        <HBoxC>
-            <VBox>
+        <HBox style={{width:'100%', justifyContent: "space-between"}}>
+            <VBox style={{ width: "20%" }}>
                 <AccessTime style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Hour}</SmallText2>
             </VBox>
-            <Spacer width={20} />
-            <VBox >
+            
+            <VBox style={{ width: "20%" }}>
                 <LocationOn style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Location}</SmallText2>
                 <SmallText2 textAlign="center">{match.Court}</SmallText2>
             </VBox>
-            <Spacer width={40} />
-            <VBox style={{ width: "40%" }}>
+            <VBox style={{ width: "60%" }}>
                 <HBox>
                     <Person style={{ color: foreColor }} />
                     <Person style={{ color: foreColor }} />
@@ -206,7 +205,7 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
                     {getBallsIndicator(match.Player4)}
                 </HBoxC>
             </VBox>
-        </HBoxC>
+        </HBox>
 
         <VBox style={{ width: "100%" }}>
             <HThinSeparator />

@@ -439,7 +439,7 @@ export async function getCollection(collName, oBy, orderDesc) {
     return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
-            if (orderBy)
+            if (oBy)
                 obj._order = i++;
 
 
@@ -468,7 +468,7 @@ export async function getPaginatedCollection(collName, oBy, orderDesc, lim, sAft
     return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
-            if (orderBy)
+            if (oBy)
                 obj._order = i++;
 
 
@@ -495,7 +495,7 @@ export async function getCollectionWithWhere(collName, whereField, op, value, oB
     return getDocs(query(colRef, ...constraints)).then((items) => {
         return items.docs.map(docObj => {
             let obj = docObj.data();
-            if (orderBy)
+            if (oBy)
                 obj._order = i++;
 
 
@@ -759,7 +759,10 @@ export async function getDetailedStats(email) {
     });
 }
 
-
+export async function getSMSBalance() {
+    const smsBalanaceFunc = httpsCallable(functions, 'smsBalance');
+    return smsBalanaceFunc().then((res)=>res.data);
+}
 
 export async function placeBet(bet) {
 

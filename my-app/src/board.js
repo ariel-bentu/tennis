@@ -5,7 +5,20 @@ import { Grid, Button } from '@material-ui/core';
 import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator, HBoxC } from './elem'
 
 import * as api from './api'
-import { DragHandle, EmojiEvents, SportsTennis, ThumbDown, ArrowBackIos } from '@material-ui/icons';
+import { DragHandle, EmojiEvents, SportsTennis, ThumbDown, ArrowBackIos, Sort } from '@material-ui/icons';
+
+const SortByWins = (s1, s2) => {
+    if (s1.wins !== s2.wins)
+        return s2.wins - s1.wins;
+
+    let games1 = s1.wins + s1.loses + s1.ties;
+    let games2 = s2.wins + s2.loses + s2.ties;
+
+    if (games1 !== games2) {
+        return s2.wins / games2 - s1.wins / games1;
+    }
+    return 0;
+};
 
 function enrichStats(stats, usersInfo) {
     let _stats = stats.map(s => {
@@ -16,18 +29,7 @@ function enrichStats(stats, usersInfo) {
             return undefined;
     }).filter(s2 => s2 !== undefined);
 
-    _stats.sort((s1, s2) => {
-        if (s1.wins !== s2.wins)
-            return s2.wins - s1.wins;
-
-        let games1 = s1.wins + s1.loses + s1.ties;
-        let games2 = s2.wins + s2.loses + s2.ties;
-
-        if (games1 !== games2) {
-            return s2.wins / games2 - s1.wins / games1;
-        }
-        return 0;
-    })
+    _stats.sort(SortByWins);
     return _stats;
 }
 
@@ -35,9 +37,14 @@ export default function Board({ UserInfo, notify }) {
 
 
     const [stats, setStats] = useState(undefined);
+    const [sortByWins, setSortByWins] = useState(true);
+
     const [usersInfo, setUsersInfo] = useState(undefined);
     const [detailsFor, setDetailsFor] = useState(undefined);
     const [detailedStats, setDetailedStats] = useState(undefined);
+    // eslint-disable-next-line no-unused-vars
+    const [refresh, setRefresh] = useState(1);
+
 
     useEffect(() => {
         if (UserInfo) {
@@ -61,6 +68,17 @@ export default function Board({ UserInfo, notify }) {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
+    useEffect(() => {
+        if (stats) {
+            setStats(_stats => {
+                console.log("sort by ", sortByWins ? "wins" : "elo")
+                _stats.sort(sortByWins ? SortByWins : (s1, s2) => s2.elo1 - s1.elo1);
+                return _stats;
+            })
+            setRefresh(old => old + 1);
+        }
+    }, [sortByWins, stats]);
 
     useEffect(() => {
         if (detailsFor) {
@@ -88,6 +106,19 @@ export default function Board({ UserInfo, notify }) {
         </HBoxC> : null}
         <Spacer height={5} />
         <Grid container spacing={1} >
+            {!detailsFor && <Grid key={0} container spacing={1}>
+                <Grid item xs={4} />
+                <Grid item xs={1} alignContent={'flex-start'} >
+                    <Sort fontSize={'small'} style={{ color: sortByWins ? "red" : "black" }} onClick={() => setSortByWins(true)} />
+                </Grid>
+                <Grid item xs={3} />
+                <Grid item xs={2} alignContent={'flex-start'} >
+                    <Sort fontSize={'small'} style={{ color: !sortByWins ? "red" : "black" }} onClick={() => setSortByWins(false)} />
+                </Grid>
+
+            </Grid>}
+
+
             <Grid key={0} container spacing={1} style={{ fontSize: 12 }}>
                 <Grid item xs={3} alignContent={'flex-start'} >
                     {detailsFor ? <SmallText2 textAlign="right">  מול  </SmallText2> : null}
@@ -113,7 +144,7 @@ export default function Board({ UserInfo, notify }) {
 
             </Grid>
             <HSeparator key={1} />
-            {statsToShow  ? statsToShow.map((oneUserStats, i) => (
+            {statsToShow ? statsToShow.map((oneUserStats, i) => (
                 [<Grid key={0} container spacing={1} style={{ fontSize: 12 }}>
                     <Grid item xs={3} alignContent={'flex-start'} >
                         <HBox>

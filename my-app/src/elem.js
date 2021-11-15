@@ -159,7 +159,7 @@ export function SVGIcon(props) {
 export function Card(props) {
     return <Box style={{
         display: 'flex',
-        width: '94%',
+        width: props.width || '94%',
         marginRight: '3%',
         marginLeft: '3%',
         marginBottom: 10,
@@ -179,6 +179,8 @@ export function VBox(props) {
         {props.children}
     </Box>
 }
+export const VBoxC = (props) => (<VBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} >{props.children}</VBox>);
+
 
 export const HBoxC = (props) => (<HBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} >{props.children}</HBox>);
 export const HBoxSB = (props) => (<HBox style={{alignItems:"center", justifyContent: "space-between", width:"100%", ...props.style}} >{props.children}</HBox>);
