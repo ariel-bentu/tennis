@@ -97,7 +97,7 @@ export default function Register(props) {
             <MyTableCell width={'20%'} className="tableHeader">רישום</MyTableCell>
             <MyTableCell width={'30%'}>יום</MyTableCell>
             <MyTableCell width={'25%'}>שעה</MyTableCell>
-            <MyTableCell width={'25%'}>נרשמו?</MyTableCell>
+            {/* <MyTableCell width={'25%'}>נרשמו?</MyTableCell> */}
           </TableRow>
 
         </TableHead>
@@ -117,7 +117,7 @@ export default function Register(props) {
                 {game.Day}
               </MyTableCell>
               <MyTableCell >{game.Hour}</MyTableCell>
-              <MyTableCell >{(game.NumOfRegistered || 0) + (getChecked(game) ? 1 : 0)}</MyTableCell>
+              {/* <MyTableCell >{(game.NumOfRegistered || 0) + (getChecked(game) ? 1 : 0)}</MyTableCell> */}
             </TableRow>
           ))}
         </TableBody>
