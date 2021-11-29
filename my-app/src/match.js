@@ -181,6 +181,7 @@ export default function Match(props) {
                 }
             });
             setEditedMatches(mtchs);
+            setDirty(false);
         });
     }, [registrations, matchesSaved, getCollection, users])
 
@@ -236,6 +237,7 @@ export default function Match(props) {
         let game = currentGameObj();
         let nm = newMatch(game);
         setEditedMatches([...editedMatches, nm]);
+        setDirty(true);
     }} style={{ fontSize: 25, height: '1.5rem', width: '3rem' }}
     >+</Button>
 
@@ -252,7 +254,7 @@ export default function Match(props) {
                     //causes reload of matches
                     setMatchesSaved(ms => ms + 1);
                     setSubmitInProcess(false);
-                    setDirty(false);
+                    //setDirty(false);
                     props.notify.success("נשמר בהצלחה");
                 }
                 ,
@@ -295,10 +297,20 @@ export default function Match(props) {
         }}
     >הודעה היום</Button>
 
+    const cancelChanges = <Button variant="contained" style={{ fontSize: 13, height: '1.5rem', width: 150 }}
+    onClick={()=>{
+        setMatchesSaved(old=>old+1);
+    }}
+    >בטל שינויים</Button>
+
+
     return (
         <MuiPickersUtilsProvider utils={DateFnsUtils}>
             <div style={{ height: '65vh', width: '100%', backgroundColor: "#F3F3F3" }}>
-                <SmallText2 textAlign="center" fontSize={25}>שיבוץ משחקים</SmallText2>
+                <HBoxC>
+                    <SmallText2 textAlign="center" fontSize={25}>שיבוץ משחקים</SmallText2>
+                    {dirty && cancelChanges}
+                </HBoxC>
                 <HBoxSB>
                     {plusButton}
                     <Spacer />
