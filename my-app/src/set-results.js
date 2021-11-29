@@ -87,10 +87,14 @@ const validate = (sets) => {
     }
     return "";
 }
-const isDirty = (match, setsEdited, canceled) => {
+const isDirty = (match, setsEdited, cancelled, paymentFactor) => {
     const setsOrig = match.sets;
 
-    if ((!match.matchCanceled && canceled) || (match.matchCanceled && !canceled)) {
+    if (match?.paymentFactor !== paymentFactor) {
+        return true;
+    }
+
+    if ((!match.matchCancelled && cancelled) || (match.matchCancelled && !cancelled)) {
         return true;
     }
 
@@ -118,7 +122,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 
     const [editedSets, setEditedSets] = useState([]);
     const [nextFocus, setNextFocus] = useState(0);
-    const [gameCanceled, setGameCanceled] = useState(match.matchCanceled === true);
+    const [gameCancelled, setGameCancelled] = useState(match.matchCancelled === true);
     const [paymentFactor, setPaymentFactor] = useState(match.paymentFactor);
 
 
@@ -161,7 +165,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 </VBox>
                 <Spacer width={15} />
 
-                {!gameCanceled ? editedSets.map((set, i) => (
+                {!gameCancelled ? editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
                         focus={i * 2 === nextFocus}
 
@@ -186,7 +190,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     {match.Player4 ? <SmallText textAlign='center'>{match.Player4.displayName}</SmallText> : null}
                 </VBox>
                 <Spacer width={15} />
-                {!gameCanceled ? editedSets.map((set, i) => (
+                {!gameCancelled ? editedSets.map((set, i) => (
                     <BoxInput
                         value={set.pair2}
                         focus={i * 2 + 1 === nextFocus}
@@ -206,8 +210,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
             <Spacer height={30} />
             <HBoxC>
                 <SmallText fontSize={15}>משחק בוטל</SmallText>
-                <IOSSwitch checked={gameCanceled} onChange={() => {
-                    setGameCanceled(canc => !canc);
+                <IOSSwitch checked={gameCancelled} onChange={() => {
+                    setGameCancelled(canc => !canc);
                 }} />
 
             
@@ -238,10 +242,10 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     if (isNaN(pf)) {
                         pf = undefined;
                     }
-                    if (isDirty(match, editedSets, gameCanceled)) {
-                        if (gameCanceled) {
+                    if (isDirty(match, editedSets, gameCancelled, paymentFactor)) {
+                        if (gameCancelled) {
                             notify.progress();
-                            return api.saveMatchCanceled(match, pf, isArchived).then(
+                            return api.saveMatchCancelled(match, pf, isArchived).then(
                                 () => {
                                     notify.success("משחק סומן כבוטל");
                                     onDone([]);

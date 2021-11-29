@@ -348,22 +348,22 @@ export async function saveMatchResults(match, paymentFactor, isArchived) {
         paymentFactor: paymentFactor ? paymentFactor : -1,
         isInArchive: isArchived,
         sets: match.sets,
-        matchedCancelled: false,
+        matchCancelled: false,
     };
 
     return updateMatchResults(payload);
 }
 
-export async function saveMatchCanceled(match, paymentFactor, isArchived) {
+export async function saveMatchCancelled(match, paymentFactor, isArchived) {
 
     const updateMatchResults = httpsCallable(functions, 'updateMatchResults');
 
     let payload = {
         matchID: match._ref.id,
-        paymentFactor: paymentFactor ? paymentFactor : -1,
+        paymentFactor: paymentFactor !== undefined ? paymentFactor : -1,
         isInArchive: isArchived,
         sets: [],
-        matchedCancelled: true,
+        matchCancelled: true,
     };
 
     return updateMatchResults(payload);

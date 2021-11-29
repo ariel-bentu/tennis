@@ -144,12 +144,12 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
         <Spacer />
         <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
             firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner === 0}
-            canceled={match.matchCanceled}
+            cancelled={match.matchCancelled}
         />
         <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
             wins={winner === 2} tie={winner === 0}
             UserInfo={UserInfo}
-            canceled={match.matchCanceled}
+            cancelled={match.matchCancelled}
         />
         {showEdit ? <HThinSeparator /> : null}
         {showEdit ?
@@ -183,12 +183,12 @@ function GetOneLine(props) {
                     {props.P2 ? <SmallText2 lineHeight={1} textAlign="center" textDecoration={p2IsMe ? 'underline' : undefined} fontWeight={p2IsMe ? 'bold' : undefined}>{props.P2.displayName}</SmallText2> : null}
                 </VBox>
             </Grid >
-            {props.canceled ? null :
+            {props.cancelled ? null :
                 <Grid item xs={1} alignSelf={'center'}>
                     {props.wins ? <EmojiEvents style={{ color: 'gold' }} /> : null}
                 </Grid>}
 
-            {props.canceled ?
+            {props.cancelled ?
 
                 <Grid item xs={7} style={{ padding: 2 }}>
                     {props.firstPair ? <HBox style={{ justifyContent: 'center' }}>
@@ -235,7 +235,7 @@ function GetOneLine(props) {
                 })
             }
 
-            {props.canceled ? null :
+            {props.cancelled ? null :
                 <Grid item xs={1} style={{ padding: 2 }}>
                     <HBox style={{ width: '100%', height: '100%' }}>
                         <VBox style={{

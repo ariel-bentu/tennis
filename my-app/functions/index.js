@@ -338,7 +338,7 @@ exports.placeBet = functions.region("europe-west1").https.onCall((data, context)
 
 
 exports.updateMatchResults = functions.region("europe-west1").https.onCall((data, context) => {
-    const matchedCancelled = data.matchedCancelled;
+    const matchCancelled = data.matchCancelled;
     const isInArchive = data.isInArchive;
     const sets = data.sets;
     const matchID = data.matchID;
@@ -370,7 +370,7 @@ exports.updateMatchResults = functions.region("europe-west1").https.onCall((data
                 break;
             }
         }
-        const priorSetResultsOrCancelled = matchDoc.data().sets && matchDoc.data().sets.length > 0 || matchDoc.data().matchedCancelled === true;
+        const priorSetResultsOrCancelled = matchDoc.data().sets && matchDoc.data().sets.length > 0 || matchDoc.data().matchCancelled === true;
         const isAdmin = userAdminDoc.exists && userAdminDoc.data().admin === true;
 
         if (paymentFactor >= 0 && paymentFactor !== matchDoc.data().paymentFactor && !isAdmin) {
@@ -385,11 +385,11 @@ exports.updateMatchResults = functions.region("europe-west1").https.onCall((data
             throw new Error("Only match players and administrators may add match results");
         }
         const update = {};
-        if (matchedCancelled) {
-            update.matchedCancelled = true;
+        if (matchCancelled) {
+            update.matchCancelled = true;
             update.sets = [];
         } else {
-            update.matchedCancelled = false;
+            update.matchCancelled = false;
             update.sets = sets;
         }
 
@@ -574,8 +574,8 @@ const handleMatchResultsChange = (change) => {
         const dataBefore = change.before.data();
         const dataAfter = change.after.data();
 
-        if (dataAfter.matchCanceled) {
-            resolve(true); // results exists (canceled) - archive it
+        if (dataAfter.matchCancelled) {
+            resolve(true); // results exists (cancelled) - archive it
             return;
         }
         if (dataAfter.sets == undefined) {
