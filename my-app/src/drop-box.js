@@ -5,6 +5,7 @@ const style = {
     display: 'flex',
     
     minHeight: '2rem',
+    minWidth: 105,
 
 
     border: '1px solid black',
