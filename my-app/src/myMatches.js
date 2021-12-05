@@ -8,7 +8,7 @@ import {
 import SetResults from './set-results';
 import { filterByPlayer, getNiceDate } from './utils'
 import * as api from './api'
-import { AccessTime, LocationOn, Person } from '@material-ui/icons'
+import { AccessTime, Cloud, LocationOn, Person } from '@material-ui/icons'
 import { ToggleButtonGroup, ToggleButton } from '@material-ui/lab';
 import PlaceBets from './place-bets';
 
@@ -169,12 +169,21 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
             <VBox style={{ width: "20%" }}>
                 <AccessTime style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Hour}</SmallText2>
+                <Spacer height={10} />
+                <Cloud style={{ color: foreColor }}/>
+                <HBox>
+                    <SmallText2 textAlign="center">{match.pop != undefined && (Math.floor(match.pop*100) + "%")}</SmallText2>
+                    <Spacer width={10} />
+                    <SmallText2 textAlign="center">{match.temp != undefined && (Math.floor(match.temp) + "°")}</SmallText2>
+                </HBox>
             </VBox>
             
             <VBox style={{ width: "20%" }}>
                 <LocationOn style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Location}</SmallText2>
                 <SmallText2 textAlign="center">{match.Court}</SmallText2>
+                <Spacer height={12} />
+                
             </VBox>
             <VBox style={{ width: "60%" }}>
                 <HBox>

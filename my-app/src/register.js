@@ -98,6 +98,7 @@ export default function Register(props) {
             <MyTableCell width={'30%'}>יום</MyTableCell>
             <MyTableCell width={'25%'}>שעה</MyTableCell>
             {/* <MyTableCell width={'25%'}>נרשמו?</MyTableCell> */}
+            <MyTableCell width={'25%'}>גשם?</MyTableCell>
           </TableRow>
 
         </TableHead>
@@ -118,6 +119,7 @@ export default function Register(props) {
               </MyTableCell>
               <MyTableCell >{game.Hour}</MyTableCell>
               {/* <MyTableCell >{(game.NumOfRegistered || 0) + (getChecked(game) ? 1 : 0)}</MyTableCell> */}
+              <MyTableCell >{game.pop !== undefined && game.pop >= 0 && ((Math.floor(game.pop*100) + "%"))}</MyTableCell>
             </TableRow>
           ))}
         </TableBody>

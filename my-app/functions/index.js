@@ -1299,3 +1299,118 @@ exports.scheduledFirestoreExport = functions.region("europe-west1").pubsub
                 throw new Error("Backup operation failed");
             });
     });
+
+/**
+ * ******  Weather ******
+ */
+
+const dateFormat = "YYYY-MM-DD";
+
+const getHourlyPop = (weather, date, hour) => {
+    let startHour = 19;
+    if (hour && hour.length > 2) {
+        startHour = parseInt(hour.substr(0, 2));
+    }
+    // take max of the 1 hour before and the two hours of game
+    const startIndex = weather.hourly.findIndex(h => {
+        const d = dayjs.unix(h.dt);
+        return (d.format(dateFormat + " HH") === date + " " + startHour);
+    });
+
+    if (startIndex >= 0) {
+        let pop = weather.hourly[startIndex].pop;
+        let temp = weather.hourly[startIndex].temp;
+        if (weather.hourly.length > startIndex + 1) {
+            pop = Math.max(pop, weather.hourly[startIndex + 1].pop);
+            temp = weather.hourly[startIndex + 1].temp;
+        }
+        if (weather.hourly.length > startIndex + 2) {
+            pop = Math.max(pop, weather.hourly[startIndex + 2].pop);
+        }
+
+        return { temp, pop };
+    }
+    return undefined;
+};
+
+exports.getWeather = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("30 * * * *")
+    .timeZone("Asia/Jerusalem")
+    .onRun((context) => {
+        const apikey = functions.config().weather.apikey;
+        const url = "https://api.openweathermap.org/data/2.5/onecall?&exclude=current,minutely&units=metric&lang=he&appid=" + apikey + "&";
+        const raananaLoc = "lat=32.19&lon=34.84";
+        const ramhashLoc = "lat=32.13&lon=34.83";
+
+        const waitFor = [
+            db.collection("matches").where("date", ">=", dayjs().format("YYYY-MM-DD")).get(),
+            db.collection("planned-games").get(),
+            axios.get(url + ramhashLoc),
+            axios.get(url + raananaLoc),
+        ];
+
+        return Promise.all(waitFor).then(all => {
+            const matches = all[0].docs;
+            const games = all[1].docs;
+            const weatherRamhash = all[2].data;
+            const weatherRaanana = all[3].data;
+
+            const batch = db.batch();
+            const startDate = dayjs.unix(weatherRamhash.hourly[0].dt);
+            for (let i = 0; i < 3; i++) {
+                matches.filter(m => m.data().date === startDate.add(i, "day").format(dateFormat)).map(match => {
+                    const matchData = match.data();
+                    const weather = matchData.Location === "רעננה" ? weatherRaanana : weatherRamhash;
+                    const hourlyWeather = getHourlyPop(weather, matchData.date, matchData.Hour);
+                    if (hourlyWeather && (matchData.pop != hourlyWeather.pop || matchData.temp !== hourlyWeather.temp)) {
+                        // console.log("match-update", match.ref.id, matchData.date, matchData.Hour, pop);
+                        batch.update(match.ref, { pop: hourlyWeather.pop, temp: hourlyWeather.temp });
+                    }
+                });
+            }
+
+            for (let i = 3; i < 7; i++) {
+                matches.filter(m => m.data().date === startDate.add(i, "day").format(dateFormat)).map(match => {
+                    const matchData = match.data();
+                    const weather = matchData.Location === "רעננה" ? weatherRaanana : weatherRamhash;
+
+                    const pop = weather.daily[i].pop;
+                    const temp = weather.daily[i].temp.eve;
+                    if (matchData.pop !== pop || matchData.temp !== temp) {
+                        batch.update(match.ref, { pop, temp });
+                        // console.log("match-update-daily", match.ref.id, matchData.date, pop);
+                    }
+                });
+            }
+
+            // On Saturday only:
+            const weekDay = dayjs().day() + 1;
+
+            games.map(game => {
+                const gameData = game.data();
+                const offSet = gameData.weekDay - weekDay;
+                if (offSet >= 0) {
+                    if (offSet < 2) {
+                        const hourlyWeather = getHourlyPop(weatherRamhash, dayjs().add(offSet, "day").format(dateFormat), gameData.Hour);
+                        if (hourlyWeather && (game.pop !== hourlyWeather.temp || game.pop !== hourlyWeather.temp)) {
+                            batch.update(game.ref, { pop: hourlyWeather.pop, temp: hourlyWeather.temp });
+                        }
+                    } else {
+                        // update based on daily weather
+                        const pop = weatherRamhash.daily[offSet].pop;
+                        const temp = weatherRamhash.daily[offSet].temp.eve;
+                        if (game.pop !== pop || game.temp !== temp) {
+                            batch.update(game.ref, { pop, temp });
+                        }
+                    }
+                } else {
+                    if (game.pop !== -1 || game.temp !== -999) {
+                        batch.update(game.ref, { pop: -1, temp: -999 });
+                    }
+                }
+            });
+
+            return batch.commit();
+        });
+    });

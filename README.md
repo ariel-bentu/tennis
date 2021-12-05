@@ -23,6 +23,8 @@ firebase functions:config:set admin.email=<admin email>
 firebase functions:config:set sms.apikey=<api key>
 firebase functions:config:set notification.serverkey=<server key>
 firebase functions:config:set notification.passphrase=<passphrase>
+firebase functions:config:set weather.apikey=<openweathermap.org free apikey>
+
 ```
 
 

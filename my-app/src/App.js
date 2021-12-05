@@ -66,7 +66,7 @@ const ResponsiveTabs = withStyles({
 
 function getDefaultTab() {
   const today = dayjs();
-  return today.day === 6 ? 0 : 1;
+  return today.day() === 6 ? 0 : 1;
 }
 
 let App = props => {

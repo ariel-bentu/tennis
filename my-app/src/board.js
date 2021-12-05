@@ -94,7 +94,7 @@ export default function Board({ UserInfo, notify }) {
     const statsToShow = detailsFor ? detailedStats : stats
 
     return (<VBox style={{ margin: 10 }}>
-        {detailsFor ? <HBoxC>
+        {detailsFor && <HBoxC>
             <SmallText2
                 textAlign="center"
                 fontSize={20}
@@ -103,10 +103,10 @@ export default function Board({ UserInfo, notify }) {
                 fontWeight="bold">{detailsFor.displayName}</SmallText2>
             <ArrowBackIos style={{ position: 'relative', left: 20, top: 0, width: 15, height: 30, color: 'white' }}
                 onClick={() => setDetailsFor(undefined)} />
-        </HBoxC> : null}
+        </HBoxC>}
         <Spacer height={5} />
         <Grid container spacing={1} >
-            {!detailsFor && <Grid key={0} container spacing={1}>
+            {!detailsFor && <Grid  container spacing={1}>
                 <Grid item xs={4} />
                 <Grid item xs={1} alignContent={'flex-start'} >
                     <Sort fontSize={'small'} style={{ color: sortByWins ? "red" : "black" }} onClick={() => setSortByWins(true)} />
@@ -119,9 +119,9 @@ export default function Board({ UserInfo, notify }) {
             </Grid>}
 
 
-            <Grid key={0} container spacing={1} style={{ fontSize: 12 }}>
+            <Grid container spacing={1} style={{ fontSize: 12 }}>
                 <Grid item xs={3} alignContent={'flex-start'} >
-                    {detailsFor ? <SmallText2 textAlign="right">  מול  </SmallText2> : null}
+                    {detailsFor && <SmallText2 textAlign="right">  מול  </SmallText2>}
                 </Grid>
                 <Grid item xs={1} alignContent={'flex-start'} >
                     <SportsTennis fontSize={'small'} />
@@ -145,7 +145,7 @@ export default function Board({ UserInfo, notify }) {
             </Grid>
             <HSeparator key={1} />
             {statsToShow ? statsToShow.map((oneUserStats, i) => (
-                [<Grid key={0} container spacing={1} style={{ fontSize: 12 }}>
+                [<Grid key={i} container spacing={1} style={{ fontSize: 12 }}>
                     <Grid item xs={3} alignContent={'flex-start'} >
                         <HBox>
                             {detailsFor ? null : <CircledValue size={17}>{i + 1}</CircledValue>}
