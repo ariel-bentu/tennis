@@ -2,10 +2,7 @@ const functions = require("firebase-functions");
 const {
     FieldPath,
     FieldValue,
-    v1,
 } = require("@google-cloud/firestore");
-// Replace BUCKET_NAME
-const bucket = "gs://atpenn-backup";
 
 const admin = require("firebase-admin");
 const axios = require("axios");
@@ -13,6 +10,8 @@ const dayjs = require("dayjs");
 const elo = require("elo-rating");
 const apn = require("apn");
 const fs = require("fs");
+const archiver = require("archiver");
+
 
 const BILLING_COLLECTION = "billing";
 const MATCHES_ARCHIVE_COLLECTION = "matches-archive";
@@ -34,6 +33,7 @@ admin.initializeApp({
             email: functions.config().admin.email,
         },
     },
+    storageBucket: "atpenn-fe837.appspot.com",
 });
 
 const db = admin.firestore();
@@ -179,7 +179,7 @@ const sendNotification = (title, body, devices, link) => {
         waitFor.push(
             axios.post("https://fcm.googleapis.com/fcm/send ", postData, {
                 headers,
-            })
+            }),
         );
     });
     return Promise.all(waitFor);
@@ -213,7 +213,7 @@ const sendSafaryNotification = (title, body, deviceTokens, link) => {
     const waitFor = [];
     deviceTokens.forEach(deviceToken => {
         waitFor.push(
-            apnProvider.send(note, deviceToken)
+            apnProvider.send(note, deviceToken),
         );
     });
     return Promise.all(waitFor).then(() => apnProvider.shutdown());
@@ -491,7 +491,7 @@ exports.sendMessage = functions.region("europe-west1").https.onCall((data, conte
     });
 });
 
-exports.openWeek = functions.region("europe-west1").pubsub
+exports.openWeekNew = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
     .schedule("00 10 * * 6")
     .timeZone("Asia/Jerusalem")
@@ -1095,7 +1095,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                         return Promise.all(sendSMSArray);
                                     });
                                 },
-                                (err) => functions.logger.error("Users read error:", err)
+                                (err) => functions.logger.error("Users read error:", err),
                             ));
                     }
 
@@ -1107,7 +1107,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                 functions.logger.info("Results detected - move to archive immediately");
                                 return archiveMatchesImpl(context.params.matchID);
                             }
-                        })
+                        }),
                     );
 
                     return Promise.all(waitFor);
@@ -1274,33 +1274,84 @@ const archiveMatchesImpl = (matchID) => {
     });
 };
 
+const backupCollections = [
+    { name: "matches-archive" },
+    { name: "matches" },
+    { name: "registrations" },
+    { name: "planned-games" },
+    { name: "stats" },
+    { name: "users" },
+    { name: "users-info" },
+    {
+        name: "billing",
+        subCollections: [
+            { name: "payments" },
+            { name: "debts" },
+        ],
+    },
+];
 
-exports.scheduledFirestoreExport = functions.region("europe-west1").pubsub
+exports.BackupDB = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
-    .schedule("00 23 * * 5") // Every Friday at 23:00
+    .schedule("00 01 * * *") // Every dya at 01:00
     .timeZone("Asia/Jerusalem")
     .onRun((context) => {
-        const client = new v1.FirestoreAdminClient();
-        const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
-        const databaseName =
-            client.databasePath(projectId, "(default)");
+        const zipName = "backup|" + dayjs().format("YYYY-MM-DD HH:mm") + ".zip";
+        const output = fs.createWriteStream("/tmp/" + zipName);
+        const archive = archiver("zip", {
+            gzip: true,
+            zlib: { level: 9 }, // Sets the compression level.
+        });
 
-        return client.exportDocuments({
-            name: databaseName,
-            outputUriPrefix: bucket,
-            // Leave collectionIds empty to export all collections
-            // or set to a list of collection IDs to export,
-            // collectionIds: ['users', 'posts']
-            collectionIds: [],
-        })
-            .then(responses => {
-                const response = responses[0];
-                functions.logger.info(`Backup Operation Name succeeded: ${response["name"]}`);
-            })
-            .catch(err => {
-                functions.logger.error(err);
-                throw new Error("Backup operation failed");
-            });
+        archive.on("error", (err) => {
+            throw (err);
+        });
+
+        // pipe archive data to the output file
+        archive.pipe(output);
+
+        const waitFor = [];
+
+        for (let i = 0; i < backupCollections.length; i++) {
+            waitFor.push(db.collection(backupCollections[i].name).get().then(async (collData) => {
+                const name = backupCollections[i].name + "|" + dayjs().format("YYYY-MM-DD HH:mm") + ".json";
+                const fileName = "/tmp/backup|" + name;
+
+                fs.appendFileSync(fileName, "[\n");
+                for (let docIndex = 0; docIndex < collData.size; docIndex++) {
+                    const doc = collData.docs[docIndex];
+                    const backupDoc = doc.data();
+                    backupDoc._docID = doc.ref.id;
+
+                    if (backupCollections[i].subCollections) {
+                        for (let j = 0; j < backupCollections[i].subCollections.length; j++) {
+                            const subColl = backupCollections[i].subCollections[j];
+                            const subColDocs = await db.collection(backupCollections[i].name).doc(doc.ref.id).collection(subColl.name).get();
+                            backupDoc[subColl.name] = [];
+                            subColDocs.forEach(subColDoc => {
+                                const backupSubColDoc = subColDoc.data();
+                                backupSubColDoc._docID = subColDoc.ref.id;
+                                backupDoc[subColl.name].push(backupSubColDoc);
+                            });
+                        }
+                    }
+
+                    fs.appendFileSync(fileName, JSON.stringify(backupDoc, undefined, " "));
+                    fs.appendFileSync(fileName, ",\n");
+                }
+                fs.appendFileSync(fileName, "]");
+                console.log("add to archive", name);
+                archive.file(fileName, { name });
+            }));
+        }
+        return Promise.all(waitFor).then(() => {
+            console.log("finalize archive");
+            archive.finalize().then(
+                () => admin.storage().bucket().upload("/tmp/" + zipName, {
+                    destination: `backups/${zipName}`,
+                }),
+            );
+        });
     });
 
 /**
