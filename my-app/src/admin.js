@@ -87,7 +87,7 @@ export default function Admin(props) {
             </Table>
 
 
-            <Spacer width={20}/>
+            {/* <Spacer width={20}/>
             <Button variant="contained" onClick={() => {
                 props.notify.ask(`האם לפתוח? פתיחה תעביר את כל נתוני הרישום לגיבוי, ותנקה את טבלאות הרישום`, "פתיחת רישום", [
                     {
@@ -102,7 +102,7 @@ export default function Admin(props) {
                 ])
 
 
-            }}>פתיחת רישום</Button>
+            }}>פתיחת רישום</Button> */}
             {/* <Spacer height={30} />
         <Button variant="contained" onClick={() => {
             props.notify.ask("פתיחת שבוע תעביר את השיבוצים הקיימים לגיבוי, תחשב לכל שחקן את חובו, ותכין המערכת לשיבוץ שבוע","פתיחת שבוע", [

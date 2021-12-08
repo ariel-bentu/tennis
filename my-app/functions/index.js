@@ -491,46 +491,49 @@ exports.sendMessage = functions.region("europe-west1").https.onCall((data, conte
     });
 });
 
+exports.openWeek = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("00 10 * * 6")
+    .timeZone("Asia/Jerusalem")
+    .onRun((context) => {
+        const batch = db.batch();
 
-exports.openWeek = functions.region("europe-west1").https.onCall((data, context) => {
-    const batch = db.batch();
+        return isAdmin(context, false).then(() => {
+            return db.collection("registrations").get().then(regs => {
+                // Move to archive
+                regs.docs.forEach((reg) => {
+                    const docRef = db.collection("registrations-archive").doc(reg.ref.id);
+                    batch.set(docRef, reg.data());
+                    batch.delete(reg.ref);
+                });
 
-    return isAdmin(context, false).then(() => {
-        return db.collection("registrations").get().then(regs => {
-            // Move to archive
-            regs.docs.forEach((reg) => {
-                const docRef = db.collection("registrations-archive").doc(reg.ref.id);
-                batch.set(docRef, reg.data());
-                batch.delete(reg.ref);
-            });
+                return batch.commit().then(() => {
+                    return Promise.all([
+                        db.collection("users").get(),
+                        db.collection(USERS_INFO_COLLECTION).get(),
+                    ]).then(all => {
+                        const phones = [];
+                        all[0].docs.forEach(user => {
+                            const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
+                            if (userInfo && !userInfo.data().inactive && user.data().phone && user.data().phone.length > 0) {
+                                // Send SMS to active users only
+                                phones.push(user.data().phone);
+                            }
+                        });
 
-            return batch.commit().then(() => {
-                return Promise.all([
-                    db.collection("users").get(),
-                    db.collection(USERS_INFO_COLLECTION).get(),
-                ]).then(all => {
-                    const phones = [];
-                    all[0].docs.forEach(user => {
-                        const userInfo = all[1].docs.find(d => d.ref.id === user.ref.id);
-                        if (userInfo && !userInfo.data().inactive && user.data().phone && user.data().phone.length > 0) {
-                            // Send SMS to active users only
-                            phones.push(user.data().phone);
-                        }
-                    });
-
-                    // functions.logger.info("Send sms to: ", phones);
-                    // Send SMS
-                    return sendSMS(`שיבוצי טניס נפתחו להשבוע:
+                        // functions.logger.info("Send sms to: ", phones);
+                        // Send SMS
+                        return sendSMS(`שיבוצי טניס נפתחו להשבוע:
 
 https://tennis.atpenn.com
 טניס טוב!`, phones);
+                    });
                 });
             });
+        }).catch(err => {
+            throw new functions.https.HttpsError("permission-denied", "AdminRequired", err.message);
         });
-    }).catch(err => {
-        throw new functions.https.HttpsError("permission-denied", "AdminRequired", err.message);
     });
-});
 
 const isMatchModified = (change) => {
     if (!change.before.exists || !change.after.exists) {

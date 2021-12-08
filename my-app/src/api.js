@@ -314,11 +314,11 @@ function getTimestamp() {
 }
 
 
-export async function openWeekForRegistration() {
-    const openWeek = httpsCallable(functions, 'openWeek');
+// export async function openWeekForRegistration() {
+//     const openWeek = httpsCallable(functions, 'openWeek');
 
-    return openWeek();
-}
+//     return openWeek();
+// }
 
 export async function sendMessage(msg, numbers) {
     const sendMessage = httpsCallable(functions, 'sendMessage');
