@@ -1358,31 +1358,25 @@ exports.getWeather = functions.region("europe-west1").pubsub
 
             const batch = db.batch();
             const startDate = dayjs.unix(weatherRamhash.hourly[0].dt);
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 7; i++) {
                 matches.filter(m => m.data().date === startDate.add(i, "day").format(dateFormat)).map(match => {
                     const matchData = match.data();
                     const weather = matchData.Location === "רעננה" ? weatherRaanana : weatherRamhash;
                     const hourlyWeather = getHourlyPop(weather, matchData.date, matchData.Hour);
-                    if (hourlyWeather && (matchData.pop != hourlyWeather.pop || matchData.temp !== hourlyWeather.temp)) {
-                        // console.log("match-update", match.ref.id, matchData.date, matchData.Hour, pop);
-                        batch.update(match.ref, { pop: hourlyWeather.pop, temp: hourlyWeather.temp });
+                    if (hourlyWeather) {
+                        if (matchData.pop != hourlyWeather.pop || matchData.temp !== hourlyWeather.temp) {
+                            batch.update(match.ref, { pop: hourlyWeather.pop, temp: hourlyWeather.temp, isHourly: true });
+                        }
+                    } else {
+                        const pop = weather.daily[i].pop;
+                        const temp = weather.daily[i].temp.eve;
+                        if (matchData.pop !== pop || matchData.temp !== temp) {
+                            batch.update(match.ref, { pop, temp, isHourly: false });
+                        }
                     }
                 });
             }
 
-            for (let i = 3; i < 7; i++) {
-                matches.filter(m => m.data().date === startDate.add(i, "day").format(dateFormat)).map(match => {
-                    const matchData = match.data();
-                    const weather = matchData.Location === "רעננה" ? weatherRaanana : weatherRamhash;
-
-                    const pop = weather.daily[i].pop;
-                    const temp = weather.daily[i].temp.eve;
-                    if (matchData.pop !== pop || matchData.temp !== temp) {
-                        batch.update(match.ref, { pop, temp });
-                        // console.log("match-update-daily", match.ref.id, matchData.date, pop);
-                    }
-                });
-            }
 
             // On Saturday only:
             const weekDay = dayjs().day() + 1;

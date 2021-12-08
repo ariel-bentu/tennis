@@ -72,9 +72,9 @@ export default function MyMatches({ UserInfo, notify, admin }) {
     }, [reload]);
 
     const handleBetsDone = (newMyBet) => {
-        setBets(_bets=>{
+        setBets(_bets => {
             let found = false;
-            const newBets = _bets.map(b=>{
+            const newBets = _bets.map(b => {
                 if (newMyBet && b.email === newMyBet.email && b.matchID === newMyBet.matchID) {
                     found = true;
                     if (newMyBet.amount === 0) {
@@ -83,7 +83,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                     } else {
                         return newMyBet;
                     }
-                    
+
                 } else {
                     return b;
                 }
@@ -92,8 +92,8 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                 newBets.push(newMyBet);
                 placeBets._numOfBets++;
             }
-            
-            return newBets.filter(b=>b !== undefined);
+
+            return newBets.filter(b => b !== undefined);
         });
         setPlaceBets(undefined);
     }
@@ -150,7 +150,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                                     <SmallText2 fontSize={14} textAlign="center">אין</SmallText2> : null}
                                 {/* <SmallText2 fontSize={18} textAlign="center">שאר המשחקים</SmallText2> */}
                                 {!showMineOnly && matches ? matches.map((match, i) => (
-                                    <OneGame key={i} match={match} setEdit={setEdit} showSetResults={admin === true || (myMatches && myMatches.find(mm=>mm._ref.id === match._ref.id))} notify={notify}
+                                    <OneGame key={i} match={match} setEdit={setEdit} showSetResults={admin === true || (myMatches && myMatches.find(mm => mm._ref.id === match._ref.id))} notify={notify}
                                         setPlaceBets={setPlaceBets} />)) : null}
                             </VBox>
                         : <Loading msg="טוען משחקים" />
@@ -165,25 +165,30 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
     return <Card>
         <SmallText color="gray">{match.Day + ", " + getNiceDate(match.date)}</SmallText>
         <HThinSeparator />
-        <HBox style={{width:'100%', justifyContent: "space-between"}}>
+        <HBox style={{ width: '100%', justifyContent: "space-between" }}>
             <VBox style={{ width: "20%" }}>
                 <AccessTime style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Hour}</SmallText2>
                 <Spacer height={10} />
-                <Cloud style={{ color: foreColor }}/>
-                <HBox>
-                    <SmallText2 textAlign="center">{match.pop != undefined && (Math.floor(match.pop*100) + "%")}</SmallText2>
-                    <Spacer width={10} />
-                    <SmallText2 textAlign="center">{match.temp != undefined && (Math.floor(match.temp) + "°")}</SmallText2>
-                </HBox>
+                <HBoxC style={{width:50}}>
+                    <Cloud style={{ color: foreColor }} />
+                    <SmallText2 textAlign="center">{match.isHourly ? "במשחק":"יומי"}</SmallText2>
+                </HBoxC>
+                {match.pop !== undefined && match.pop >= 0 &&
+                    <HBox>
+                        <SmallText2 textAlign="center">{(Math.floor(match.pop * 100) + "%")}</SmallText2>
+                        <Spacer width={10} />
+                        <SmallText2 textAlign="center">{(Math.floor(match.temp) + "°")}</SmallText2>
+                        
+                    </HBox>}
             </VBox>
-            
+
             <VBox style={{ width: "20%" }}>
                 <LocationOn style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Location}</SmallText2>
                 <SmallText2 textAlign="center">{match.Court}</SmallText2>
                 <Spacer height={12} />
-                
+
             </VBox>
             <VBox style={{ width: "60%" }}>
                 <HBox>
@@ -221,11 +226,11 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
             <HBox style={{ alignItems: "center" }}>
                 {
                     showSetResults ?
-                        [<SVGIcon key="1" svg="editResults" size={25}  onClick={() => setEdit(match)}  />,
+                        [<SVGIcon key="1" svg="editResults" size={25} onClick={() => setEdit(match)} />,
                         <Spacer key="2" width={20} />] : null
                 }
                 <div style={{ display: 'flex', alignItems: "center" }}>
-                <SVGIcon svg="bet" onClick={() => setPlaceBets(match)} size={20} style={{position:'relative', right:14}}/>
+                    <SVGIcon svg="bet" onClick={() => setPlaceBets(match)} size={20} style={{ position: 'relative', right: 14 }} />
                     {/* <img src={betPlus} onClick={() => setPlaceBets(match)} style={{position:'relative', right:14, width: 20, height: 20, stroke: "gold" }} /> */}
                     {match._numOfBets && match._numOfBets > 0 ? <SmallText2>{match._numOfBets}</SmallText2> : null}
                 </div>
