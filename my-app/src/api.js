@@ -147,8 +147,8 @@ export async function getUserInfo(user, pwd) {
         });
 }
 
-export async function changePwd(user,  newPwd) {
-    return updatePassword(user, newPwd).catch(err=>{
+export async function changePwd(user, newPwd) {
+    return updatePassword(user, newPwd).catch(err => {
         if (err.message.includes("auth/requires-recent-login")) {
             return new Error("יש לרענן את ההתחברות לפני שינוי הסיסמא. נא להתנתק ולהתחבר שוב, ואז לנסות בשנית");
         }
@@ -174,12 +174,12 @@ export async function getUserObj(user) {
             } else if (data.inactive) {
                 throw new Error("חשבונך אינו פעיל - יש לפנות למנהל המערכת");
             }
-            return { 
-                displayName: data.displayName, 
+            return {
+                displayName: data.displayName,
                 email: user.email.toLowerCase(),
                 _user: user,
-                _userInfo: data, 
-                pushNotification: data.pushNotification 
+                _userInfo: data,
+                pushNotification: data.pushNotification
             };
         },
             (err) => {
@@ -685,8 +685,12 @@ export async function setRegistrationOpen(isOpen) {
     return updateDoc(docRef, { open: isOpen });
 }
 
-export async function getDetailedStats(email) {
+export async function getDetailedStats(email, selectedYear) {
     // let db = firebase.firestore();
+    const year = () => dayjs().format("YYYY")
+    const yearSuffix = (selectedYear === year() ? "" : selectedYear);
+
+
     let matches = db.collection(Collections.MATCHES_ARCHIVE_COLLECTION);
 
     let queries = [
@@ -695,9 +699,18 @@ export async function getDetailedStats(email) {
         getDocs(query(matches, where("Player3.email", "==", email))),
         getDocs(query(matches, where("Player4.email", "==", email))),
     ];
+    console.log("selected year for filter", selectedYear)
+    const filterYears = (doc => {
+        const data = doc.data();
+        return data.date.startsWith(selectedYear)
+    });
+
     const stats = {};
     return Promise.all(queries).then(all => {
-        let allMatches = all[0].docs.concat(all[1].docs).concat(all[2].docs).concat(all[3].docs);
+        let allMatches = all[0].docs.filter(filterYears)
+            .concat(all[1].docs.filter(filterYears))
+            .concat(all[2].docs.filter(filterYears))
+            .concat(all[3].docs.filter(filterYears));
 
         allMatches.forEach(matchDoc => {
             const match = matchDoc.data();
@@ -717,30 +730,35 @@ export async function getDetailedStats(email) {
             if (!match.sets)
                 return;
 
+            const winsName = ["wins" + yearSuffix]
+            const losesName = ["loses" + yearSuffix]
+            const tiesName = ["ties" + yearSuffix]
+
+
             for (let i = 1; i <= 4; i++) {
                 if (match["Player" + i]) {
                     let winner = calcWinner(match);
                     let stat = stats[match["Player" + i].email];
                     if (stat === undefined) {
                         stat = {
-                            wins: 0,
-                            loses: 0,
-                            ties: 0,
+                            [winsName]: 0,
+                            [losesName]: 0,
+                            [tiesName]: 0,
                         }
                     }
                     if (winner === 0) {
-                        stat.ties++;
+                        stat[tiesName]++;
                     } else if (i >= 3) {
                         if (winner === 1) {
-                            stat.wins++;
+                            stat[winsName]++;
                         } else {
-                            stat.loses++;
+                            stat[losesName]++;
                         }
                     } else {
                         if (winner === 1) {
-                            stat.loses++;
+                            stat[losesName]++;
                         } else {
-                            stat.wins++;
+                            stat[winsName]++;
                         }
                     }
                     stats[match["Player" + i].email] = stat;
@@ -761,7 +779,7 @@ export async function getDetailedStats(email) {
 
 export async function getSMSBalance() {
     const smsBalanaceFunc = httpsCallable(functions, 'smsBalance');
-    return smsBalanaceFunc().then((res)=>res.data);
+    return smsBalanaceFunc().then((res) => res.data);
 }
 
 export async function placeBet(bet) {

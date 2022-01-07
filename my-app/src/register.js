@@ -81,15 +81,15 @@ export default function Register(props) {
     return game.Registered === true;
   }
 
-  const blockedByDebt = balInt< -2000;
+  const blockedByDebt = balInt < -500;
 
 
   let nowDirty = isDirty();
   return (
     <div style={{ height: '65vh', width: '100%' }}>
       <Spacer height={10} />
-      {!blockedByDebt && balInt< -500?<SmallText2 fontSize={18} textAlign="center" color="orange">{`יש לך חוב גבוה -  ${Math.abs(balInt)} ש״ח. נא להסדירו!`}</SmallText2>:null}
-      {blockedByDebt?<SmallText2 fontSize={18} textAlign="center" color="red">{`יש לך חוב גבוה מידי -  ${Math.abs(balInt)} ש״ח. אין אפשרות להירשם לפני הסדרתו!`}</SmallText2>:null}
+      {!blockedByDebt && balInt < -400 ? <SmallText2 fontSize={18} textAlign="center" color="orange">{`יש לך חוב גבוה -  ${Math.abs(balInt)} ש״ח. נא להסדירו!`}</SmallText2> : null}
+      {blockedByDebt ? <SmallText2 fontSize={18} textAlign="center" color="red">{`יש לך חוב גבוה מידי -  ${Math.abs(balInt)} ש״ח. אין אפשרות להירשם לפני הסדרתו!`}</SmallText2> : null}
       <Spacer height={10} />
       <Table >
         <TableHead>
@@ -98,7 +98,7 @@ export default function Register(props) {
             <MyTableCell width={'30%'}>יום</MyTableCell>
             <MyTableCell width={'25%'}>שעה</MyTableCell>
             {/* <MyTableCell width={'25%'}>נרשמו?</MyTableCell> */}
-            <MyTableCell width={'25%'}>גשם?</MyTableCell>
+            {/* <MyTableCell width={'25%'}>גשם?</MyTableCell> */}
           </TableRow>
 
         </TableHead>
@@ -119,7 +119,7 @@ export default function Register(props) {
               </MyTableCell>
               <MyTableCell >{game.Hour}</MyTableCell>
               {/* <MyTableCell >{(game.NumOfRegistered || 0) + (getChecked(game) ? 1 : 0)}</MyTableCell> */}
-              <MyTableCell >{game.pop !== undefined && game.pop >= 0 && ((Math.floor(game.pop*100) + "%"))}</MyTableCell>
+              {/* <MyTableCell >{game.pop !== undefined && game.pop >= 0 && ((Math.floor(game.pop*100) + "%"))}</MyTableCell> */}
             </TableRow>
           ))}
         </TableBody>
@@ -153,8 +153,8 @@ export default function Register(props) {
               setSubmitInProcess(false);
             }
           )
-        }}>{blockedByDebt? "חסום זמנית"
-          :registrationOpen ? (nowDirty ? "שלח" : "ללא שינוי") : "הרשמה סגורה"}</Button>
+        }}>{blockedByDebt ? "חסום זמנית"
+          : registrationOpen ? (nowDirty ? "שלח" : "ללא שינוי") : "הרשמה סגורה"}</Button>
 
     </div>
   );

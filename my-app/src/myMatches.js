@@ -170,9 +170,10 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets }) {
                 <AccessTime style={{ color: foreColor }} />
                 <SmallText2 textAlign="center">{match.Hour}</SmallText2>
                 <Spacer height={10} />
-                <HBoxC style={{width:50}}>
+                <HBoxC style={{width:58, justifyContent:"space-between"}}>
                     <Cloud style={{ color: foreColor }} />
-                    <SmallText2 textAlign="center">{match.isHourly ? "במשחק":"יומי"}</SmallText2>
+                    
+                    <SmallText2 textAlign={"center"}>{match.isHourly ? "משחק":"יומי"}</SmallText2>
                 </HBoxC>
                 {match.pop !== undefined && match.pop >= 0 &&
                     <HBox>

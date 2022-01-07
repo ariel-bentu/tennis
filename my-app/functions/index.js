@@ -843,6 +843,9 @@ const handleMatchResultsChange = (change) => {
                     if (!statDoc || !statDoc.exists) {
                         const docRef = db.collection("stats").doc(update.email);
                         batch.set(docRef, {
+                            loses2021: 0,
+                            ties2021: 0,
+                            wins2021: 0,
                             wins: update.win,
                             loses: update.lose,
                             ties: update.tie,
@@ -852,9 +855,14 @@ const handleMatchResultsChange = (change) => {
                     } else {
                         const data = statDoc.data();
                         batch.update(statDoc.ref, {
+                            wins2021: data.wins2021 + update.win,
+                            loses2021: data.loses2021 + update.lose,
+                            ties2021: data.ties2021 + update.tie,
+
                             wins: data.wins + update.win,
                             loses: data.loses + update.lose,
                             ties: data.ties + update.tie,
+
                             elo1: data.elo1 === undefined ? 1500 + elo1Update : data.elo1 + elo1Update,
                             elo2: data.elo2 === undefined ? 1500 + elo2Update : data.elo2 + elo2Update,
                         });

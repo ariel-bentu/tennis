@@ -3,7 +3,7 @@ import './App.css';
 import * as React from 'react';
 import {
     CircularProgress, TableCell, Box, Paper, InputBase,
-    Switch, Typography, TextField
+    Switch, Typography, TextField, FormControl, InputLabel, Select, MenuItem
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import SportsBaseballSharpIcon from '@material-ui/icons/SportsBaseballSharp';
@@ -153,7 +153,7 @@ export function SVGIcon(props) {
         default:
     }
 
-    return <img src={src} alt="" {...props} style={{ ...props.style, height: props.size, width: props.size }}  />
+    return <img src={src} alt="" {...props} style={{ ...props.style, height: props.size, width: props.size }} />
 }
 
 export function Card(props) {
@@ -179,11 +179,11 @@ export function VBox(props) {
         {props.children}
     </Box>
 }
-export const VBoxC = (props) => (<VBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} >{props.children}</VBox>);
+export const VBoxC = (props) => (<VBox style={{ alignItems: "center", justifyContent: "center", width: "100%", ...props.style }} >{props.children}</VBox>);
 
 
-export const HBoxC = (props) => (<HBox style={{alignItems:"center", justifyContent: "center", width:"100%", ...props.style}} >{props.children}</HBox>);
-export const HBoxSB = (props) => (<HBox style={{alignItems:"center", justifyContent: "space-between", width:"100%", ...props.style}} >{props.children}</HBox>);
+export const HBoxC = (props) => (<HBox style={{ alignItems: "center", justifyContent: "center", width: "100%", ...props.style }} >{props.children}</HBox>);
+export const HBoxSB = (props) => (<HBox style={{ alignItems: "center", justifyContent: "space-between", width: "100%", ...props.style }} >{props.children}</HBox>);
 
 
 export function HBox(props) {
@@ -223,6 +223,21 @@ export function Loading(props) {
         <CircularProgress /><Text fontSize={35} textAlign={"center"}>{props.msg}</Text>
     </div>
 }
+
+export const Picker = (props) => {
+    return (<FormControl fullWidth>
+        {props.name &&<InputLabel >{props.name}</InputLabel>}
+        <Select
+            native={false}
+            value={props.value}
+            label={props.value}
+            onChange={(event)=>props.onChange(event.target.value)}
+        >
+            {props.values.map((val,i)=> <MenuItem key={i} value={val}>{val}</MenuItem>)}
+        </Select>
+    </FormControl>)
+}
+
 
 export const IOSSwitch = withStyles((theme) => ({
     root: {

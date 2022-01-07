@@ -1,10 +1,45 @@
 
-- singles do not change stats
 
 # Security
 - (low)remove read systemInfo for non-admin (for registration-open)
 
 # features
-- new year (XL, high)
-- who to play with
-- bets
+
+
+New Year:
+--------
+- two boards: 1 continue, 1 new. 
+  - hilo also zero, but second for shibutz
+- picker for last year
+- add year to old games
+
+
+- singles do not change stats
+
+
+bet:
+ - no visibility who on whom
+ - show total bet and total people
+ - show tokens of all
+ - initial: 400, bet: 50, 100. game give: 100, double or nothing
+
+Replacements:
+- sms to anyone not playing that day + admins
+- list of replacements needed
+- first come, replacing the requester. admins get notified
+- replacing exactly the same place 
+- sms on replacement to players - add "NOT Final"
+
+
+- Add details for debt screen
+
+- add hide field to stats table and filter in the UI
+
+
+Shabat: 18, 20 - send sms to those who did not register, about unfull games.
+
+Remove "Rain" in registration
+add winds
+*space between cloud and "במשחק"
+
+
