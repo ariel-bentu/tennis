@@ -1596,19 +1596,25 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                         waitFor2.push(reg.ref.delete());
                     }
 
-                    return Promise.all(waitFor2).then(all2 => {
-                        const activeUsers = all2[0].docs.filter(uDoc => {
-                            const userInfo = all2[1].docs.find(uiDoc => uiDoc.ref.id === uDoc.ref.id);
-                            return userInfo && !userInfo.inactive;
-                        });
-                        const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(uDoc.data().email));
-                        const phonesToNotify = usersToNotify.map(uDoc => uDoc.data().phone);
-                        const matchData = matchDoc.data();
+                    return isMatchEventsOn().then(eventsOn => {
+                        if (!eventsOn) {
+                            functions.logger.info("matchUpdated: Events are off - skipping event");
+                            return;
+                        }
 
-                        functions.logger.info("Message to all users who don't play", JSON.stringify(usersToNotify));
+                        return Promise.all(waitFor2).then(all2 => {
+                            const activeUsers = all2[0].docs.filter(uDoc => {
+                                const userInfo = all2[1].docs.find(uiDoc => uiDoc.ref.id === uDoc.ref.id);
+                                return userInfo && !userInfo.inactive;
+                            });
+                            const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(uDoc.data().email));
+                            const phonesToNotify = usersToNotify.map(uDoc => uDoc.data().phone);
+                            const matchData = matchDoc.data();
 
-                        const waitFor3 = [
-                            sendSMS(`החלפה!
+                            functions.logger.info("Message to all users who don't play", JSON.stringify(usersToNotify));
+
+                            const waitFor3 = [
+                                sendSMS(`החלפה!
                             ${matchData["Player" + requesterIndex].displayName} מחפש מחליף.
                             ביום ${matchData.Day}, ${getNiceDate(matchData.date)} ב- ${matchData.Hour} ב${matchData.Location} במגרש ${matchData.Court}.
 
@@ -1617,22 +1623,98 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                             לצפיה במשחק כנס לאפליקציה.
                             https://tennis.atpenn.com#1
                             טניס טוב!`, phonesToNotify),
-                        ];
+                            ];
 
-                        const adminsPhones = all2[2].docs.filter(admin => admin.data().notifyChanges).map(admin => {
-                            const adminUser = all2[0].docs.find(uDoc => uDoc.ref.id === admin.ref.id);
-                            return adminUser.data().phone;
-                        });
+                            const adminsPhones = all2[2].docs.filter(admin => admin.data().notifyChanges).map(admin => {
+                                const adminUser = all2[0].docs.find(uDoc => uDoc.ref.id === admin.ref.id);
+                                return adminUser.data().phone;
+                            });
 
-                        waitFor3.push(
-                            sendSMS(`מנהל יקר - בקשת החלפה!
+                            waitFor3.push(
+                                sendSMS(`מנהל יקר - בקשת החלפה!
 ${matchData["Player" + requesterIndex].displayName} מחפש מחליף.
 הודעה נשלחה לכל מי שעדיין לא משחק`, adminsPhones),
-                        );
+                            );
 
-                        return Promise.all(waitFor3);
+                            return Promise.all(waitFor3);
+                        });
                     });
                 }
             });
+        });
+    });
+
+exports.regstrationCreated = functions.region("europe-west1").firestore
+    .document("registrations/{regId}")
+    .onCreate((snapshot, context) => {
+        const gameID = snapshot.data().GameID;
+        const email = snapshot.data().email;
+
+        // Get the match
+        return db.collection("replacement-requests").get().then(repRequests => {
+            for (let i = 0; i < repRequests.docs.length; i++) {
+                if (repRequests.docs[i].data().gameID === gameID && !repRequests.docs[i].data().fulfilled) {
+                    const requesterEmail = repRequests.docs[i].data().email;
+
+                    // fetch the match
+                    return db.collection("matches").doc(repRequests.docs[i].data().matchID).get().then(matchDoc => {
+                        // Find which Player index requested the change
+                        let requesterIndex = -1;
+                        for (let i = 1; i <= 4; i++) {
+                            if (matchDoc.data()["Player" + i] && matchDoc.data()["Player" + i].email === requesterEmail) {
+                                // register user is playing in this match
+                                requesterIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (requesterIndex === -1) {
+                            // not found in this match
+                            return;
+                        }
+
+                        return db.collection("matches").where("date", "==", matchDoc.data().date).get().then(matches => {
+                            const doesNotPlay = (email) => {
+                                const match = matches.docs.find(mDoc => {
+                                    const matchData = mDoc.data();
+                                    for (let i = 1; i <= 4; i++) {
+                                        if (matchData["Player" + i] && matchData["Player" + i].email === email) {
+                                            // user is playing in this match
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                });
+
+                                // only those who are not in any match
+                                return match === undefined;
+                            };
+
+                            if (doesNotPlay(email)) {
+                                // fetch the displayName of the replacer
+
+                                return db.collection("users").doc(email).get().then(userDoc => {
+                                    const batch = db.batch();
+                                    const updatedData = {
+                                        ["Player" + requesterIndex]: {
+                                            email: email,
+                                            displayName: userDoc.data().displayName,
+                                        },
+                                        autoMatch: true,
+                                        replacementFor: {
+                                            email: requesterEmail,
+                                            displayName: matchDoc.data()["Player" + requesterIndex].displayName,
+                                        },
+                                    };
+                                    batch.update(matchDoc.ref, updatedData);
+
+                                    batch.update(repRequests.docs[i].ref, { fulfilled: true });
+                                    return batch.commit();
+                                });
+                            }
+                        });
+                    });
+                }
+            }
         });
     });

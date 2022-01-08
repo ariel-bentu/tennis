@@ -809,6 +809,7 @@ export async function requestReplacement(userInfo, match, requestActive) {
             return setDoc(docRef, {
                 ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                 email: userInfo.email,
+                gameID: match.GameID,
                 matchID: match._ref.id,
             })
         }
