@@ -98,6 +98,7 @@ export default function Match(props) {
                 let uStat = all[5].find(u1 => u1._ref.id === u.email);
                 if (uStat) {
                     u.elo1 = uStat.elo1;
+                    u.elo2 = uStat.elo2;
                 }
 
 

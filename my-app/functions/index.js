@@ -117,7 +117,7 @@ https://tennis.atpenn.com
 
 const inThePast = (d, afterBy) => dayjs().subtract(afterBy === undefined ? 1 : afterBy, "day").isAfter(dayjs(d));
 
-const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) => {
+const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4, autoMatch) => {
     const missing = !p1 || !p2 || !p3 || !p4;
 
     let team = "";
@@ -149,6 +149,7 @@ const getUpdatedMsg = (name, day, date, location, hour, court, p1, p2, p3, p4) =
 ביום ${day}, ${getNiceDate(date)} ב- ${hour} ב${location} במגרש ${court}.
 ${team}
 
+${autoMatch ? "השיבוץ עדיין אינו סופי" : ""}
 לצפיה במשחקים שלך כנס לאפליקציה.
 https://tennis.atpenn.com
 טניס טוב!`;
@@ -498,12 +499,24 @@ exports.openWeekNew = functions.region("europe-west1").pubsub
     .onRun((context) => {
         const batch = db.batch();
 
-        return db.collection("registrations").get().then(regs => {
+        const waitFor = [
+            db.collection("registrations").get(),
+            db.collection("replacement-requests").get(),
+        ];
+
+        return Promise.all(waitFor).then(all => {
             // Move to archive
-            regs.docs.forEach((reg) => {
+            all[0].docs.forEach((reg) => {
                 const docRef = db.collection("registrations-archive").doc(reg.ref.id);
                 batch.set(docRef, reg.data());
                 batch.delete(reg.ref);
+            });
+
+            all[1].docs.forEach((repReq) => {
+                // todo - handle games that did not yet happen??
+                const docRef = db.collection("replacement-requests-archive").doc(repReq.ref.id);
+                batch.set(docRef, repReq.data());
+                batch.delete(repReq.ref);
             });
 
             return batch.commit().then(() => {
@@ -573,7 +586,8 @@ const handleMatchResultsChange = (change) => {
         const dataBefore = change.before.data();
         const dataAfter = change.after.data();
 
-        if (dataAfter.matchCancelled) {
+        if (dataAfter.matchCancelled && dataAfter.Player2 === undefined) {
+            // cancelled or singles
             resolve(true); // results exists (cancelled) - archive it
             return;
         }
@@ -981,9 +995,13 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                         if (change.after.exists) {
                             if (change.before.exists) {
                                 adminMsg += "משחק התעדכן:\n";
+                                if (change.after.replacementFor) {
+                                    adminMsg += `עידכון אוטומטי עקב בקשת החלפה של ${change.after.replacementFor.displayName}\n`;
+                                }
                             } else {
                                 adminMsg += "משחק חדש:\n";
                             }
+
                             // all players receive a change notification
                             for (let i = 1; i <= 4; i++) {
                                 const p = change.after.data()["Player" + i];
@@ -1046,7 +1064,7 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                                                         dataAfter.date, dataAfter.Location, dataAfter.Hour,
                                                         dataAfter.Court,
                                                         dataAfter.Player1, dataAfter.Player2,
-                                                        dataAfter.Player3, dataAfter.Player4),
+                                                        dataAfter.Player3, dataAfter.Player4, dataAfter.autoMatch),
                                                     [user.phone]);
                                                 sendSMSArray.push(ret);
                                                 if (!adminHeader) {
@@ -1467,5 +1485,154 @@ exports.getWeather = functions.region("europe-west1").pubsub
             });
 
             return batch.commit();
+        });
+    });
+
+
+exports.replacementRequest = functions.region("europe-west1").firestore
+    .document("replacement-requests/{reqId}")
+    .onCreate((snapshot, context) => {
+        const matchID = snapshot.data().matchID;
+        const email = snapshot.data().email;
+
+        // Get the match
+        return db.collection("matches").doc(matchID).get().then(matchDoc => {
+            if (!matchDoc.exists) {
+                return;
+            }
+
+            // Find which Player index requested the change
+            let requesterIndex = -1;
+            for (let i = 1; i <= 4; i++) {
+                if (matchDoc.data()["Player" + i] && matchDoc.data()["Player" + i].email === email) {
+                    // register user is playing in this match
+                    requesterIndex = i;
+                    break;
+                }
+            }
+
+            if (requesterIndex === -1) {
+                // not found in this match
+                return;
+            }
+
+            const waitFor = [
+                db.collection("registrations").get(),
+                db.collection("planned-games").get(),
+                // get all matches on the same date
+                db.collection("matches").where("date", "==", matchDoc.data().date).get(),
+            ];
+
+            return Promise.all(waitFor).then(all => {
+                const doesNotPlay = (email) => {
+                    const match = all[2].docs.find(mDoc => {
+                        const matchData = mDoc.data();
+                        for (let i = 1; i <= 4; i++) {
+                            if (matchData["Player" + i] && matchData["Player" + i].email === email) {
+                                // user is playing in this match
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+
+                    // only those who are not in any match
+                    return match === undefined;
+                };
+
+
+                // find out if there is a registered person not playing
+                let registeredUsers = all[0].docs.filter(ru => ru.data().GameID === matchDoc.data().GameID);
+                registeredUsers = registeredUsers.filter(ru => doesNotPlay(ru.data().email));
+
+                if (registeredUsers.length > 0) {
+                    //   if yes - replace and notification will occur on a different function
+
+                    // found registered users to replace
+                    // Look for the one who registered first
+                    let firstRegistered = registeredUsers[0];
+                    for (let i = 1; i < registeredUsers.length; i++) {
+                        if (registeredUsers[i].date < firstRegistered.date) {
+                            firstRegistered = registeredUsers[i];
+                        }
+                    }
+
+                    // fetch the displayName of the replacer
+                    return db.collection("users").doc(firstRegistered.data().email).get().then(userDoc => {
+                        const batch = db.batch();
+                        const updatedData = {
+                            ["Player" + requesterIndex]: {
+                                email: firstRegistered.data().email,
+                                displayName: userDoc.data().displayName,
+                            },
+                            autoMatch: true,
+                            replacementFor: {
+                                email,
+                                displayName: matchDoc.data()["Player" + requesterIndex].displayName,
+                            },
+                        };
+                        batch.update(matchDoc.ref, updatedData);
+
+                        batch.update(snapshot.ref, { fulfilled: true });
+
+                        // delete the registration for this user
+                        const reg = all[0].docs.find(regDoc => regDoc.data().email === email && regDoc.data().GameID == matchDoc.data().GameID);
+                        if (reg) {
+                            batch.delete(reg.ref);
+                        }
+                        return batch.commit();
+                    });
+                } else {
+                    //   if no - notify all users who do not play that day + admin
+                    const waitFor2 = [
+                        db.collection("users").get(),
+                        db.collection("users-info").get(),
+                        db.collection("admins").get(),
+                    ];
+
+                    // delete the registration for this user
+                    const reg = all[0].docs.find(regDoc => regDoc.data().email === email && regDoc.data().GameID == matchDoc.data().GameID);
+                    if (reg) {
+                        waitFor2.push(reg.ref.delete());
+                    }
+
+                    return Promise.all(waitFor2).then(all2 => {
+                        const activeUsers = all2[0].docs.filter(uDoc => {
+                            const userInfo = all2[1].docs.find(uiDoc => uiDoc.ref.id === uDoc.ref.id);
+                            return userInfo && !userInfo.inactive;
+                        });
+                        const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(uDoc.data().email));
+                        const phonesToNotify = usersToNotify.map(uDoc => uDoc.data().phone);
+                        const matchData = matchDoc.data();
+
+                        functions.logger.info("Message to all users who don't play", JSON.stringify(usersToNotify));
+
+                        const waitFor3 = [
+                            sendSMS(`החלפה!
+                            ${matchData["Player" + requesterIndex].displayName} מחפש מחליף.
+                            ביום ${matchData.Day}, ${getNiceDate(matchData.date)} ב- ${matchData.Hour} ב${matchData.Location} במגרש ${matchData.Court}.
+
+                            אם ברצונך להחליף, פשוט כנס לאפליקציה והרשם לאותו יום בלשונית הרישום
+
+                            לצפיה במשחק כנס לאפליקציה.
+                            https://tennis.atpenn.com#1
+                            טניס טוב!`, phonesToNotify),
+                        ];
+
+                        const adminsPhones = all2[2].docs.filter(admin => admin.data().notifyChanges).map(admin => {
+                            const adminUser = all2[0].docs.find(uDoc => uDoc.ref.id === admin.ref.id);
+                            return adminUser.data().phone;
+                        });
+
+                        waitFor3.push(
+                            sendSMS(`מנהל יקר - בקשת החלפה!
+${matchData["Player" + requesterIndex].displayName} מחפש מחליף.
+הודעה נשלחה לכל מי שעדיין לא משחק`, adminsPhones),
+                        );
+
+                        return Promise.all(waitFor3);
+                    });
+                }
+            });
         });
     });

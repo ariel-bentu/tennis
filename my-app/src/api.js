@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app'
 import {
     getFirestore, collection, getDocs, getDoc, doc,
     query, where, orderBy, limit, startAfter,
-    updateDoc, setDoc,
+    updateDoc, setDoc, deleteDoc,
     writeBatch
 } from 'firebase/firestore/lite';
 
@@ -31,7 +31,8 @@ export const Collections = {
     USERS_INFO_COLLECTION: "users-info",
     SYSTEM_INFO: "systemInfo",
     REGISTRATION_ARCHIVE_COLLECTION: "registrations-archive",
-    MATCHES_ARCHIVE_COLLECTION: "matches-archive"
+    MATCHES_ARCHIVE_COLLECTION: "matches-archive",
+    REPLACEMENTS_REQUEST_COLLECTION: "replacement-requests",
 }
 
 
@@ -373,7 +374,7 @@ export async function getUserBalance(email) {
     let docRef = doc(db, Collections.BILLING_COLLECTION, email);
 
     return getDoc(docRef).then(doc => {
-        if (doc.exists) {
+        if (doc.exists()) {
             let data = doc.data();
             let initialBalance = data.initialBalance ? data.initialBalance : 0;
             return data.balance + initialBalance;
@@ -560,6 +561,12 @@ function cleanseMatch(m) {
     else
         newMatch.Player4 = cleansePlayer(newMatch.Player4)
 
+    if (newMatch.autoMatch)
+        delete newMatch.autoMatch;
+
+    if (newMatch.replacementFor)
+        delete newMatch.replacementFor;
+
     return newMatch;
 }
 
@@ -675,7 +682,7 @@ export async function setBallsAmount(email, curr, delta) {
 export async function getRegistrationOpen() {
     let docRef = doc(db, Collections.SYSTEM_INFO, SYSTEM_RECORD_REGISTRATION);
     return getDoc(docRef).then(doc => {
-        return doc.exists && doc.data().open
+        return doc.exists() && doc.data().open
     })
 
 }
@@ -789,4 +796,22 @@ export async function placeBet(bet) {
     const placeBetFunction = httpsCallable(functions, 'placeBet');
 
     return placeBetFunction(bet);
+}
+
+export async function requestReplacement(userInfo, match, requestActive) {
+    let docRef = doc(db, Collections.REPLACEMENTS_REQUEST_COLLECTION, (userInfo.email + match._ref.id));
+    return getDoc(docRef).then(doc => {
+        if (doc.exists() && !requestActive) {
+            return deleteDoc(doc.ref);
+        } 
+
+        if (!doc.exists() && requestActive) {
+            return setDoc(docRef, {
+                ts: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                email: userInfo.email,
+                matchID: match._ref.id,
+            })
+        }
+    })
+
 }

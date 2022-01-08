@@ -78,6 +78,8 @@ export default function Board({ UserInfo, notify }) {
 
                     let _stats = enrichStats(all[0], all[1], SortByWinsComp);
 
+                    // filter hidden users
+                    _stats = _stats.filter(s=>!s.hidden);
 
                     setStats(_stats);
 

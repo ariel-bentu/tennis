@@ -7,6 +7,7 @@ import {
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import SportsBaseballSharpIcon from '@material-ui/icons/SportsBaseballSharp';
+import { FindReplace } from '@material-ui/icons';
 
 
 export function Spacer(props) {
@@ -66,6 +67,11 @@ export const getBallsIndicator = (player, inMatch) => player && player.balls && 
         </div>
     </VBox>) :
     null
+
+export const getReplacementIndicator = (player) => player?._activeReplacementRequest && (
+    <VBox style={{ alignContent: "center" }}>
+        <FindReplace style={{ color: 'red', fontSize: 25 }} />
+    </VBox>)
 
 export function BoxInput(props) {
     return <div className="Sunken" style={{
@@ -150,6 +156,12 @@ export function SVGIcon(props) {
         case "bet":
             src = require("./bet.svg").default;
             break;
+        case "replacementRequest":
+            src = require("./replacement.svg").default;
+            break;
+        case "cancelReplacementRequest":
+            src = require("./replacementCancel.svg").default;
+            break;
         default:
     }
 
@@ -226,14 +238,14 @@ export function Loading(props) {
 
 export const Picker = (props) => {
     return (<FormControl fullWidth>
-        {props.name &&<InputLabel >{props.name}</InputLabel>}
+        {props.name && <InputLabel >{props.name}</InputLabel>}
         <Select
             native={false}
             value={props.value}
             label={props.value}
-            onChange={(event)=>props.onChange(event.target.value)}
+            onChange={(event) => props.onChange(event.target.value)}
         >
-            {props.values.map((val,i)=> <MenuItem key={i} value={val}>{val}</MenuItem>)}
+            {props.values.map((val, i) => <MenuItem key={i} value={val}>{val}</MenuItem>)}
         </Select>
     </FormControl>)
 }
