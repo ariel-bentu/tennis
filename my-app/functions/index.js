@@ -995,8 +995,12 @@ exports.matchUpdated = functions.region("europe-west1").firestore
                         if (change.after.exists) {
                             if (change.before.exists) {
                                 adminMsg += "משחק התעדכן:\n";
-                                if (change.after.replacementFor) {
-                                    adminMsg += `עידכון אוטומטי עקב בקשת החלפה של ${change.after.replacementFor.displayName}\n`;
+                                if (change.after.autoMatch) {
+                                    if (change.after.replacementFor) {
+                                        adminMsg += `עידכון אוטומטי עקב בקשת החלפה של ${change.after.replacementFor.displayName}\n`;
+                                    } else {
+                                        adminMsg += "עידכון אוטומטי - שחקן נרשם ושובץ למשחק חסר\n";
+                                    }
                                 }
                             } else {
                                 adminMsg += "משחק חדש:\n";
@@ -1718,3 +1722,168 @@ exports.regstrationCreated = functions.region("europe-west1").firestore
             }
         });
     });
+
+const mapWeekDay2GameID = {
+    0: 1, // Sunday
+    1: 6, // Monday
+    2: 2, // Tuesday
+    3: 7, // Wednesday
+    4: 3, // Thursday
+    5: 4, // Friday
+    6: 5, // Saturday
+};
+
+exports.NudjeForPartialMatches = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("01 10,14 * * *")
+    .timeZone("Asia/Jerusalem")
+    .onRun(async (context) => {
+        const waitFor = [
+            db.collection("registrations").get(),
+            db.collection("matches").where("date", "==", dayjs().format(dateFormat)).get(),
+            db.collection("replacement-requests").get(),
+        ];
+
+        const all = await Promise.all(waitFor);
+        const regs = all[0].docs;
+        const matches = all[1].docs;
+        const repReq = all[2].docs;
+
+        const todaysGameID = mapWeekDay2GameID[dayjs().day()];
+        const openReplacements = repReq.filter(r => !r.data().fulfilled && matches.find(m => m.ref.id === r.data().matchID));
+
+        const todaysRegs = regs.filter(r => r.data().GameID === todaysGameID);
+
+        const regsNotPlaying = [];
+        todaysRegs.forEach(reg => {
+            if (doesNotPlay(matches, reg.data().email)) {
+                regsNotPlaying.push(reg);
+            }
+        });
+
+        // look for uncomplete matches
+        const uncompleteMatches = matches.filter(match => {
+            const matchData = match.data();
+            return (matchData.Player1 && matchData.Player2 && matchData.Player3 && matchData.Player4) ||
+                // Singles
+                (matchData.Player1 && !matchData.Player2 && matchData.Player3 && !matchData.Player4);
+        });
+
+        const waitFor2 = [];
+        // Try to auto match
+        if (uncompleteMatches.length > 0 && regsNotPlaying.length > 0) {
+            const users = await db.collection("users").get();
+            const batch = db.batch();
+            let playersCount = 0;
+            for (let m = uncompleteMatches.length - 1; m >= 0; m--) {
+                for (let i = 1; i <= 4; i++) {
+                    if (uncompleteMatches[m].data()["Player" + i] === undefined) {
+                        if (regsNotPlaying.length > 0) {
+                            // Extract displayName for replacement
+                            const userDoc = users.docs.find(u => u.ref.id === regsNotPlaying[regsNotPlaying.length - 1].email);
+                            if (userDoc) {
+                                batch.update(uncompleteMatches[m].ref, {
+                                    ["Player" + i]: {
+                                        email: regsNotPlaying[regsNotPlaying.length - 1].email,
+                                        displayName: userDoc.data().displayName,
+                                    },
+                                    autoMatch: true,
+                                });
+                                regsNotPlaying.pop();
+                                playersCount++;
+                            }
+                        }
+                    } else {
+                        playersCount++;
+                    }
+                }
+                if (playersCount === 4) {
+                    uncompleteMatches.pop();
+                }
+            }
+            waitFor2.push(batch.commit());
+        }
+
+
+        if (regsNotPlaying.length % 4 > 1 || openReplacements.length > 0 || uncompleteMatches.length > 0) {
+            let missing = 0;
+            if (uncompleteMatches.length > 0) {
+                missing = uncompleteMatches.length;
+            } else {
+                missing = 4 - (regsNotPlaying.length % 4);
+            }
+
+            const msg = `חסר שחקן.ים להיום!
+    חסר עוד ${missing}, מי נרשם?
+    https://tennis.atpenn.com#0`;
+            let msgAdmin = `מנהל קבוצה יקר - נשלח דירבון לרישום להיום!
+    חסר עוד ${missing}.
+    `;
+            if (uncompleteMatches.length > 0 && regsNotPlaying.length > 0) {
+                msgAdmin += `שים לב שיש ${regsNotPlaying.length} שחקנים שנרשמו שטרם שובצו
+`;
+            }
+            const mailsOfRegNoPlaying = regsNotPlaying.map(rnp => rnp.data().email);
+            waitFor2.push(notifyThoseWhoAreNotPlaying(matches, mailsOfRegNoPlaying, msg, msgAdmin));
+        }
+        return await Promise.all(waitFor2);
+    });
+
+const doesNotPlay = (matches, email) => {
+    const match = matches.find(mDoc => {
+        const matchData = mDoc.data();
+        for (let i = 1; i <= 4; i++) {
+            if (matchData["Player" + i] && matchData["Player" + i].email === email) {
+                // user is playing in this match
+                return true;
+            }
+        }
+        return false;
+    });
+
+    // only those who are not in any match
+    return match === undefined;
+};
+
+
+const notifyThoseWhoAreNotPlaying = (matches, excludeMails, msg, adminMsg) => {
+    const waitFor = [
+        db.collection("users").get(),
+        db.collection("users-info").get(),
+        db.collection("admins").get(),
+        isMatchEventsOn(),
+    ];
+
+    return Promise.all(waitFor).then(all => {
+        if (!all[3]) {
+            // Events are off
+            return;
+        }
+        const users = all[0].docs;
+        const usersInfo = all[1].docs;
+        const admins = all[2].docs;
+
+        const activeUsers = users.filter(uDoc => {
+            const userInfo = usersInfo.find(uiDoc => uiDoc.ref.id === uDoc.ref.id);
+            return userInfo && !userInfo.inactive;
+        });
+
+        const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(matches, uDoc.data().email));
+        const phonesToNotify = usersToNotify
+            .filter(uDoc => !excludeMails.includes(uDoc.ref.id))
+            .map(uDoc => uDoc.data().phone);
+
+        const adminsPhones = admins.filter(admin => admin.data().notifyChanges).map(admin => {
+            const adminUser = users.find(uDoc => uDoc.ref.id === admin.ref.id);
+            return adminUser.data().phone;
+        });
+
+
+        const waitForMsgs = [
+            sendSMS(msg, phonesToNotify),
+            sendSMS(adminMsg, adminsPhones),
+        ];
+
+        return Promise.all(waitForMsgs);
+    });
+};
