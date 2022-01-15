@@ -110,7 +110,7 @@ function RecreateStats(year) {
             batch.update(statRef.ref, update);
         });
         batch.commit();
-        console.log("done", statUpdates)
+        console.log("done", JSON.stringify(statUpdates, undefined, "  "))
 
     });
 
@@ -118,7 +118,7 @@ function RecreateStats(year) {
 
 
 // Actual work:
-//RecreateStats("2022")
+RecreateStats("2022")
 
 
 

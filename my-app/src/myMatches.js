@@ -39,16 +39,18 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                     let myM = filterByPlayer(mtchs, UserInfo.email);
                     setMyMatches(myM);
 
-                    api.getCollectionWithWhere(api.Collections.BETS_COLLECTION,
-                        "matchID", "in", mtchs.map(u => u._ref.id)).then(_bets => {
-                            // add numOfBets per game
-                            mtchs.forEach(m => {
-                                const matchBets = _bets.filter(bet => bet.matchID === m._ref.id);
-                                m._numOfBets = matchBets.length;
-                            })
+                    if (mtchs?.length > 0) {
+                        api.getCollectionWithWhere(api.Collections.BETS_COLLECTION,
+                            "matchID", "in", mtchs.map(u => u._ref.id)).then(_bets => {
+                                // add numOfBets per game
+                                mtchs.forEach(m => {
+                                    const matchBets = _bets.filter(bet => bet.matchID === m._ref.id);
+                                    m._numOfBets = matchBets.length;
+                                })
 
-                            setBets(_bets);
-                        });
+                                setBets(_bets);
+                            });
+                    }
 
                     api.getCollection(api.Collections.REPLACEMENTS_REQUEST_COLLECTION).then(replacements => {
                         setReplacementsRequests(replacements);

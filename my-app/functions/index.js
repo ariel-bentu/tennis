@@ -586,7 +586,7 @@ const handleMatchResultsChange = (change) => {
         const dataBefore = change.before.data();
         const dataAfter = change.after.data();
 
-        if (dataAfter.matchCancelled && dataAfter.Player2 === undefined) {
+        if (dataAfter.matchCancelled || dataAfter.Player2 === undefined) {
             // cancelled or singles
             resolve(true); // results exists (cancelled) - archive it
             return;
@@ -1612,7 +1612,8 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                                 return userInfo && !userInfo.inactive;
                             });
                             const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(uDoc.data().email));
-                            const phonesToNotify = usersToNotify.map(uDoc => uDoc.data().phone);
+                            const phonesToNotify = usersToNotify.map(uDoc => uDoc.data().phone)
+                                .filter(phone => phone && phone.length > 0);
                             const matchData = matchDoc.data();
 
                             functions.logger.info("Message to all users who don't play", JSON.stringify(usersToNotify));
@@ -1871,7 +1872,8 @@ const notifyThoseWhoAreNotPlaying = (matches, excludeMails, msg, adminMsg) => {
         const usersToNotify = activeUsers.filter(uDoc => doesNotPlay(matches, uDoc.data().email));
         const phonesToNotify = usersToNotify
             .filter(uDoc => !excludeMails.includes(uDoc.ref.id))
-            .map(uDoc => uDoc.data().phone);
+            .map(uDoc => uDoc.data().phone)
+            .filter(phone => phone && phone.length > 0);
 
         const adminsPhones = admins.filter(admin => admin.data().notifyChanges).map(admin => {
             const adminUser = users.find(uDoc => uDoc.ref.id === admin.ref.id);

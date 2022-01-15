@@ -142,6 +142,8 @@ let App = props => {
           uo => {
             setUserInfo(uo);
             if (uo) {
+              api.isAdmin().then(setAdmin);
+
               setPushNotification(uo.pushNotification);
 
               if (uo.pushNotification === undefined) {
@@ -174,7 +176,6 @@ let App = props => {
                   )
                 }, 3000);
               }
-              api.isAdmin().then(setAdmin);
               api.getUserBalance(uo.email).then(bal => setUserBalance(bal));
             }
           },
