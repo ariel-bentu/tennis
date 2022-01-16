@@ -9,8 +9,8 @@ import {
     KeyboardDatePicker,
 
 } from '@material-ui/pickers';
-import dayjs from 'dayjs'
-
+import dayjs from 'dayjs';
+import './match.css';
 
 import {
     Spacer, Card, Loading, HBox, VBox, Text, SmallText,
@@ -243,6 +243,7 @@ export default function Match(props) {
     >+</Button>
 
     const saveButton = <Button
+        className={dirty ? "blink-bg" : ""}
         style={{ fontSize: 15, height: '1.5rem', width: '3rem' }}
         size={"large"}
 
@@ -461,9 +462,12 @@ export default function Match(props) {
                                                         onClick={() => updateMatchValue(match.id, { _collapse: !match._collapse }, true)} />
                                                     {!match._collapse && <Delete style={{ color: foreColor }}
                                                         onClick={() => {
-                                                            props.notify.ask("האם למחוק משחקון זה?", "מחיקה", [
+                                                            props.notify.ask(
+                                                                "האם למחוק משחקון?\n(גם לאחר אישור יש ללחוץ על שמור)",
+                                                                "מחיקה",
+                                                                [
                                                                 {
-                                                                    caption: "מחק",
+                                                                    caption: "אישור",
                                                                     callback: () => updateMatchValue(match.id, { deleted: true })
                                                                 },
                                                                 { caption: "בטל", callback: () => { } }

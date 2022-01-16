@@ -4,6 +4,7 @@
 - (low)remove read systemInfo for non-admin (for registration-open)
 
 # features
+- add winds
 
 
 *New Year:
@@ -24,16 +25,16 @@ bet:
  - initial: 400, bet: 50, 100. game give: 100, double or nothing
 
 Replacements:
-- sms to anyone not playing that day + admins
-- list of replacements needed (maybe this is enough?)
-- first come, replacing the requester. admins get notified
-- replacing exactly the same place 
-- sms on replacement to players - add "NOT Final"
+*- sms to anyone not playing that day + admins
+*- list of replacements needed (maybe this is enough?)
+*- first come, replacing the requester. admins get notified
+*- replacing exactly the same place 
+*- sms on replacement to players - add "NOT Final"
 
 
 - Add details for debt screen
-Shabat: 18, 20 - send sms to those who did not register, about unfull games.
-add winds
+*Shabat: 18, 20 - send sms to those who did not register, about unfull games.
+
 
 *- add hide field to stats table and filter in the UI
 

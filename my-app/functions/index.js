@@ -1734,6 +1734,16 @@ const mapWeekDay2GameID = {
     6: 5, // Saturday
 };
 
+const day2DayName = {
+    0: "ראשון",
+    1: "שני",
+    2: "שלישי",
+    3: "רביעי",
+    4: "חמישי",
+    5: "שישי",
+    6: "שבת",
+};
+
 exports.NudjeForPartialMatches = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
     .schedule("01 10,14 * * *")
@@ -1889,3 +1899,38 @@ const notifyThoseWhoAreNotPlaying = (matches, excludeMails, msg, adminMsg) => {
         return Promise.all(waitForMsgs);
     });
 };
+
+exports.NudjeOnSat = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("01 18,20 * * 6")
+    .timeZone("Asia/Jerusalem")
+    .onRun(async (context) => {
+        const regs = await db.collection("registrations").get();
+        const missing = [];
+        for (let i = 0; i <= 6; i++) {
+            const dayRegs = regs.docs.filter(r => r.data().GameID === mapWeekDay2GameID[i.toString()]);
+            if (dayRegs.length > 0 && dayRegs.length % 4 > 1) {
+                missing.push({
+                    day: day2DayName[i],
+                    missing: 4 - dayRegs.length % 4,
+                });
+            }
+        }
+
+        if (missing.length > 0) {
+            let msg = "שחקנים יקרים\nההרשמה עדיין פתוחה!\n";
+            missing.forEach(m => {
+                msg += `ביום ${m.day} חסרים ${m.missing}ֿ\n`;
+            });
+            const notifDoc = db.collection(NOTIFICATIONS_COLLECTION).doc();
+            notifDoc.set({
+                title: "קדימה להרשם",
+                body: msg,
+                link: "/#0",
+                createdAt: FieldValue.serverTimestamp(),
+                to: ["all"],
+            });
+        }
+    });
+
+
