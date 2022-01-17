@@ -96,7 +96,7 @@ const inTheFuture = (match) => {
     const d = dayjs(date + " " + hour);
     const diff = d.diff(dayjs(), 'hour');
     
-    return diff <= 0;
+    return diff > 0;
 }
 
 const isDirty = (match, setsEdited, cancelled, paymentFactor) => {
