@@ -4,6 +4,7 @@ import { HBox, VBox, Spacer, SmallText, SmallText2, BoxInput, IOSSwitch, HBoxC }
 import { getNiceDate } from './utils';
 import * as api from './api'
 import { Paper1 } from './elem';
+import dayjs from 'dayjs';
 
 const isTieBreakSet = (set) => {
     const p1IntVal = parseInt(set.pair1);
@@ -87,6 +88,17 @@ const validate = (sets) => {
     }
     return "";
 }
+
+const inTheFuture = (match) => {
+    const date = match.date;
+    const hour = match.Hour;
+
+    const d = dayjs(date + " " + hour);
+    const diff = d.diff(dayjs(), 'hour');
+    
+    return diff <= 0;
+}
+
 const isDirty = (match, setsEdited, cancelled, paymentFactor) => {
     const setsOrig = match.sets;
 
@@ -243,6 +255,12 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         pf = undefined;
                     }
                     if (isDirty(match, editedSets, gameCancelled, paymentFactor)) {
+                        if (inTheFuture(match)) {
+                            notify.error("משחק טרם החל - אין אפשרות להזין תוצאות");
+                            onCancel();
+                            return;
+                        }
+
                         if (gameCancelled) {
                             notify.progress();
                             return api.saveMatchCancelled(match, pf, isArchived).then(

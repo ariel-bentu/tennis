@@ -511,6 +511,15 @@ export async function saveMatches(matches, isTest) {
     var batch = writeBatch(db);
 
     matches.forEach(m => {
+        if (!m.Hour || m.Hour.length < 5 || m.Hour[2] !== ":") {
+            throw new Error("Illegal Hour " + m.Hour + ". Expected HH:MM");
+        }
+
+        const hourParts = m.Hour.split(":");
+        if (hourParts.length != 2 || isNaN(parseInt(hourParts[0])) || isNaN(parseInt(hourParts[1]))) {
+            throw new Error("Illegal Hour " + m.Hour + ". Expected HH:MM");
+        }
+
         if (m.deleted) {
             if (m._ref) {
                 batch.delete(m._ref);
@@ -803,7 +812,7 @@ export async function requestReplacement(userInfo, match, requestActive) {
     return getDoc(docRef).then(doc => {
         if (doc.exists() && !requestActive) {
             return deleteDoc(doc.ref);
-        } 
+        }
 
         if (!doc.exists() && requestActive) {
             return setDoc(docRef, {
