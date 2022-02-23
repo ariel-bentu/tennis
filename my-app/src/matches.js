@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Button } from '@material-ui/core';
 
 import { Spacer, Loading, VBox, HBox, SmallText2, SVGIcon, Card, HThinSeparator, HBoxC } from './elem'
-import { filterByPlayer, getNiceDate } from './utils'
+import { calcWinner, filterByPlayer, getNiceDate } from './utils'
 
 import * as api from './api'
 import { EmojiEvents, SentimentDissatisfied } from '@material-ui/icons';
@@ -103,24 +103,11 @@ export default function Matches({ UserInfo, notify, reload, admin }) {
 function GetMatch({ match, UserInfo, setEdit, admin }) {
 
     //calculate winner
+    const winner = calcWinner(match);
     const wonSets1 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) > Val(curr.pair2) ? 1 : 0), 0) : -1;
     const wonSets2 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) < Val(curr.pair2) ? 1 : 0), 0) : -1;
-    let winner = 0;
 
-    if (wonSets1 > wonSets2) {
-        winner = 1;
-    } else if (wonSets1 < wonSets2) {
-        winner = 2;
-    } else if (match.sets) {
-        const wonGames1 = match.sets.reduce((prev, curr) => prev + Val(curr.pair1), 0);
-        const wonGames2 = match.sets.reduce((prev, curr) => prev + Val(curr.pair2), 0);
-        if (wonGames1 > wonGames2) {
-            winner = 1;
-        } else if (wonGames1 < wonGames2) {
-            winner = 2;
-        }
-    }
-
+    
     let sets = match.sets ? [...match.sets] : [];
 
     for (let i = sets.length; i < 5; i++) {
@@ -142,11 +129,11 @@ function GetMatch({ match, UserInfo, setEdit, admin }) {
 
         </Grid>
         <Spacer />
-        <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo}
+        <GetOneLine P1={match.Player1} P2={match.Player2} sets={sets} UserInfo={UserInfo} Quit={match.pairQuit === 1}
             firstPair={true} wonSets={wonSets1} wins={winner === 1} tie={winner === 0}
             cancelled={match.matchCancelled}
         />
-        <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}
+        <GetOneLine P1={match.Player3} P2={match.Player4} sets={sets} wonSets={wonSets2}  Quit={match.pairQuit === 2}
             wins={winner === 2} tie={winner === 0}
             UserInfo={UserInfo}
             cancelled={match.matchCancelled}
@@ -181,6 +168,7 @@ function GetOneLine(props) {
                 <VBox>
                     {props.P1 ? <SmallText2 marginTop={5} lineHeight={1} textAlign="center" textDecoration={p1IsMe ? 'underline' : undefined} fontWeight={p1IsMe ? 'bold' : undefined}>{props.P1.displayName}</SmallText2> : null}
                     {props.P2 ? <SmallText2 lineHeight={1} textAlign="center" textDecoration={p2IsMe ? 'underline' : undefined} fontWeight={p2IsMe ? 'bold' : undefined}>{props.P2.displayName}</SmallText2> : null}
+                    {props.Quit && <div style={{position:"relative", top:-20, left:-30, color:"red", transform: "rotate(-45deg)"}}>פרשו</div>}
                 </VBox>
             </Grid >
             {props.cancelled ? null :

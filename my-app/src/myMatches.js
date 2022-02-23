@@ -48,7 +48,10 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                                     m._numOfBets = matchBets.length;
                                 })
 
-                                setBets(_bets);
+                                // filter bets of other users
+                                const ownBets = _bets.filter(bet=>bet.email === UserInfo.email);
+
+                                setBets(ownBets);
                             });
                     }
 
@@ -71,6 +74,10 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                         });
                     });
 
+                    // api.getCollection(api.Collections.STATS_COLLECTION).then(stats => {
+                    // });
+                    
+
                     // let nonMy = mtchs.filter(m => !myM.find(mm => mm.id === m.id));
                     // setOtherMatches(nonMy);
 
@@ -81,13 +88,16 @@ export default function MyMatches({ UserInfo, notify, admin }) {
                     setMyMatches([]);
                     // setOtherMatches([]);
                 })
-
-
-
-
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [UserInfo, reload])
+
+    useEffect(() => {
+        //Load balls list
+        api.getUsersWithBalls().then(uwb => {
+            setUsersWithBalls(uwb);
+        })
+    }, [reload]);
 
     useEffect(() => {
         //Load balls list
@@ -164,7 +174,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 
     return (
         placeBets ? <PlaceBets match={placeBets} onDone={handleBetsDone} bets={bets}
-            UserInfo={UserInfo} notify={notify} /> :
+            UserInfo={UserInfo} notify={notify} tokenLimit={100}/> :
             <div style={{ height: '100%', width: '100%', backgroundColor: "#F3F3F3" }}>
                 <Spacer height={20} />
                 {edit ?

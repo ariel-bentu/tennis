@@ -351,6 +351,9 @@ export async function saveMatchResults(match, paymentFactor, isArchived) {
         sets: match.sets,
         matchCancelled: false,
     };
+    if (match.pairQuit) {
+        payload.pairQuit = match.pairQuit;
+    }
 
     return updateMatchResults(payload);
 }
@@ -364,6 +367,7 @@ export async function saveMatchCancelled(match, paymentFactor, isArchived) {
         paymentFactor: paymentFactor !== undefined ? paymentFactor : -1,
         isInArchive: isArchived,
         sets: [],
+        //pairQuit is explicitly left out
         matchCancelled: true,
     };
 
@@ -516,7 +520,7 @@ export async function saveMatches(matches, isTest) {
         }
 
         const hourParts = m.Hour.split(":");
-        if (hourParts.length != 2 || isNaN(parseInt(hourParts[0])) || isNaN(parseInt(hourParts[1]))) {
+        if (hourParts.length !== 2 || isNaN(parseInt(hourParts[0])) || isNaN(parseInt(hourParts[1]))) {
             throw new Error("Illegal Hour " + m.Hour + ". Expected HH:MM");
         }
 

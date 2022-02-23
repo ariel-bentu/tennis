@@ -232,6 +232,9 @@ export function getNiceDate(d) {
 const Val = (v) => parseInt(v);
 
 export function calcWinner(match) {
+    if (match.pairQuit) {
+        return match.pairQuit === 1 ? 2 : 1;
+    }
     const wonSets1 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) > Val(curr.pair2) ? 1 : 0), 0) : -1;
     const wonSets2 = match.sets ? match.sets.reduce((prev, curr) => prev + (Val(curr.pair1) < Val(curr.pair2) ? 1 : 0), 0) : -1;
     let winner = 0;

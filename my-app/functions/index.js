@@ -342,6 +342,7 @@ exports.updateMatchResults = functions.region("europe-west1").https.onCall((data
     const matchCancelled = data.matchCancelled;
     const isInArchive = data.isInArchive;
     const sets = data.sets;
+    const pairQuit = data.pairQuit;
     const matchID = data.matchID;
     const paymentFactor = data.paymentFactor;
     const collectionName = isInArchive ? MATCHES_ARCHIVE_COLLECTION : MATCHES_COLLECTION;
@@ -389,9 +390,11 @@ exports.updateMatchResults = functions.region("europe-west1").https.onCall((data
         if (matchCancelled) {
             update.matchCancelled = true;
             update.sets = [];
+            update.pairQuit = FieldValue.delete();
         } else {
             update.matchCancelled = false;
             update.sets = sets;
+            update.pairQuit = pairQuit ? pairQuit : FieldValue.delete();
         }
 
         if (paymentFactor >= 0 && paymentFactor !== matchDoc.data().paymentFactor) {
@@ -597,7 +600,10 @@ const handleMatchResultsChange = (change) => {
             return;
         }
 
-        const calcWinner = (sets) => {
+        const calcWinner = (sets, pairQuit) => {
+            if (pairQuit) {
+                return pairQuit === 1 ? 2 : 1;
+            }
             const wonSets1 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) > toNum(curr.pair2) ? 1 : 0), 0);
             const wonSets2 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) < toNum(curr.pair2) ? 1 : 0), 0);
 
@@ -638,8 +644,8 @@ const handleMatchResultsChange = (change) => {
         let winner = 0;
         if (dataBefore.sets !== undefined) {
             // Sets existed before - find changes, calculate and update players stats
-            const winnerBefore = calcWinner(dataBefore.sets);
-            const winnerAfter = calcWinner(dataAfter.sets);
+            const winnerBefore = calcWinner(dataBefore.sets, dataBefore.pairQuit);
+            const winnerAfter = calcWinner(dataAfter.sets, dataAfter.pairQuit);
             if (winnerBefore === winnerAfter) {
                 // No update is needed
                 resolve();
@@ -717,7 +723,7 @@ const handleMatchResultsChange = (change) => {
             }
         } else {
             // Sets now added - calculate and save players stats
-            winner = calcWinner(dataAfter.sets);
+            winner = calcWinner(dataAfter.sets, dataAfter.pairQuit);
             if (dataAfter.Player1) {
                 updates.push({
                     _pair: 1,
@@ -869,9 +875,9 @@ const handleMatchResultsChange = (change) => {
                     } else {
                         const data = statDoc.data();
                         batch.update(statDoc.ref, {
-                            wins2021: data.wins2021 + update.win,
-                            loses2021: data.loses2021 + update.lose,
-                            ties2021: data.ties2021 + update.tie,
+                            // wins2021: data.wins2021 + update.win,
+                            // loses2021: data.loses2021 + update.lose,
+                            // ties2021: data.ties2021 + update.tie,
 
                             wins: data.wins + update.win,
                             loses: data.loses + update.lose,
@@ -1775,9 +1781,9 @@ exports.NudjeForPartialMatches = functions.region("europe-west1").pubsub
         // look for uncomplete matches
         const uncompleteMatches = matches.filter(match => {
             const matchData = match.data();
-            return (matchData.Player1 && matchData.Player2 && matchData.Player3 && matchData.Player4) ||
+            return !(matchData.Player1 && matchData.Player2 && matchData.Player3 && matchData.Player4) &&
                 // Singles
-                (matchData.Player1 && !matchData.Player2 && matchData.Player3 && !matchData.Player4);
+                !(matchData.Player1 && !matchData.Player2 && matchData.Player3 && !matchData.Player4);
         });
 
         const waitFor2 = [];
@@ -1823,19 +1829,20 @@ exports.NudjeForPartialMatches = functions.region("europe-west1").pubsub
             } else {
                 missing = 4 - (regsNotPlaying.length % 4);
             }
-
-            const msg = `חסר שחקן.ים להיום!
+            if (missing < 3) {
+                const msg = `חסר שחקן.ים להיום!
     חסר עוד ${missing}, מי נרשם?
     https://tennis.atpenn.com#0`;
-            let msgAdmin = `מנהל קבוצה יקר - נשלח דירבון לרישום להיום!
+                let msgAdmin = `מנהל קבוצה יקר - נשלח דירבון לרישום להיום!
     חסר עוד ${missing}.
     `;
-            if (uncompleteMatches.length > 0 && regsNotPlaying.length > 0) {
-                msgAdmin += `שים לב שיש ${regsNotPlaying.length} שחקנים שנרשמו שטרם שובצו
+                if (uncompleteMatches.length > 0 && regsNotPlaying.length > 0) {
+                    msgAdmin += `שים לב שיש ${regsNotPlaying.length} שחקנים שנרשמו שטרם שובצו
 `;
+                }
+                const mailsOfRegNoPlaying = regsNotPlaying.map(rnp => rnp.data().email);
+                waitFor2.push(notifyThoseWhoAreNotPlaying(matches, mailsOfRegNoPlaying, msg, msgAdmin));
             }
-            const mailsOfRegNoPlaying = regsNotPlaying.map(rnp => rnp.data().email);
-            waitFor2.push(notifyThoseWhoAreNotPlaying(matches, mailsOfRegNoPlaying, msg, msgAdmin));
         }
         return await Promise.all(waitFor2);
     });

@@ -75,6 +75,7 @@ let App = props => {
 
 
   const [userInfo, setUserInfo] = useState(undefined);
+
   const [userBlocked, setUserBlocked] = useState(false);
   const [changePwd, setChangePwd] = useState(false);
   const [forgotPwd, setForgotPwd] = useState(false);
@@ -138,9 +139,12 @@ let App = props => {
     api.initAPI(
       // Callback for AuthStateChanged
       (user) => {
+
         api.getUserObj(user).then(
           uo => {
             setUserInfo(uo);
+            setLoading(false);
+
             if (uo) {
               api.isAdmin().then(setAdmin);
 
@@ -180,6 +184,7 @@ let App = props => {
             }
           },
           (err) => {
+            setLoading(false);
             setUserBlocked(true);
             setMsg({ open: true, severity: "error", title: "", body: err.message, top: 100 })
           }
@@ -192,7 +197,6 @@ let App = props => {
       },
       (notifToken) => setNotificationToken(notifToken));
 
-    setTimeout(() => setLoading(false), 1000);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -5,6 +5,7 @@ import { getNiceDate } from './utils';
 import * as api from './api'
 import { Paper1 } from './elem';
 import dayjs from 'dayjs';
+import { RadioButtonChecked, RadioButtonUnchecked } from '@material-ui/icons';
 
 const isTieBreakSet = (set) => {
     const p1IntVal = parseInt(set.pair1);
@@ -95,12 +96,16 @@ const inTheFuture = (match) => {
 
     const d = dayjs(date + " " + hour);
     const diff = d.diff(dayjs(), 'hour');
-    
+
     return diff > 0;
 }
 
-const isDirty = (match, setsEdited, cancelled, paymentFactor) => {
+const isDirty = (match, setsEdited, pairQuit, cancelled, paymentFactor) => {
     const setsOrig = match.sets;
+
+    if (match.pairQuit !== pairQuit) {
+        return true;
+    }
 
     if (match?.paymentFactor !== paymentFactor) {
         return true;
@@ -133,14 +138,28 @@ const isDirty = (match, setsEdited, cancelled, paymentFactor) => {
 export default function SetResults({ UserInfo, match, notify, onCancel, onDone, isArchived, Admin }) {
 
     const [editedSets, setEditedSets] = useState([]);
+    const [pairQuit, setPairQuit] = useState(undefined);
+
     const [nextFocus, setNextFocus] = useState(0);
     const [gameCancelled, setGameCancelled] = useState(match.matchCancelled === true);
     const [paymentFactor, setPaymentFactor] = useState(match.paymentFactor);
 
+    const togglePairQuit = (pairIndex) => {
+        setPairQuit(currPairQuit=>{
+            if (currPairQuit === pairIndex) {
+                return undefined;
+            }
+
+            return pairIndex
+        })
+    }
+
 
     useEffect(() => {
-        let sets = match.sets ? [...match.sets] : [];
+        let pairQuit = match.pairQuit ? match.pairQuit : undefined;
+        setPairQuit(pairQuit);
 
+        let sets = match.sets ? [...match.sets] : [];
         for (let i = sets.length; i < 5; i++) {
             sets.push({
                 pair1: "",
@@ -157,13 +176,20 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
             <SmallText textAlign='center' fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
             <Spacer height={20} />
             <HBoxC>
-                <Spacer width={75} />
+                <VBox style={{ width: 75 }} >
+                    <SmallText textAlign='center'></SmallText>
+                    <SmallText textAlign='center'></SmallText>
+                </VBox>
+                <Spacer width={15} />
                 {editedSets.map((s, i) => (
-                    <HBox style={{ width: 50 }}>
-                        <SmallText2 textAlign="left" fontSize={10}>{"set " + (i + 1)}</SmallText2>
+                    <HBox style={{ width: 40, marginLeft:5, marginRight:5 }}>
+                        <SmallText2 textAlign="center" fontSize={10}>{"set " + (i + 1)}</SmallText2>
                     </HBox>
                 )
                 )}
+                <HBox style={{ width: 40, marginLeft:5, marginRight:5 }}>
+                    <SmallText2 textAlign="center" fontSize={10}>פרישה</SmallText2>
+                </HBox>
             </HBoxC>
 
             {tieBreak ?
@@ -177,7 +203,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 </VBox>
                 <Spacer width={15} />
 
-                {!gameCancelled ? editedSets.map((set, i) => (
+                {!gameCancelled && editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
                         focus={i * 2 === nextFocus}
 
@@ -189,7 +215,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         }
                     />
                 )
-                ) : null}
+                )}
+                {!gameCancelled && <div style={{width:40}} onClick={()=>togglePairQuit(1)}>{pairQuit === 1?<RadioButtonChecked />:<RadioButtonUnchecked />}</div>}
             </HBoxC>
             <HBoxC>
                 <Spacer width={25} />
@@ -202,7 +229,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     {match.Player4 ? <SmallText textAlign='center'>{match.Player4.displayName}</SmallText> : null}
                 </VBox>
                 <Spacer width={15} />
-                {!gameCancelled ? editedSets.map((set, i) => (
+                {!gameCancelled && editedSets.map((set, i) => (
                     <BoxInput
                         value={set.pair2}
                         focus={i * 2 + 1 === nextFocus}
@@ -211,7 +238,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         onChange={newVal => setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair2: newVal } : s))}
                     />
                 )
-                ) : null}
+                ) }
+                {!gameCancelled && <div style={{width:40}} onClick={()=>togglePairQuit(2)}>{pairQuit === 2?<RadioButtonChecked />:<RadioButtonUnchecked />}</div>}
             </HBoxC>
 
             {tieBreak ?
@@ -226,7 +254,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     setGameCancelled(canc => !canc);
                 }} />
 
-            
+
                 {Admin ? <TextField
                     variant="outlined"
                     margin="normal"
@@ -254,7 +282,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     if (isNaN(pf)) {
                         pf = undefined;
                     }
-                    if (isDirty(match, editedSets, gameCancelled, paymentFactor)) {
+                    if (isDirty(match, editedSets, pairQuit, gameCancelled, paymentFactor)) {
                         if (inTheFuture(match)) {
                             notify.error("משחק טרם החל - אין אפשרות להזין תוצאות");
                             onCancel();
@@ -279,6 +307,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         }
                         //save changes
                         match.sets = editedSets.filter(s => s.pair1 !== "");
+                        if (!pairQuit) {
+                            delete match.pairQuit;
+                        } else {
+                            match.pairQuit = pairQuit;
+                        }
                         notify.progress();
                         return api.saveMatchResults(match, pf, isArchived).then(
                             () => {
@@ -304,7 +337,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
     return (
         <HBoxC>
-            <Spacer width={90} />
+            <VBox style={{ width: 75 }} >
+                    <SmallText textAlign='center'></SmallText>
+                    <SmallText textAlign='center'></SmallText>
+                </VBox>
+                <Spacer width={15} />
             {editedSets.map((set, i) => (
                 isTieBreakSet(set) ?
                     <BoxInput
@@ -319,6 +356,7 @@ function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
                     : <Spacer width={50} height={50} />
             ))
             }
+            <Spacer width={40}/>
         </HBoxC>
     )
 }
