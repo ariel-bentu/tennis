@@ -91,9 +91,29 @@ const DaysMap = {
 
 };
 
-export const sortByDays = (d1, d2) => DaysMap[d1] - DaysMap[d2];
+export const sortByDays = (d1, d2) => DaysOrder[d1] - DaysOrder[d2];
+const DaysOrder = {
+    "השבת":
+        "0",
+    "ראשון":
+        "1",
+    "שני":
+        "2",
+    "שלישי":
+        "3",
+    "רביעי":
+        "4",
+    "חמישי":
+        "5",
+    "שישי":
+        "6",
+    "שבת":
+        "7"
+}
 
 const daysMap = {
+    "השבת":
+        "ש",
     "ראשון":
         "א",
     "שני":

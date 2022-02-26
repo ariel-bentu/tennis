@@ -204,6 +204,12 @@ export async function getPlannedGames(currentUser) {
             });
             results.sort((a, b) => sortByDays(a.Day, b.Day));
 
+            let today = dayjs()
+            if (today.day() !== 6) {
+                //not saturday
+                results = results.filter(g=>g.id !== -5);
+            }
+
             getDocs(db.collection(Collections.REGISTRATION_COLLECTION)).then(
                 regs => {
                     let regsData = regs.docs.map(doc => doc.data());

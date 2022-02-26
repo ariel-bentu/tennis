@@ -79,6 +79,13 @@ export default function Match(props) {
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
                 games.sort((g1, g2) => sortByDays(g1.Day, g2.Day));
 
+                let today = dayjs()
+                if (today.day() !== 6) {
+                    //not saturday
+                    games = games.filter(g=>g.id !== -5);
+                }
+
+
                 setGames(games);
                 if (games && games.length > 0) {
                     setCurrentGame(games[0].id)
@@ -112,13 +119,13 @@ export default function Match(props) {
 
             if (all[4] !== undefined) {
                 regs = regs.concat(all[4]);
-                setGames(g => {
-                    const newGames = [
-                        { id: -5, Day: "השבת", Hour: "20:00" },
-                        ...g
-                    ];
-                    return newGames;
-                })
+                // setGames(g => {
+                //     const newGames = [
+                //         { id: -5, Day: "השבת", Hour: "20:00" },
+                //         ...g
+                //     ];
+                //     return newGames;
+                // })
             }
 
             //add user displayNames names
