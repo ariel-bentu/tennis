@@ -116,6 +116,7 @@ export default function Match(props) {
 
 
             let regs = all[0];
+            const plannedGames = all[2];
 
             if (all[4] !== undefined) {
                 regs = regs.concat(all[4]);
@@ -136,7 +137,7 @@ export default function Match(props) {
                 }
 
                 // Add indication which other registration this user has
-                let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID);
+                let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID && plannedGames.find(game=>r.GameID === game.id));
                 if (otherRegs && otherRegs.length > 0) {
                     const days = otherRegs.map(or => {
                         let game = all[2].find(g => g.id === or.GameID)
