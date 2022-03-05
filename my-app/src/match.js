@@ -75,14 +75,13 @@ export default function Match(props) {
     useEffect(() => {
         Promise.all([
             getCollection(api.Collections.REGISTRATION_COLLECTION, "utcTime"),
-            getCollection(api.Collections.USERS_COLLECTION),
             getCollection(api.Collections.PLANNED_GAMES_COLLECTION).then(games => {
                 games.sort((g1, g2) => sortByDays(g1.Day, g2.Day));
 
                 let today = dayjs()
                 if (today.day() !== 6) {
                     //not saturday
-                    games = games.filter(g=>g.id !== -5);
+                    games = games.filter(g => g.id !== -5);
                 }
 
 
@@ -95,14 +94,20 @@ export default function Match(props) {
             getCollection(api.Collections.USERS_INFO_COLLECTION),
             api.thisSatRegistration(),
             getCollection(api.Collections.STATS_COLLECTION),
+            getCollection(api.Collections.USERS_COLLECTION),
+            getCollection(api.Collections.MATCHES_COLLECTION),
         ]).then(all => {
-            let _users = all[1];
-            _users = _users.filter(u => {
-                let uInfo = all[3].find(u1 => u1.email === u.email);
+            const _registrations = all[0];
+            const _plannedGames = all[1];
+            const _userInfos = all[2];
+            const _thisSatRegistrations = all[3];
+            const _stats = all[4]
+            const _users = all[5].filter(u => {
+                let uInfo = _userInfos.find(u1 => u1.email === u.email);
                 if (uInfo) {
                     u.balls = uInfo.balls;
                 }
-                let uStat = all[5].find(u1 => u1._ref.id === u.email);
+                let uStat = _stats.find(u1 => u1._ref.id === u.email);
                 if (uStat) {
                     u.elo1 = uStat.elo1;
                     u.elo2 = uStat.elo2;
@@ -111,36 +116,29 @@ export default function Match(props) {
 
                 return uInfo && uInfo.inactive === false
             })
+            const _matches = all[6];
+
             setUsers(_users)
 
 
 
-            let regs = all[0];
-            const plannedGames = all[2];
-
-            if (all[4] !== undefined) {
-                regs = regs.concat(all[4]);
-                // setGames(g => {
-                //     const newGames = [
-                //         { id: -5, Day: "השבת", Hour: "20:00" },
-                //         ...g
-                //     ];
-                //     return newGames;
-                // })
+            let actRegistration = _registrations;
+            if (_thisSatRegistrations !== undefined) {
+                actRegistration = actRegistration.concat(_thisSatRegistrations);
             }
 
             //add user displayNames names
-            regs = regs.map(reg => {
+            actRegistration = actRegistration.map(reg => {
                 let user = _users.find(u => u.email === reg.email);
                 if (!user) {
                     reg.displayName = reg.email;
                 }
 
                 // Add indication which other registration this user has
-                let otherRegs = all[0].filter(r => r.email === reg.email && r.GameID !== reg.GameID && plannedGames.find(game=>r.GameID === game.id));
+                let otherRegs = _registrations.filter(r => r.email === reg.email && r.GameID !== reg.GameID && _plannedGames.find(game => r.GameID === game.id));
                 if (otherRegs && otherRegs.length > 0) {
                     const days = otherRegs.map(or => {
-                        let game = all[2].find(g => g.id === or.GameID)
+                        let game = _plannedGames.find(g => g.id === or.GameID)
 
                         return {
                             id: game.id,
@@ -158,42 +156,50 @@ export default function Match(props) {
 
                 return user ? { ...reg, ...user } : reg;
             });
-            regs.sort((a, b) => a._order - b._order);
+            actRegistration.sort((a, b) => a._order - b._order);
 
             //make order local to game
-            all[2].forEach(game => {
-                regs.filter(r => r.GameID === game.id).forEach((orderedReg, i) => (orderedReg._order = i + 1))
+            _plannedGames.forEach(game => {
+                actRegistration.filter(r => r.GameID === game.id).forEach((orderedReg, i) => (orderedReg._order = i + 1))
             })
 
-            setRegistrations(regs);
+            setRegistrations(actRegistration);
+            loadMatches(_matches, actRegistration, _users);
         });
 
     }, [getCollection]);
 
-    useEffect(() => {
-        getCollection(api.Collections.MATCHES_COLLECTION).then(mtchs => {
-            //enrich with registration info
-            mtchs.forEach(m => {
-                for (let i = 1; i <= 4; i++) {
-                    if (m["Player" + i]) {
-                        let reg = registrations.find(r => r.email === m["Player" + i].email &&
-                            r.GameID === m.GameID);
-                        if (reg) {
-                            m["Player" + i] = reg;
-                        } else {
-                            let user = users.find(r => r.email === m["Player" + i].email);
-                            if (user) {
-                                m["Player" + i] = user;
-                            }
+    const loadMatches = (updatedMatches, regs, inUsers) => {
+        //enrich with registration info
+        updatedMatches.forEach(m => {
+            for (let i = 1; i <= 4; i++) {
+                let matchGameID = m.GameID;
+                if (isToday(m) && m.GameID == 5) {
+                    matchGameID = -5;
+                }
+                if (m["Player" + i]) {
+                    let reg = regs.find(r => r.email === m["Player" + i].email &&
+                        r.GameID === matchGameID);
+                    if (reg) {
+                        m["Player" + i] = reg;
+                    } else {
+                        let user = inUsers.find(r => r.email === m["Player" + i].email);
+                        if (user) {
+                            m["Player" + i] = user;
                         }
                     }
                 }
-            });
-            setEditedMatches(mtchs);
-            setDirty(false);
+            }
         });
-    }, [registrations, matchesSaved, getCollection, users])
+        setEditedMatches(updatedMatches);
+        setDirty(false);
+    }
 
+    useEffect(() => {
+        if (matchesSaved > 1) {
+            getCollection(api.Collections.MATCHES_COLLECTION).then(mtchs => loadMatches(mtchs, registrations, users));
+        }
+    }, [matchesSaved]);
 
     useEffect(() => setUnregUsers(
         users.filter(u => registrations.filter(r => r.GameID === currentGame).every(r => r.email !== u.email))
@@ -308,9 +314,9 @@ export default function Match(props) {
     >הודעה היום</Button>
 
     const cancelChanges = <Button variant="contained" style={{ fontSize: 13, height: '1.5rem', width: 150 }}
-    onClick={()=>{
-        setMatchesSaved(old=>old+1);
-    }}
+        onClick={() => {
+            setMatchesSaved(old => old + 1);
+        }}
     >בטל שינויים</Button>
 
 
@@ -389,9 +395,9 @@ export default function Match(props) {
                                                                         disableUnderline: true,
 
                                                                     }}
-                                                                    style={{ width: 0, right:20 }}
+                                                                    style={{ width: 0, right: 20 }}
                                                                     // labelFunc={(value, errString)=>getNiceDate(value)}
-                                                                    
+
                                                                     margin="dense"
                                                                     variant="inline"
                                                                     autoOk
@@ -415,8 +421,8 @@ export default function Match(props) {
                                                         />
                                                         <Spacer />
                                                         <InputBase
-                                                            inputProps={{ style: { textAlign: 'center'} }}
-                                                            style={{ backgroundColor: '#F3F3F3' , width: 50 }}
+                                                            inputProps={{ style: { textAlign: 'center' } }}
+                                                            style={{ backgroundColor: '#F3F3F3', width: 50 }}
                                                             fullWidth={true}
                                                             value={match.Court}
                                                             onChange={e => updateMatchValue(match.id, { Court: e.currentTarget.value })}
@@ -463,7 +469,7 @@ export default function Match(props) {
 
 
                                                 <Spacer />
-                                                {!match._collapse &&<HThinSeparator />}
+                                                {!match._collapse && <HThinSeparator />}
                                                 <HBox>
                                                     <ExpandMore
                                                         style={match._collapse ? null : { transform: "rotate(180deg)" }}
@@ -474,12 +480,12 @@ export default function Match(props) {
                                                                 "האם למחוק משחקון?\n(גם לאחר אישור יש ללחוץ על שמור)",
                                                                 "מחיקה",
                                                                 [
-                                                                {
-                                                                    caption: "אישור",
-                                                                    callback: () => updateMatchValue(match.id, { deleted: true })
-                                                                },
-                                                                { caption: "בטל", callback: () => { } }
-                                                            ])
+                                                                    {
+                                                                        caption: "אישור",
+                                                                        callback: () => updateMatchValue(match.id, { deleted: true })
+                                                                    },
+                                                                    { caption: "בטל", callback: () => { } }
+                                                                ])
 
                                                         }} />}
                                                 </HBox>
