@@ -422,7 +422,7 @@ export async function addPayment(email, amountStr, comment) {
     return getDoc(billingRecord).then(rec => {
         var batch = writeBatch(db);
 
-        if (rec.exists) {
+        if (rec.exists()) {
             batch.update(billingRecord, { balance: rec.data().balance + amount });
         } else {
             batch.set(billingRecord, { balance: amount })
