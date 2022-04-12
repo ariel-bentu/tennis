@@ -5,8 +5,8 @@ import { Grid, Button } from '@material-ui/core';
 import { Spacer, Loading, VBox, HBox, CircledValue, SmallText2, HSeparator, HBoxC, Picker } from './elem'
 
 import * as api from './api'
-import dayjs from 'dayjs'
 import { DragHandle, EmojiEvents, SportsTennis, ThumbDown, ArrowBackIos, Sort } from '@material-ui/icons';
+import { year, years } from './utils';
 
 
 function enrichStats(stats, usersInfo, comp) {
@@ -22,16 +22,7 @@ function enrichStats(stats, usersInfo, comp) {
     return _stats;
 }
 
-const year = () => dayjs().format("YYYY")
-const years = () => {
-    const yearsArray = ["2021"]
-    let y = 2021
-    let endYear = parseInt(year());
-    for (let yy = y + 1; yy <= endYear; yy++) {
-        yearsArray.push(yy + "");
-    }
-    return yearsArray;
-}
+
 
 export default function Board({ UserInfo, notify }) {
 
@@ -40,6 +31,7 @@ export default function Board({ UserInfo, notify }) {
     const [sortByWins, setSortByWins] = useState(true);
 
     const [usersInfo, setUsersInfo] = useState(undefined);
+    const [optOut, setOptOut] = useState(false);
     const [detailsFor, setDetailsFor] = useState(undefined);
     const [detailedStats, setDetailedStats] = useState(undefined);
     const [selectedYear, setSelectedYear] = useState(year());
@@ -52,7 +44,7 @@ export default function Board({ UserInfo, notify }) {
     const winsName = ["wins" + yearSuffix]
     const losesName = ["loses" + yearSuffix]
     const tiesName = ["ties" + yearSuffix]
-    const elo = selectedYear === "2021" ? "elo2" : "elo1"
+    const elo = selectedYear === "2021" ? "elo2021" : "elo1"
 
     const SortByWinsComp = (s1, s2) => {
         if (s1[winsName] !== s2[winsName])
@@ -68,7 +60,7 @@ export default function Board({ UserInfo, notify }) {
     };
 
     useEffect(() => {
-        if (UserInfo) {
+        if (UserInfo && !UserInfo._userInfo.optOutBoard) {
             Promise.all(
                 [
                     api.getCollection(api.Collections.STATS_COLLECTION),
@@ -79,7 +71,7 @@ export default function Board({ UserInfo, notify }) {
                     let _stats = enrichStats(all[0], all[1], SortByWinsComp);
 
                     // filter hidden users
-                    _stats = _stats.filter(s=>!s.hidden);
+                    _stats = _stats.filter(s=>!s.optOutBoard);
 
                     setStats(_stats);
 
@@ -88,6 +80,8 @@ export default function Board({ UserInfo, notify }) {
                         notify.error(err.message);
                         setStats([]);
                     })
+        } else if (UserInfo) {
+            setOptOut(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -118,6 +112,15 @@ export default function Board({ UserInfo, notify }) {
     }, [detailsFor, usersInfo, selectedYear]);
 
     const statsToShow = detailsFor ? detailedStats : stats
+
+
+    if (optOut) {
+        return <VBox style={{ margin: 10 }}>
+            <SmallText2 textAlign="center">לבקשתך, אינך לוקח חלק בלוח תוצאות</SmallText2>
+            <Spacer height={20}/>
+            <Button variant="contained" onClick={() => {notify.error("נא לפנות לנועם")}}>חיבור מחדש ללוח</Button>
+        </VBox>
+    }
 
     return (<VBox style={{ margin: 10 }}>
         {detailsFor && <HBoxC>

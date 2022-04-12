@@ -156,6 +156,9 @@ export function SVGIcon(props) {
         case "bet":
             src = require("./bet.svg").default;
             break;
+        case "betGray":
+            src = require("./bet-gray.svg").default;
+            break;
         case "replacementRequest":
             src = require("./replacement.svg").default;
             break;

@@ -174,7 +174,7 @@ export default function MyMatches({ UserInfo, notify, admin }) {
 
     return (
         placeBets ? <PlaceBets match={placeBets} onDone={handleBetsDone} bets={bets}
-            UserInfo={UserInfo} notify={notify} tokenLimit={100}/> :
+            UserInfo={UserInfo} notify={notify} /> :
             <div style={{ height: '100%', width: '100%', backgroundColor: "#F3F3F3" }}>
                 <Spacer height={20} />
                 {edit ?
@@ -308,8 +308,8 @@ function OneGame({ match, setEdit, showSetResults, notify, setPlaceBets, request
                 {
                     requestReplacement && [
 
-                        <SVGIcon svg={isReplacementActive ? "cancelReplacementRequest" : "replacementRequest"} onClick={() => requestReplacement(match, !isReplacementActive)} size={30} />,
-                        <Spacer key="2" width={20} />
+                        <SVGIcon key="3" svg={isReplacementActive ? "cancelReplacementRequest" : "replacementRequest"} onClick={() => requestReplacement(match, !isReplacementActive)} size={30} />,
+                        <Spacer key="4" width={20} />
                     ]
                 }
 

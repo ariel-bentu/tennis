@@ -22,11 +22,11 @@ import ForgotPwd from './forgot-pwd'
 import Board from './board';
 import { Notifications } from './notifications';
 
-import { Toolbar, Text, Loading, VBox, HBox, Spacer, TabPanel, SmallText2 } from './elem'
+import { Toolbar, Text, Loading, VBox, HBox, Spacer, TabPanel, SmallText2, SVGIcon } from './elem'
 
 import {
   AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart, Check,
-  NotificationsActive, NotificationsOff
+  NotificationsActive, NotificationsOff, Money
 } from '@material-ui/icons';
 import * as api from './api'
 import Login from './login'
@@ -40,12 +40,13 @@ import {
 
 import BallsAdmin from './balls-admin';
 import dayjs from 'dayjs'
+import { Bets } from './bets';
 
 
 const ResponsiveTab = withStyles({
   root: {
-    minWidth: 65,
-    width: 65
+    minWidth: 60,
+    width: 60
   },
   selected: {
 
@@ -448,6 +449,7 @@ let App = props => {
                   <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
                   <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
                   <ResponsiveTab label={"לוח"} icon={<BarChart />} />
+                  <ResponsiveTab label={"הימורים"} icon={<VBox><Spacer height={7}/><SVGIcon svg={tab == 4?"bet":"betGray"} size={25}/></VBox>} />
                   <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
 
 
@@ -467,8 +469,11 @@ let App = props => {
                   {tab === 3 ? <Board notify={notify} UserInfo={userInfo} /> : null}
                 </TabPanel>,
                 <TabPanel key="4" value={tab} index={4}>
-                  {tab === 4 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
-                </TabPanel>
+                  {tab === 4 ? <Bets notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
+                </TabPanel>,
+                 <TabPanel key="5" value={tab} index={5}>
+                 {tab === 5 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
+               </TabPanel>
               ]
             }}
           />

@@ -20,6 +20,8 @@ const USERS_INFO_COLLECTION = "users-info";
 const ADMINS_COLLECTION = "admins";
 const NOTIFICATIONS_COLLECTION = "notifications";
 const BETS_COLLECTION = "bets";
+const BETS_ARCHIVE_COLLECTION = "bets-archive";
+const BETS_STATS_COLLECTION = "bets-stats";
 
 const express = require("express");
 const app = express();
@@ -74,6 +76,31 @@ const getGameTariff = () => {
 const normalizeFactor = (f) => f === undefined ? 1 : f;
 const round = (f) => Math.floor(f * 10) / 10;
 
+
+const calcWinner = (sets, pairQuit) => {
+    if (pairQuit) {
+        return pairQuit === 1 ? 2 : 1;
+    }
+    const wonSets1 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) > toNum(curr.pair2) ? 1 : 0), 0);
+    const wonSets2 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) < toNum(curr.pair2) ? 1 : 0), 0);
+
+    if (wonSets1 > wonSets2) {
+        return 1;
+    } else if (wonSets1 < wonSets2) {
+        return 2;
+    } else {
+        const wonGames1 = sets.reduce((prev, curr) => prev + toNum(curr.pair1), 0);
+        const wonGames2 = sets.reduce((prev, curr) => prev + toNum(curr.pair2), 0);
+        if (wonGames1 > wonGames2) {
+            return 1;
+        } else if (wonGames1 < wonGames2) {
+            return 2;
+        } else {
+            // Tie...
+            return 0;
+        }
+    }
+};
 
 const addOneGameDebt = (db, batch, gameTariff,
     email, matchID, isSingles, date) => {
@@ -303,34 +330,48 @@ exports.placeBet = functions.region("europe-west1").https.onCall((data, context)
     const matchID = data.matchID;
     const winner = data.winner;
     const amount = data.amount;
+    const date = data.date;
+
     return db.collection(USERS_INFO_COLLECTION).doc(context.auth.token.email).get().then(userInfo => {
         if (userInfo.exists && userInfo.data().inactive !== true) {
             return db.collection(BETS_COLLECTION)
                 .where("matchID", "==", matchID)
                 .where("email", "==", context.auth.token.email).get().then(bet => {
+                    const batch = db.batch();
+                    let deltaAmount = 0;
                     if (bet.docs.length == 0) {
                         if (amount > 0) {
+                            deltaAmount = amount;
                             const docRef = db.collection(BETS_COLLECTION).doc();
-                            return docRef.set({
+                            batch.set(docRef, {
                                 email: context.auth.token.email,
                                 matchID,
                                 amount,
                                 winner,
+                                date,
                                 displayName: userInfo.data().displayName,
                             });
                         }
                     } else {
                         if (amount > 0) {
                             // Update the bet
-                            return bet.docs[0].ref.update({
+                            deltaAmount = amount - bet.docs[0].data().amount;
+                            batch.update(bet.docs[0].ref, {
                                 amount,
                                 winner,
                             });
                         } else {
                             // Delete the bet
-                            return bet.docs[0].ref.delete();
+                            deltaAmount = -bet.docs[0].data().amount;
+                            batch.delete(bet.docs[0].ref);
                         }
                     }
+                    // Update the stats
+                    batch.update(db.collection(BETS_STATS_COLLECTION).doc(context.auth.token.email), {
+                        total: FieldValue.increment(-deltaAmount),
+                    });
+
+                    return batch.commit();
                 });
         }
         throw new functions.https.HttpsError("permission-denied", "UserNotFound ", "User does not exist or locked");
@@ -425,11 +466,18 @@ exports.registerUser = functions.region("europe-west1").https.onCall((data, cont
         })
         .then(
             () => {
-                return db.collection("users").doc(data.email).set({
-                    email: data.email,
-                    phone: data.phone,
-                    displayName: data.displayName,
-                }).then(() => {
+                return Promise.all([
+                    db.collection("users").doc(data.email).set({
+                        email: data.email,
+                        phone: data.phone,
+                        displayName: data.displayName,
+                    }),
+                    db.collection(BETS_STATS_COLLECTION).doc(data.email).set({
+                        total: 200,
+                        wins: 0,
+                        loses: 0,
+                    }),
+                ]).then(() => {
                     const msg = `מנהל מערכת טניס יקר.
 הרגע נרשם למערכת שחקן חדש.
 שמו: ${data.displayName}.
@@ -589,41 +637,24 @@ const handleMatchResultsChange = (change) => {
         const dataBefore = change.before.data();
         const dataAfter = change.after.data();
 
-        if (dataAfter.matchCancelled || dataAfter.Player2 === undefined) {
-            // cancelled or singles
-            resolve(true); // results exists (cancelled) - archive it
+        if (dataAfter.matchCancelled) {
+            // cancelled
+            resolve(true); // results exists (cancelled)
             return;
         }
+
+
         if (dataAfter.sets == undefined) {
             // No sets data (assume they are not deleted - when deleted, it will be empty array)
             resolve(false);
             return;
         }
 
-        const calcWinner = (sets, pairQuit) => {
-            if (pairQuit) {
-                return pairQuit === 1 ? 2 : 1;
-            }
-            const wonSets1 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) > toNum(curr.pair2) ? 1 : 0), 0);
-            const wonSets2 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) < toNum(curr.pair2) ? 1 : 0), 0);
-
-            if (wonSets1 > wonSets2) {
-                return 1;
-            } else if (wonSets1 < wonSets2) {
-                return 2;
-            } else {
-                const wonGames1 = sets.reduce((prev, curr) => prev + toNum(curr.pair1), 0);
-                const wonGames2 = sets.reduce((prev, curr) => prev + toNum(curr.pair2), 0);
-                if (wonGames1 > wonGames2) {
-                    return 1;
-                } else if (wonGames1 < wonGames2) {
-                    return 2;
-                } else {
-                    // Tie...
-                    return 0;
-                }
-            }
-        };
+        if (dataAfter.Player1 !== undefined && dataAfter.Player3 !== undefined &&
+            dataAfter.Player2 === undefined && dataAfter.Player4 === undefined) {
+            resolve(false); // Singles are not counted for stats
+            return;
+        }
 
         const updates = [];
 
@@ -1168,6 +1199,166 @@ exports.matchArchiveUpdated = functions.region("europe-west1").firestore
         });
     });
 
+exports.matchArchiveUpdatedBets = functions.region("europe-west1").firestore
+    .document(MATCHES_ARCHIVE_COLLECTION + "/{matchID}")
+    .onWrite((change, context) => {
+        const dataAfter = change.after.data();
+        const dataBefore = change.before.data();
+
+        if (!change.before.exists && dataAfter.sets == undefined) {
+            // No sets data yet
+            return;
+        }
+
+        const winAfter = calcWinner(dataAfter.sets, dataAfter.pairQuit);
+
+        if (!change.before.exists || dataBefore.sets == undefined) {
+            // New results
+            const batch = db.batch();
+
+            return db.collection(BETS_COLLECTION).where("matchID", "==", context.params.matchID).get()
+                .then(bets => {
+                    if (bets.docs.length > 0) {
+                        bets.docs.forEach(doc => {
+                            // update bets-stats
+                            const statsDocRef = db.collection(BETS_STATS_COLLECTION).doc(doc.data().email);
+                            if (doc.data().winner == winAfter) {
+                                // reward the win with double
+                                const delta = doc.data().amount * 2;
+                                batch.update(statsDocRef, {
+                                    total: FieldValue.increment(delta),
+                                    wins: FieldValue.increment(1),
+                                });
+                            } else {
+                                // mark the lose
+                                batch.update(statsDocRef, {
+                                    loses: FieldValue.increment(1),
+                                });
+                            }
+
+                            // copy to archive
+                            const data = doc.data();
+                            data.win = doc.data().winner == winAfter;
+                            batch.set(db.collection(BETS_ARCHIVE_COLLECTION).doc(doc.ref.id), data);
+
+                            // delete bet
+                            batch.delete(doc.ref);
+
+                            functions.logger.info("Process Bet", "betID", doc.ref.id, doc.data().email, "matchID", doc.data().matchID, "win", data.win, "amount", data.amount);
+                        });
+                    }
+                })
+                .then(() => {
+                    // reward each player
+                    if (dataAfter.Player2 && dataAfter.Player4) {
+                        // not singles
+                        const rewarded = [];
+                        for (let i = 1; i <= 4; i++) {
+                            if (dataAfter["Player" + i]) {
+                                const playerEmail = dataAfter["Player" + i].email;
+                                rewarded.push(playerEmail);
+                            }
+                        }
+
+                        return db.collection(BETS_STATS_COLLECTION).where("email", "in", rewarded).get()
+                            .then(stats => {
+                                const actRewarded = [];
+                                stats.docs.forEach(player => {
+                                    if (player.data().total < 200) {
+                                        actRewarded.push(player.ref.id);
+                                        batch.update(player.ref, {
+                                            total: FieldValue.increment(50),
+                                        });
+                                    }
+                                });
+
+                                functions.logger.info("Reward players with tokens", "list", actRewarded, "amount", 50);
+                                return batch.commit();
+                            });
+                    }
+                    return batch.commit();
+                });
+        }
+
+        // Update results
+        const winBefore = calcWinner(dataBefore.sets, dataBefore.pairQuit);
+        if (winBefore == winAfter) {
+            // No change
+            return;
+        }
+
+        return db.collection(BETS_ARCHIVE_COLLECTION).where("matchID", "==", context.params.matchID).get().then(bets => {
+            if (bets.docs.length > 0) {
+                const batch = db.batch();
+
+                bets.docs.forEach(doc => {
+                    // update bets-stats
+                    const winValue = doc.data().amount * 2;
+                    const statsDocRef = db.collection(BETS_STATS_COLLECTION).doc(doc.data().email);
+
+                    if (doc.data().winner == winAfter) {
+                        // reward the win with double
+                        batch.update(statsDocRef, {
+                            total: FieldValue.increment(winValue),
+                            wins: FieldValue.increment(1),
+                            loses: FieldValue.increment(-1),
+                        });
+                    } else if (doc.data().winner == winBefore) {
+                        // mark the lose and subtruct the win only if before it was win
+                        batch.update(statsDocRef, {
+                            total: FieldValue.increment(-winValue),
+                            wins: FieldValue.increment(-1),
+                            loses: FieldValue.increment(1),
+                        });
+                    }
+
+                    // update to archive
+                    batch.update(db.collection(BETS_ARCHIVE_COLLECTION).doc(doc.ref.id), {
+                        win: doc.data().winner == winAfter,
+                    });
+
+                    functions.logger.info("Process Bet - match change", "betID", doc.ref.id, doc.data().email, "matchID", doc.data().matchID, "win", doc.data().winner == winAfter, "winValue", winValue);
+                });
+
+                return batch.commit();
+            }
+        });
+    });
+
+
+exports.archiveBets = functions.region("europe-west1").pubsub
+    // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
+    .schedule("00 23 * * *")
+    .timeZone("Asia/Jerusalem")
+    .onRun((context) => {
+        return db.collection(BETS_COLLECTION).get().then(bets => {
+            const batch = db.batch();
+            const waitFor = [];
+            bets.docs.forEach(doc => {
+                // look for the match:
+                waitFor.push(
+                    db.collection(MATCHES_COLLECTION).doc(doc.data().matchID).get().then(match => {
+                        if (!match.exists) {
+                            return db.collection(MATCHES_ARCHIVE_COLLECTION).doc(doc.data().matchID).get().then(matchArchive => {
+                                if (!matchArchive.exists || matchArchive.data().matchedCancelled ||
+                                    dayjs(matchArchive.data().date).diff(dayjs(), "day") < -5) {
+                                    // Not found match - remove bet and reclaim the bet
+                                    functions.logger.info("archiveBet", "betID", doc.ref.id, doc.data().email, "matchID", doc.data().matchID);
+                                    batch.delete(doc.ref);
+                                    batch.update(db.collection("bets-stats").doc(doc.data().email), {
+                                        total: FieldValue.increment(doc.data().amount),
+                                    });
+                                }
+                            });
+                        }
+                    }));
+            });
+            return Promise.all(waitFor).then(() => {
+                return batch.commit();
+            });
+        });
+    });
+
 exports.archiveMatches = functions.region("europe-west1").pubsub
     // minute (0 - 59) | hour (0 - 23) | day of the month (1 - 31) | month (1 - 12) | day of the week (0 - 6) - Sunday to Saturday
     .schedule("00 21 * * *")
@@ -1231,7 +1422,7 @@ const archiveMatchesImpl = (matchID) => {
     let msg = "Billing: ";
 
     return getGameTariff().then((tariff) => {
-        return db.collection("matches").get().then((allMatches) => {
+        return db.collection(MATCHES_COLLECTION).get().then((allMatches) => {
             const batch = db.batch();
             const debtUpdateMap = {};
 
@@ -1307,11 +1498,14 @@ const archiveMatchesImpl = (matchID) => {
 };
 
 const backupCollections = [
-    { name: "matches-archive" },
-    { name: "matches" },
+    { name: MATCHES_ARCHIVE_COLLECTION },
+    { name: MATCHES_COLLECTION },
     { name: "registrations" },
     { name: "planned-games" },
     { name: "stats" },
+    { name: "bets" },
+    { name: "bets-stats" },
+    { name: "bets-archive" },
     { name: "users" },
     { name: "users-info" },
     {
@@ -1430,7 +1624,7 @@ exports.getWeather = functions.region("europe-west1").pubsub
         const ramhashLoc = "lat=32.13&lon=34.83";
 
         const waitFor = [
-            db.collection("matches").where("date", ">=", dayjs().format("YYYY-MM-DD")).get(),
+            db.collection(MATCHES_COLLECTION).where("date", ">=", dayjs().format("YYYY-MM-DD")).get(),
             db.collection("planned-games").get(),
             axios.get(url + ramhashLoc),
             axios.get(url + raananaLoc),
@@ -1506,7 +1700,7 @@ exports.replacementRequest = functions.region("europe-west1").firestore
         const email = snapshot.data().email;
 
         // Get the match
-        return db.collection("matches").doc(matchID).get().then(matchDoc => {
+        return db.collection(MATCHES_COLLECTION).doc(matchID).get().then(matchDoc => {
             if (!matchDoc.exists) {
                 return;
             }
@@ -1530,7 +1724,7 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                 db.collection("registrations").get(),
                 db.collection("planned-games").get(),
                 // get all matches on the same date
-                db.collection("matches").where("date", "==", matchDoc.data().date).get(),
+                db.collection(MATCHES_COLLECTION).where("date", "==", matchDoc.data().date).get(),
             ];
 
             return Promise.all(waitFor).then(all => {
@@ -1668,7 +1862,7 @@ exports.regstrationCreated = functions.region("europe-west1").firestore
                     const requesterEmail = repRequests.docs[i].data().email;
 
                     // fetch the match
-                    return db.collection("matches").doc(repRequests.docs[i].data().matchID).get().then(matchDoc => {
+                    return db.collection(MATCHES_COLLECTION).doc(repRequests.docs[i].data().matchID).get().then(matchDoc => {
                         // Find which Player index requested the change
                         let requesterIndex = -1;
                         for (let i = 1; i <= 4; i++) {
@@ -1684,7 +1878,7 @@ exports.regstrationCreated = functions.region("europe-west1").firestore
                             return;
                         }
 
-                        return db.collection("matches").where("date", "==", matchDoc.data().date).get().then(matches => {
+                        return db.collection(MATCHES_COLLECTION).where("date", "==", matchDoc.data().date).get().then(matches => {
                             const doesNotPlay = (email) => {
                                 const match = matches.docs.find(mDoc => {
                                     const matchData = mDoc.data();
@@ -1757,7 +1951,7 @@ exports.NudjeForPartialMatches = functions.region("europe-west1").pubsub
     .onRun(async (context) => {
         const waitFor = [
             db.collection("registrations").get(),
-            db.collection("matches").where("date", "==", dayjs().format(dateFormat)).get(),
+            db.collection(MATCHES_COLLECTION).where("date", "==", dayjs().format(dateFormat)).get(),
             db.collection("replacement-requests").get(),
         ];
 

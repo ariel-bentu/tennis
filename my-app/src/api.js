@@ -26,6 +26,8 @@ export const Collections = {
     PAYMENTS_SUB_COLLECTION: "payments",
     STATS_COLLECTION: "stats",
     BETS_COLLECTION: "bets",
+    BETS_ARCHIVE_COLLECTION:"bets-archive",
+    BETS_STATS_COLLECTION: "bets-stats",
 
     USERS_COLLECTION: "users",
     USERS_INFO_COLLECTION: "users-info",
@@ -207,7 +209,7 @@ export async function getPlannedGames(currentUser) {
             let today = dayjs()
             if (today.day() !== 6) {
                 //not saturday
-                results = results.filter(g=>g.id !== -5);
+                results = results.filter(g => g.id !== -5);
             }
 
             getDocs(db.collection(Collections.REGISTRATION_COLLECTION)).then(
@@ -491,7 +493,7 @@ export async function getPaginatedCollection(collName, oBy, orderDesc, lim, sAft
     });
 }
 
-export async function getCollectionWithWhere(collName, whereField, op, value, oBy, orderDesc) {
+export async function getCollectionWithWhere(collName, whereField, op, value, oBy, orderDesc, lim) {
     let colRef = db.collection(collName);
     const constraints = []
     if (whereField) {
@@ -501,6 +503,9 @@ export async function getCollectionWithWhere(collName, whereField, op, value, oB
         constraints.push(orderDesc ? orderBy(oBy, "desc") : orderBy(oBy));
     }
 
+    if (lim) {
+        constraints.push(limit(lim));
+    }
 
     let i = 1;
     return getDocs(query(colRef, ...constraints)).then((items) => {
@@ -814,7 +819,9 @@ export async function placeBet(bet) {
 
     const placeBetFunction = httpsCallable(functions, 'placeBet');
 
-    return placeBetFunction(bet);
+    return placeBetFunction({
+        date:getTimestamp(),
+        ...bet});
 }
 
 export async function requestReplacement(userInfo, match, requestActive) {
@@ -834,4 +841,15 @@ export async function requestReplacement(userInfo, match, requestActive) {
         }
     })
 
+}
+
+export function getAvailableTokens(email) {
+    let docRef = doc(db, Collections.BETS_STATS_COLLECTION, email);
+    return getDoc(docRef).then(doc => {
+        if (doc.exists()) {
+            return doc.data().total;
+        } else {
+            return 0;
+        }
+    });
 }

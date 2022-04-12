@@ -1,9 +1,10 @@
 import { Grid } from '@material-ui/core';
-import { Check, Close, EmojiEventsOutlined } from '@material-ui/icons';
+import { Check, Close, EmojiEventsOutlined, Lock } from '@material-ui/icons';
 import { ToggleButton, ToggleButtonGroup } from '@material-ui/lab';
 import React, { useState, useEffect, useCallback } from 'react';
 import { HBox, HThinSeparator, SmallText2, Spacer, Card, SVGIcon, HBoxC } from './elem';
 import * as api from './api'
+import dayjs from 'dayjs';
 
 
 
@@ -12,6 +13,8 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
     const [myBet, setMyBet] = useState(undefined);
     const [myEditedBet, setMyEditedBet] = useState(undefined);
     const [submitInProcess, setSubmitInProcess] = useState(false);
+    const [tokens, setTokens] = useState(0);
+    const [locked, setLocked] = useState(false);
 
     useEffect(() => {
         if (bets && match) {
@@ -24,6 +27,15 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
             }
             setMatchBets(_matchBets);
         }
+        api.getAvailableTokens(UserInfo.email).then(tokens => {
+            setTokens(tokens);
+        })
+
+        // If match started - lock it
+        if (dayjs(match.date + " " + match.Hour).isBefore(dayjs())) {
+            setLocked(true);
+        }
+
     }, [match, bets, UserInfo.email]);
 
 
@@ -84,11 +96,16 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
         if (newAmount < 0) {
             newAmount = 0;
         }
+        if (newAmount > tokens) {
+            notify.error(" עברת את מכסת הטוקנים שלך");
+            return;
+        }
 
         setMyEditedBet({ ...editedBet, amount: newAmount });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [myBet, myEditedBet, UserInfo])
-    const actualMyBet = myEditedBet ? myEditedBet : myBet;
+    }, [myBet, myEditedBet, UserInfo, tokens])
+    const actualMyBet = myEditedBet ? myEditedBet : myBet ? myBet : { amount: 0 };
+    const deltaBet = myBet ? actualMyBet.amount - myBet.amount : actualMyBet.amount;
     const whoWins = actualMyBet ? actualMyBet.winner : 0;
 
     return (
@@ -99,7 +116,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                     fontSize={20}
                     backgroundColor="black"
                     color="white"
-                    fontWeight="bold">הימורים - preview</SmallText2>
+                    fontWeight="bold">מי ינצח?</SmallText2>
                 <Close style={{ position: 'relative', left: 10, width: 15, height: 30, color: 'white' }}
                     onClick={() => onDone(myBet)} />
             </HBox>
@@ -142,20 +159,21 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                     </Grid>
 
                     <Grid container spacing={1} >
-                        <Grid item xs={5} alignContent={'flex-start'} >
-
+                        <Grid item xs={5} alignContent={'center'} >
+                            <SmallText2 textAlign="center" width={80}>יתרה: {tokens - deltaBet}</SmallText2>
                         </Grid>
                         <Grid item xs={4} alignContent={'flex-start'} >
                             <Spacer />
                             <HBoxC>
-                                <SVGIcon svg="betPlus" onClick={() => setMyAmount(true)} size={20} />
+                                <SVGIcon svg="betPlus" onClick={() => !locked && setMyAmount(true)} size={20} />
                                 <SmallText2 textAlign="center" width={40}>{actualMyBet ? actualMyBet.amount : ""}</SmallText2>
-                                <SVGIcon svg="betMinus" onClick={() => setMyAmount(false)} size={20} />
+                                <SVGIcon svg="betMinus" onClick={() => !locked && setMyAmount(false)} size={20} />
                             </HBoxC>
                             <Spacer />
                         </Grid>
 
                         <Grid item xs={2} alignContent={'flex-start'} >
+                            {locked && <Lock />}
                             {isDirty() ? <Check onClick={() => {
                                 if (!submitInProcess) {
                                     setSubmitInProcess(true);
@@ -166,6 +184,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                                             setMyBet(myEditedBet);
                                             setMyEditedBet(undefined);
                                             setSubmitInProcess(false);
+                                            onDone(myEditedBet);
                                         },
                                         (err) => {
                                             notify.error(err.message);

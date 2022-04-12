@@ -274,3 +274,15 @@ export function calcWinner(match) {
     }
     return winner;
 }
+
+
+export const year = () => dayjs().format("YYYY")
+export const years = () => {
+    const yearsArray = ["2021"]
+    let y = 2021
+    let endYear = parseInt(year());
+    for (let yy = y + 1; yy <= endYear; yy++) {
+        yearsArray.push(yy + "");
+    }
+    return yearsArray;
+}
