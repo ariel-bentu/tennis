@@ -178,7 +178,7 @@ export default function PlaceBets({ UserInfo, onDone, match, bets, notify }) {
                                 if (!submitInProcess) {
                                     setSubmitInProcess(true);
                                     notify.progress();
-                                    api.placeBet(myEditedBet).then(
+                                    api.placeBet({...myEditedBet, date:match.date}).then(
                                         () => {
                                             notify.success("נשמר בהצלחה");
                                             setMyBet(myEditedBet);

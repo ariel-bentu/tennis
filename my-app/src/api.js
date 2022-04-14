@@ -819,9 +819,7 @@ export async function placeBet(bet) {
 
     const placeBetFunction = httpsCallable(functions, 'placeBet');
 
-    return placeBetFunction({
-        date:getTimestamp(),
-        ...bet});
+    return placeBetFunction(bet);
 }
 
 export async function requestReplacement(userInfo, match, requestActive) {

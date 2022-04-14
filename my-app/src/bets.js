@@ -1,10 +1,10 @@
 import { documentId } from 'firebase/firestore/lite';
 import { Grid } from "@material-ui/core";
-import {  AttachMoney, EmojiEvents, Person, SentimentVeryDissatisfied, SentimentVerySatisfied, ThumbDown, ThumbUp } from "@material-ui/icons";
+import { EmojiEvents, Person, SentimentVeryDissatisfied, SentimentVerySatisfied, ThumbDown, ThumbUp } from "@material-ui/icons";
 import { ToggleButton, ToggleButtonGroup } from "@material-ui/lab";
 import React, { useEffect, useState } from "react";
 import * as api from './api'
-import { Card, HBox, HBoxC, HSeparator, HThinSeparator, Loading, Picker, SmallText, SmallText2, Spacer, VBox, VBoxC } from "./elem";
+import { Card, HBox, HBoxC, HSeparator, HThinSeparator, Loading, Picker, SmallText, SmallText2, Spacer, SVGIcon, VBox, VBoxC } from "./elem";
 import { getNiceDate, year, years } from "./utils";
 
 const getComparator = () => {
@@ -22,20 +22,17 @@ export function Bets(props) {
 
     useEffect(() => {
         Promise.all([
-            api.getCollection(api.Collections.USERS_INFO_COLLECTION).then(u => {
-                return u;
-            }),
-            api.getCollection(api.Collections.BETS_STATS_COLLECTION).then(ub => {
-                return ub;
-            })
+            api.getCollection(api.Collections.USERS_INFO_COLLECTION),
+            api.getCollection(api.Collections.BETS_STATS_COLLECTION),
+            api.getCollection(api.Collections.BETS_COLLECTION),
         ]).then(all => {
             const users = all[0];
             const betsStats = all[1];
+            const allBets = all[2];
 
             users.forEach(oneUser => {
                 let userBet = betsStats.find(betStat => betStat._ref.id === oneUser.email);
                 if (!userBet) {
-                    //oneUser.displayName = "לא נמצא"
                     betsStats.push({
                         displayName: oneUser.displayName,
                         total: 0,
@@ -45,8 +42,10 @@ export function Bets(props) {
                         _ref: { id: oneUser.email }
                     })
                 } else {
+                    const betSum = allBets.filter(bet => bet.email === oneUser.email).reduce((prev, curr) => prev + curr.amount, 0);
                     userBet.displayName = oneUser.displayName;
                     userBet.inactive = oneUser.inactive;
+                    userBet.openBets = betSum;
                 }
             })
             betsStats.sort(getComparator());
@@ -67,9 +66,10 @@ export function Bets(props) {
 
     useEffect(() => {
         if (viewMyBets && !myBets) {
+            const email = props.UserInfo.email;
             Promise.all([
-                api.getCollectionWithWhere(api.Collections.BETS_COLLECTION, "email", "==", props.UserInfo.email),
-                api.getCollectionWithWhere(api.Collections.BETS_ARCHIVE_COLLECTION, "email", "==", props.UserInfo.email, "date", true, 10),
+                api.getCollectionWithWhere(api.Collections.BETS_COLLECTION, "email", "==", email),
+                api.getCollectionWithWhere(api.Collections.BETS_ARCHIVE_COLLECTION, "email", "==", email, "date", true, 10),
             ])
                 .then(all => {
                     const _myBets = all[0];
@@ -77,24 +77,30 @@ export function Bets(props) {
 
                     const matchIDs = _myBets.map(b => b.matchID);
                     const matchArchiveIDs = _archiveBets.map(ab => ab.matchID);
-
                     const enrich = (bets, matches) => bets.map(bet => {
                         const match = matches.find(m => m._ref.id === bet.matchID)
                         if (match) {
                             return { match: match, ...bet };
                         }
                         return undefined;
-                    })
+                    }).filter(b => b !== undefined);
 
                     if (matchIDs?.length > 0) {
                         api.getCollectionWithWhere(api.Collections.MATCHES_COLLECTION, documentId(), "in", matchIDs)
-                            .then(_matches => setMyBets(enrich(_myBets, _matches)));
+                            .then(_matches => {
+                                const bb = enrich(_myBets, _matches);
+                                setMyBets(bb)
+                            });
                     } else {
                         setMyBets([]);
                     }
                     if (matchArchiveIDs?.length > 0) {
+                        console.log("archiveIDs", matchArchiveIDs)
                         api.getCollectionWithWhere(api.Collections.MATCHES_ARCHIVE_COLLECTION, documentId(), "in", matchArchiveIDs)
-                            .then(_archiveMatches => setMyArchiveBets(enrich(_archiveBets, _archiveMatches)));
+                            .then(_archiveMatches => {
+                                const bb = enrich(_archiveBets, _archiveMatches);
+                                setMyArchiveBets(bb)
+                            });
                     } else {
                         setMyArchiveBets([]);
                     }
@@ -144,6 +150,9 @@ export function Bets(props) {
                     <Grid item xs={1}  >
                         <ThumbDown fontSize={'small'} />
                     </Grid>
+                    <Grid item xs={3}  >
+                        <SmallText2 textAlign="center">פתוח</SmallText2>
+                    </Grid>
                 </Grid>
                 <HSeparator key={"sep"} />
                 {bets && bets.map((oneBet, i) => (
@@ -163,6 +172,9 @@ export function Bets(props) {
                         <Grid item xs={1}  >
                             {oneBet.loses}
                         </Grid>
+                        <Grid item xs={3}  >
+                            <SmallText2 textAlign="center">{oneBet.openBets > 0 ? oneBet.openBets : ""}</SmallText2>
+                        </Grid>
                     </Grid>,
                     <HSeparator key={"sep2"} />]
                 ))
@@ -178,7 +190,7 @@ export function Bets(props) {
                 {myBets && (myBets.length === 0 ?
                     <SmallText2 fontSize={18}>אין</SmallText2> :
                     myBets.map((bet, i) => (
-                        <OneGame key={i} match={bet.match} bet={bet} />)
+                        bet.match ? <OneGame key={i} match={bet.match} bet={bet} /> : <SmallText key={i}>missing: {JSON.stringify(bet)}</SmallText>)
                     ))
                 }
                 <Spacer />
@@ -191,7 +203,7 @@ export function Bets(props) {
                 {myArchiveBets && (myArchiveBets.length === 0 ?
                     <SmallText2 fontSize={18}>אין</SmallText2> :
                     myArchiveBets.map((bet, i) => (
-                        <OneGame key={i} match={bet.match} bet={bet} />)
+                        bet.match ? <OneGame key={i} match={bet.match} bet={bet} /> : <SmallText>חסר</SmallText>)
                     ))
                 }
             </VBoxC>
@@ -209,7 +221,8 @@ function OneGame({ match, bet }) {
         <HThinSeparator />
         <HBox style={{ width: '100%', justifyContent: "space-between" }}>
             <VBox style={{ width: "20%" }}>
-                <AttachMoney style={{ color: foreColor }} />
+                {/* <AttachMoney style={{ color: foreColor }} /> */}
+                <SVGIcon svg={"betWithColor"} size={22} color={"foreColor"} />
                 <SmallText2 fontSize={20} textAlign="center">{bet.amount}</SmallText2>
                 <Spacer height={30} />
                 {bet.win !== undefined && (bet.win ? <SentimentVerySatisfied fontSize={'large'} color={'primary'} /> : <SentimentVeryDissatisfied fontSize={'large'} color={'error'} />)}

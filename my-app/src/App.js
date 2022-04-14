@@ -449,7 +449,7 @@ let App = props => {
                   <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
                   <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
                   <ResponsiveTab label={"לוח"} icon={<BarChart />} />
-                  <ResponsiveTab label={"הימורים"} icon={<VBox><Spacer height={7}/><SVGIcon svg={tab == 4?"bet":"betGray"} size={25}/></VBox>} />
+                  <ResponsiveTab label={"הימורים"} icon={<SVGIcon svg={"betWithColor"} size={25} color={tab == 4?"#3D95EE":"#737373"}/>} />
                   <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
 
 
