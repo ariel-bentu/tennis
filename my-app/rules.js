@@ -31,6 +31,11 @@ service cloud.firestore {
     	allow read: if request.auth != null;
     }
     
+    match /bets-stats/{user} {
+      allow write: if isAdmin();
+    	allow read: if request.auth != null;
+    }
+    
     match /stats/{user} {
       allow write: if isAdmin();
     	allow read: if request.auth != null;
@@ -39,6 +44,11 @@ service cloud.firestore {
     match /registrations/{reg} {
     	allow read: if request.auth != null;
       allow write: if isActiveUser();
+    }
+    
+    match /replacement-requests/{rep} {
+    	allow read: if request.auth != null;
+      allow write: if rep.matches(request.auth.token.email + ".*");
     }
 
     match /matches/{m} {
@@ -60,12 +70,24 @@ service cloud.firestore {
       allow read: if isFinAdmin() || user == request.auth.token.email;
     }
 
-    match /billing/{m}/debts/{d} {
-    	allow read, write: if isFinAdmin();
+    match /billing/{user}/debts/{d} {
+    	allow write: if isFinAdmin();
+      allow read: if isFinAdmin() || user == request.auth.token.email;
     }
     
-    match /billing/{m}/payments/{d} {
-    	allow read, write: if isFinAdmin();
+    match /billing/{user}/payments/{d} {
+    	allow write: if isFinAdmin();
+      allow read: if isFinAdmin() || user == request.auth.token.email;
+    }
+    
+    match /bets/{m} {
+    	allow read: if isActiveUser();
+      allow write: if isAdmin();
+    }
+    
+    match /bets-archive/{m} {
+    	allow read: if isActiveUser();
+      allow write: if isAdmin();
     }
     
     match /systemInfo/{m} {
