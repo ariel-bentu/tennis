@@ -39,8 +39,8 @@ export default function Users(props) {
                 return (u1, u2) => u1.rank - u2.rank;
             case 2:
                 return (u1, u2) => u2._elo1 - u1._elo1;
-            case 3:
-                return (u1, u2) => u2._elo2 - u1._elo2;
+            // case 3:
+            //     return (u1, u2) => u2._elo2 - u1._elo2;
             default:
                 return undefined;
         }
@@ -149,10 +149,10 @@ export default function Users(props) {
                         <Grid item xs={condense ? 3 : 2}>טלפון</Grid>
                         <Grid item xs={condense ? 2 : 1}>
                             <HBoxSB>
-                                <SmallText>{"דירוג" + (sortBy === 3 ? "(e)" : sortBy === 2 ? "(e.n)" : "")}</SmallText>
+                                <SmallText>{"דירוג"}</SmallText>
                                 <Sort style={{ color: sortBy > 0 ? "red" : "black" }} onClick={() => setSortBy(oldSort => {
                                     let newSort = oldSort + 1;
-                                    if (newSort > 3) {
+                                    if (newSort > 2) {
                                         newSort = 1;
                                     }
                                     return newSort;
