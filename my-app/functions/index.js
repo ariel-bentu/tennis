@@ -490,6 +490,9 @@ exports.registerUser = functions.region("europe-west1").https.onCall((data, cont
                         phone: data.phone,
                         displayName: data.displayName,
                     }),
+                    db().collection(BILLING_COLLECTION).doc(data.email).set({
+                        balance: 0,
+                    }),
                     db().collection(BETS_STATS_COLLECTION).doc(data.email).set({
                         total: 200,
                         wins: 0,
