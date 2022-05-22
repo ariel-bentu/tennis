@@ -1810,7 +1810,7 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                     // Look for the one who registered first
                     let firstRegistered = registeredUsers[0];
                     for (let i = 1; i < registeredUsers.length; i++) {
-                        if (registeredUsers[i].date < firstRegistered.date) {
+                        if (registeredUsers[i].utcTime < firstRegistered.utcTime) {
                             firstRegistered = registeredUsers[i];
                         }
                     }
@@ -1833,11 +1833,6 @@ exports.replacementRequest = functions.region("europe-west1").firestore
 
                         batch.update(snapshot.ref, { fulfilled: true });
 
-                        // delete the registration for this user
-                        const reg = all[0].docs.find(regDoc => regDoc.data().email === email && regDoc.data().GameID == matchDoc.data().GameID);
-                        if (reg) {
-                            batch.delete(reg.ref);
-                        }
                         return batch.commit();
                     });
                 } else {
