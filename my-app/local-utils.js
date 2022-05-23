@@ -2,7 +2,7 @@ const axios = require("axios");
 const fs = require("fs");
 const archiver = require('archiver');
 const elo = require("elo-rating");
-
+const Excel = require("exceljs")
 
 
 
@@ -17,6 +17,7 @@ const {
     FieldPath,
     FieldValue,
 } = require("@google-cloud/firestore");
+const { match } = require("assert");
 
 function moveStatsYear() {
     const batch = db.batch();
@@ -40,23 +41,27 @@ function moveStatsYear() {
 }
 //year as string
 //update elo1 from 1500
-function RecreateStats(year) {
+function RecreateStats(year, eloFieldName, eloInitFieldName, players) {
     const waitFor = []
-    //const nextYear = (parseInt(year) + 1) + ""
+
+    let matchRef = db.collection("matches-archive");
+    if (year) {
+        matchRef = matchRef.where("date", ">=", year)
+    }
+    matchRef = matchRef.orderBy("date", "asc")
+
     waitFor.push(db.collection("stats").get());
-    waitFor.push(db.collection("matches-archive")
-        .where("date", ">=", year)
-        //.where("date", "<", nextYear)
-        .orderBy("date", "asc")
-        .get());
+    waitFor.push(matchRef.get());
 
 
     Promise.all(waitFor).then(all => {
         const matches = all[1].docs.filter(doc => {
             return (doc.data().matchCancelled == undefined || doc.data().matchCancelled == false) &&
-                doc.data().Player2 != undefined && doc.data().date.startsWith(year)
+                doc.data().Player2 != undefined && (!year || doc.data().date.startsWith(year))
         });
-        const curStats = all[0].docs;
+
+
+        let curStats = all[0].docs;
 
         const statUpdates = [];
 
@@ -65,29 +70,39 @@ function RecreateStats(year) {
             if (!match.sets) {
                 continue;
             }
-            const winner = calcWinner(match.sets)
+            const winner = calcWinner(match.sets, match.pairQuit, match.matchCancelled)
+            if (winner === -1) {
+                continue;
+            }
 
-            const pair1EloAvg = getEloAvg(statUpdates, match.Player1, match.Player2);
-            const pair2EloAvg = getEloAvg(statUpdates, match.Player3, match.Player4);
+            const pair1EloAvg = getEloAvg(statUpdates, curStats, match.Player1, match.Player2, eloFieldName, eloInitFieldName);
+            const pair2EloAvg = getEloAvg(statUpdates, curStats, match.Player3, match.Player4, eloFieldName, eloInitFieldName);
 
-            const newElo1Rating = elo.calculate(pair1EloAvg.elo2021, pair2EloAvg.elo2021, winner === 1, 32);
+            if (isNaN(pair1EloAvg[eloFieldName]) || isNaN(pair2EloAvg[eloFieldName])) {
+                debugger
+            }
+            const newElo1Rating = elo.calculate(pair1EloAvg[eloFieldName], pair2EloAvg[eloFieldName], winner === 1, 32);
 
-            const eloDiff1_p1_2 = Math.abs(newElo1Rating.playerRating - pair1EloAvg.elo2021);
-            const eloDiff1_p3_4 = Math.abs(newElo1Rating.opponentRating - pair2EloAvg.elo2021);
+            const eloDiff1_p1_2 = Math.abs(newElo1Rating.playerRating - pair1EloAvg[eloFieldName]);
+            const eloDiff1_p3_4 = Math.abs(newElo1Rating.opponentRating - pair2EloAvg[eloFieldName]);
+
+            console.log("elo", eloDiff1_p1_2, eloDiff1_p3_4)
 
             const updatePlayer = (p, firstPair) => {
                 let updateIndex = statUpdates.findIndex(s => s.email === p.email);
                 if (updateIndex < 0) {
                     const curStat = curStats.find(c => c.ref.id === p.email)
                     if (!curStat) {
-                        console.log("stop")
+                        //only update existing stats
+                        //return;
                     }
+
                     statUpdates.push({
                         email: p.email,
-                        // wins2021: curStat.data().wins2021,
-                        // loses2021: curStat.data().loses2021,
-                        // ties2021: curStat.data().ties2021,
-                        elo2021: curStat.data().elo2Init,
+                        [eloFieldName]: curStat.data()[eloInitFieldName] || 1500,
+                        // wins: 0,
+                        // loses: 0,
+                        // ties: 0,
                     })
                     updateIndex = statUpdates.length - 1;
                 }
@@ -96,14 +111,18 @@ function RecreateStats(year) {
                 const lose = (firstPair && winner == 2) || (!firstPair && winner == 1)
                 const tie = winner == 0
 
-                // statUpdates[updateIndex].wins2021 -= win ? 1 : 0;
-                // statUpdates[updateIndex].loses2021 -= lose ? 1 : 0;
-                // statUpdates[updateIndex].ties2021 -= tie ? 1 : 0;
+                // statUpdates[updateIndex].wins += win ? 1 : 0;
+                // statUpdates[updateIndex].loses += lose ? 1 : 0;
+                // statUpdates[updateIndex].ties += tie ? 1 : 0;
+
                 if (win) {
-                    statUpdates[updateIndex].elo2021 += (firstPair ? eloDiff1_p1_2 : eloDiff1_p3_4);
+                    statUpdates[updateIndex][eloFieldName] += (firstPair ? eloDiff1_p1_2 : eloDiff1_p3_4);
                 }
                 if (lose) {
-                    statUpdates[updateIndex].elo2021 -= (firstPair ? eloDiff1_p1_2 : eloDiff1_p3_4);;
+                    statUpdates[updateIndex][eloFieldName] -= (firstPair ? eloDiff1_p1_2 : eloDiff1_p3_4);;
+                }
+                if (isNaN(statUpdates[updateIndex][eloFieldName])) {
+                    debugger
                 }
             }
 
@@ -116,12 +135,36 @@ function RecreateStats(year) {
 
         const batch = db.batch();
         statUpdates.forEach(update => {
-            const statRef = all[0].docs.find(s => s.ref.id === update.email);
+            if (!players || players.findIndex(p => p === update.email) !== -1) {
+                const statRef = all[0].docs.find(s => s.ref.id === update.email);
 
-            batch.update(statRef.ref, update);
+                batch.update(statRef.ref, update);
+                console.log("update", statRef.ref.id, update);
+            }
         });
         batch.commit();
-        console.log("done", JSON.stringify(statUpdates, undefined, "  "))
+
+        // console.log("differences of > 25", eloFieldName, "init", eloInitFieldName)
+        // statUpdates.forEach(update => {
+        //     const statRef = all[0].docs.find(s => s.ref.id === update.email);
+        //     if (Math.abs(update[eloFieldName] - statRef.data()[eloFieldName]) > 25) {
+        //         console.log(update.email, "new", update[eloFieldName], "curr", statRef.data()[eloFieldName])
+        //     }
+
+        //     if (update.wins !== statRef.data().wins ||
+        //     update.loses !== statRef.data().loses ||
+        //     update.ties !== statRef.data().ties 
+        //     ) {
+        //         console.log(update.email, "wins/loses mismatch")
+        //         console.log(update)
+        //         console.log(JSON.stringify(statRef.data()))
+        //     }
+
+        // })
+
+
+
+        //console.log("done", JSON.stringify(statUpdates, undefined, "  "))
 
     });
 
@@ -129,7 +172,9 @@ function RecreateStats(year) {
 
 
 // Actual work:
-//RecreateStats("2021")
+//RecreateStats(undefined, "elo1", "none")
+
+//["yhorr@017.net.il", "ofertalmon@gmail.com", "asaflevy22@gmail.com", "dandan.koper@gmail.com"])
 // function loadStats2021ForBackup() {
 //     let gib =  fs.readFileSync("/Users/i022021/Downloads/stats.json", 'utf8');
 //     let stats = JSON.parse(gib)
@@ -148,7 +193,13 @@ function RecreateStats(year) {
 const toNum = (v) => parseInt(v);
 
 
-const calcWinner = (sets) => {
+const calcWinner = (sets, pairQuit, cancelled) => {
+    if (pairQuit) {
+        return pairQuit === 1 ? 2 : 1;
+    }
+    if (cancelled) {
+        return -1;
+    }
     const wonSets1 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) > toNum(curr.pair2) ? 1 : 0), 0);
     const wonSets2 = sets.reduce((prev, curr) => prev + (toNum(curr.pair1) < toNum(curr.pair2) ? 1 : 0), 0);
 
@@ -171,37 +222,53 @@ const calcWinner = (sets) => {
 };
 
 //assumes 4 players
-const getEloAvg = (stats, p1, p2) => {
+const getEloAvg = (updateStats, stats, p1, p2, field, initFieldName) => {
 
-    const p1StatDoc = stats.find(s => s.email === p1.email);
+    const p1StatDoc = updateStats.find(s => s.email === p1.email);
     let p1Stat;
     if (!p1StatDoc) {
-        p1Stat = {
-            elo2021: 1500,
-            //elo2: 1500,
-        };
+        const initStat = stats.find(s => s.data().email === p1.email);
+        if (!initStat) {
+            p1Stat = {
+                [field]: 1500,
+                //elo2: 1500,
+            };
+        } else {
+            p1Stat = {
+                [field]: initStat.data()[initFieldName] || 1500,
+                //elo2: 1500,
+            };
+        }
     } else {
         p1Stat = {
-            elo2021: p1StatDoc.elo2021,
+            [field]: p1StatDoc[field],
             //elo2: p1StatDoc.data().elo2,
         };
     }
 
-    const p2StatDoc = stats.find(s => s.email === p2.email);
+    const p2StatDoc = updateStats.find(s => s.email === p2.email);
     let p2Stat;
     if (!p2StatDoc) {
-        p2Stat = {
-            elo2021: 1500,
-            //elo2: 1500,
-        };
+        const initStat = stats.find(s => s.data().email === p1.email);
+        if (!initStat) {
+            p2Stat = {
+                [field]: 1500
+                //elo2: 1500,
+            };
+        } else {
+            p2Stat = {
+                [field]: initStat.data()[initFieldName] || 1500,
+                //elo2: 1500,
+            };
+        }
     } else {
         p2Stat = {
-            elo2021: p2StatDoc.elo2021,
+            [field]: p2StatDoc[field],
             //elo2: p2StatDoc.data().elo2,
         };
     }
     return {
-        elo2021: (p1Stat.elo2021 + p2Stat.elo2021) / 2,
+        [field]: (p1Stat[field] + p2Stat[field]) / 2,
         //elo2: (p1Stat.elo2 + p2Stat.elo2) / 2,
     };
 };
@@ -263,12 +330,197 @@ function sendNotification() {
     let docRef = db.collection("notifications").doc();
     docRef.set({
         title: "שים לב שחקן יקר!",
-        body: `טרם שילמת את דמי ההרשמה לקבוצת ATPenn.
-אנא העבר את דמי ההרשמה בלינק הבא:`,
+//         body: `טרם שילמת את דמי ההרשמה לקבוצת ATPenn.
+// אנא העבר את דמי ההרשמה בלינק הבא:`,
+        body: "test youhoo",
         link: "/#4",
         createdAt: FieldValue.serverTimestamp(),
-        to: ["dmitry@picnmix.ru", "amir.yaniv@one.co.il", "royfried10@gmail.com"]
+        to: ["ariel.bentolila@gmail.com"]
     });
 }
 
+sendNotification()
+
 //initBetsStats()
+
+
+function rewardBetTokens() {
+    const waitFor = [
+        db.collection("bets-stats").get(),
+        db.collection("matches-archive")
+            .where("date", ">=", "2022-04-11")
+            .get()
+    ]
+    Promise.all(waitFor).then(all => {
+        const batch = db.batch();
+        const stats = all[0].docs;
+        all[1].docs.forEach(match => {
+            const dataAfter = match.data();
+
+            if (dataAfter.Player2 && dataAfter.Player4) {
+                // not singles
+                const rewarded = [];
+                for (let i = 1; i <= 4; i++) {
+                    if (dataAfter["Player" + i]) {
+                        const playerEmail = dataAfter["Player" + i].email;
+                        rewarded.push(playerEmail);
+                    }
+                }
+
+                const actRewarded = [];
+                rewarded.forEach(email => {
+                    const player = stats.find(s => s.ref.id === email)
+
+                    if (player.data().total < 200) {
+                        actRewarded.push(player.ref.id);
+                        batch.update(player.ref, {
+                            total: FieldValue.increment(50),
+                        });
+                        console.log(player.ref.id, 50)
+                    }
+                });
+
+                console.log("Reward players with tokens", "list", actRewarded, "amount", 50);
+                //return batch.commit();
+            }
+
+        })
+        return batch.commit();
+    });
+}
+
+//rewardBetTokens()
+
+
+
+function getMatchData(id) {
+    db.collection("matches").doc(id).get().then(doc => {
+        if (doc.exists) {
+            console.log(JSON.stringify(doc.data()))
+        }
+    })
+}
+//getMatchData("IGhy1gZvTKK00dZrZbNH")
+
+
+function rank(year, players) {
+    let matchRef = db.collection("matches-archive");
+    if (year) {
+        matchRef = matchRef.where("date", ">=", year)
+    }
+    matchRef = matchRef.orderBy("date", "asc")
+
+    const waitFor = [
+        matchRef.get(),
+        //        db.collection("stats").get()
+        db.collection("users-info").get(),
+    ];
+
+
+    Promise.all(waitFor).then(all => {
+        const matches = all[0].docs.filter(doc => {
+            return (doc.data().matchCancelled == undefined || doc.data().matchCancelled == false) &&
+                doc.data().Player2 != undefined && (!year || doc.data().date.startsWith(year))
+        });
+
+        //let curStats = all[0].docs;
+
+
+        const users = all[1].docs;
+
+        const statUpdates = users.map(u => ({
+            email: u.ref.id,
+            rank: 1500,
+            lastGame: '2021-08-01',
+        }));
+        let lastDate = "";
+        let datePlayers = [];
+
+        for (let i = 0; i < matches.length; i++) {
+            const match = matches[i].data()
+            if (!match.sets) {
+                continue;
+            }
+
+            if (match.date !== lastDate) {
+                lastDate = match.date;
+
+                // reduce rank of all who did not play
+                statUpdates.filter(s1 => !datePlayers.find(s2 => s1.email === s2)).forEach(su => {
+                    su.rank -= 1;
+                })
+
+
+                datePlayers = [];
+            }
+
+            const winner = calcWinner(match.sets, match.pairQuit, match.matchCancelled)
+            if (winner === -1) {
+                // cancelled
+                continue;
+            }
+
+            for (let i = 1; i <= 4; i++) {
+                const email = match["Player" + i].email;
+                datePlayers.push(email);
+
+                const isPair1 = i < 3;
+
+                let update = statUpdates.find(s => s.email === email);
+
+
+                // win / lose
+                if (winner === 1 && isPair1 || winner === 2 && !isPair1) {
+                    update.rank += 20;
+                } else if (winner !== 2) { //not a tie
+                    update.rank -= 20;
+                }
+                // participation
+                update.rank += 3;
+
+                // all others not participating
+
+                update.lastGame = match.data;
+
+            }
+
+        }
+
+        const workbook = new Excel.Workbook();
+        const fileName = "/Users/i022021/dev/tennis/ATPenn/my-app/rank.xlsx"
+        workbook.xlsx.readFile(fileName).then(
+            (xl) => {
+                const sheet = xl.worksheets[0];
+                const rows = sheet.getRows(1, 1000)
+
+
+                statUpdates.forEach((update, i) => {
+                    const user = users.find(u => u.ref.id === update.email)
+
+                    // find the row
+                    const row = rows.find(r => r.getCell(1).value === user.data().displayName)
+                    if (row) {
+                        if (row.getCell(1).value == null) {
+                            row.getCell(1).value = user.data().displayName;
+                        } else if (row.getCell(1).value !== user.data().displayName) {
+                            debugger;
+                        }
+                        row.getCell(4).value = update.rank;
+
+                        row.commit();
+                    }
+                    //console.log(user.data().displayName, update.rank);
+
+                });
+                xl.xlsx.writeFile(fileName).then(
+                    () => console.log("saved"),
+                    (err) => console.log(err)
+                );
+            },
+            (reason) => {
+                console.log(reason)
+            })
+    });
+}
+
+// rank();
