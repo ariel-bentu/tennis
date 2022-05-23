@@ -26,7 +26,7 @@ import { Toolbar, Text, Loading, VBox, HBox, Spacer, TabPanel, SmallText2, SVGIc
 
 import {
   AttachMoney, PlaylistAdd, SportsTennis, Menu, CalendarToday, BarChart, Check,
-  NotificationsActive, NotificationsOff, Money
+  NotificationsActive, NotificationsOff
 } from '@material-ui/icons';
 import * as api from './api'
 import Login from './login'
@@ -215,6 +215,9 @@ let App = props => {
     notify.ask(`האם ל${pushNotification === true ? "בטל" : "אפשר"} הודעות בדחיפה?`, undefined, [
       {
         caption: "כן", callback: () => {
+          if (pushNotification === false) {
+            handleSafariNotifClick();
+          }
           api.updateUserNotification(!pushNotification).then(
             () => {
               notify.success("עודכן בהצלחה")
@@ -230,15 +233,15 @@ let App = props => {
   }, [pushNotification]);
 
 
-  // const handleNotifClick = () => {
-  //   if ('safari' in window && 'pushNotification' in window.safari) {
-  //     let permissionData = window.safari.pushNotification.permission('web.com.atpenn');
-  //     let token = api.checkSafariRemotePermission(permissionData);
-  //     if (token) {
-  //       setNotificationToken(token);
-  //     }
-  //   };
-  // };
+  const handleSafariNotifClick = () => {
+    if ('safari' in window && 'pushNotification' in window.safari) {
+      let permissionData = window.safari.pushNotification.permission('web.com.atpenn');
+      let token = api.checkSafariRemotePermission(permissionData);
+      if (token) {
+        setNotificationToken(token);
+      }
+    };
+  };
 
   const isAdminPath = window.location && window.location.pathname && window.location.pathname.endsWith("admin");
   //console.log("adminPath" + (isAdminPath ? " y" : " n"))
@@ -449,7 +452,7 @@ let App = props => {
                   <ResponsiveTab label={"מתוכנן"} icon={<CalendarToday />} />
                   <ResponsiveTab label={"משחקים"} icon={<SportsTennis />} />
                   <ResponsiveTab label={"לוח"} icon={<BarChart />} />
-                  <ResponsiveTab label={"הימורים"} icon={<SVGIcon svg={"betWithColor"} size={25} color={tab == 4?"#3D95EE":"#737373"}/>} />
+                  <ResponsiveTab label={"הימורים"} icon={<SVGIcon svg={"betWithColor"} size={25} color={tab === 4 ? "#3D95EE" : "#737373"} />} />
                   <ResponsiveTab label={"חוב"} icon={<AttachMoney />} />
 
 
@@ -471,9 +474,9 @@ let App = props => {
                 <TabPanel key="4" value={tab} index={4}>
                   {tab === 4 ? <Bets notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
                 </TabPanel>,
-                 <TabPanel key="5" value={tab} index={5}>
-                 {tab === 5 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
-               </TabPanel>
+                <TabPanel key="5" value={tab} index={5}>
+                  {tab === 5 ? <MyBill notify={notify} UserInfo={userInfo} Balance={userBalance} /> : null}
+                </TabPanel>
               ]
             }}
           />

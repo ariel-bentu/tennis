@@ -101,7 +101,7 @@ export function initAPI(onAuth, onPushNotification, onNotificationToken) {
 export const checkSafariRemotePermission = (permissionData) => {
     if (permissionData.permission === 'default') {
         // This is a new web service URL and its validity is unknown.
-        window.safari.pushNotification.requestPermission(
+        return window.safari.pushNotification.requestPermission(
             'https://tennis.atpenn.com', // The web service URL.
             'web.com.atpenn',     // The Website Push ID.
             {}, // Data that you choose to send to your server to help you identify the user.
@@ -109,6 +109,7 @@ export const checkSafariRemotePermission = (permissionData) => {
         );
     }
     else if (permissionData.permission === 'denied') {
+        console.log("Safari push is denied");
         // The user said no.
     }
     else if (permissionData.permission === 'granted') {
