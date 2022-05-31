@@ -121,10 +121,12 @@ export default function Match(props) {
             setUsers(_users)
 
 
-
             let actRegistration = _registrations;
             if (_thisSatRegistrations !== undefined) {
-                actRegistration = actRegistration.concat(_thisSatRegistrations);
+                // remove cases where user registered already to same day (happens in SAT only)
+                const cleanSatRegistered = _thisSatRegistrations.filter(r=>!actRegistration.some(ar=>ar.email === r.email && ar.GameID === r.GameID))
+
+                actRegistration = actRegistration.concat(cleanSatRegistered);
             }
 
             //add user displayNames names
