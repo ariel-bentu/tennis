@@ -83,7 +83,7 @@ export default function Login({onForgotPwd, onLogin, onError, notify}) {
             label="אימייל"
             autoComplete="email"
             autoFocus
-            onChange={(e) => setUser(e.currentTarget.value)}
+            onChange={(e) => setUser(e.currentTarget.value.trim())}
           />
         </div>
         <TextField

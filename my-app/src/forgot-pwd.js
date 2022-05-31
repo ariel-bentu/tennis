@@ -53,7 +53,7 @@ export default function ForgotPwd(props) {
                         label="אימייל"
                         autoComplete="email"
                         autoFocus
-                        onChange={(e) => setEmail(e.currentTarget.value)}
+                        onChange={(e) => setEmail(e.currentTarget.value.trim())}
                     />
                     <HBox>
                         <Button
