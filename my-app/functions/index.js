@@ -1798,6 +1798,8 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                     return match === undefined;
                 };
 
+                // find the registration for the user who asked for replacement - for deletion
+                const thisUserReg = all[0].docs.find(regDoc => regDoc.data().email === email && regDoc.data().GameID == matchDoc.data().GameID);
 
                 // find out if there is a registered person not playing
                 let registeredUsers = all[0].docs.filter(ru => ru.data().GameID === matchDoc.data().GameID);
@@ -1810,7 +1812,7 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                     // Look for the one who registered first
                     let firstRegistered = registeredUsers[0];
                     for (let i = 1; i < registeredUsers.length; i++) {
-                        if (registeredUsers[i].utcTime < firstRegistered.utcTime) {
+                        if (registeredUsers[i].data().utcTime < firstRegistered.data().utcTime) {
                             firstRegistered = registeredUsers[i];
                         }
                     }
@@ -1832,6 +1834,9 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                         batch.update(matchDoc.ref, updatedData);
 
                         batch.update(snapshot.ref, { fulfilled: true });
+                        if (thisUserReg) {
+                            batch.delete(thisUserReg.ref);
+                        }
 
                         return batch.commit();
                     });
@@ -1843,10 +1848,8 @@ exports.replacementRequest = functions.region("europe-west1").firestore
                         db().collection("admins").get(),
                     ];
 
-                    // delete the registration for this user
-                    const reg = all[0].docs.find(regDoc => regDoc.data().email === email && regDoc.data().GameID == matchDoc.data().GameID);
-                    if (reg) {
-                        waitFor2.push(reg.ref.delete());
+                    if (thisUserReg) {
+                        waitFor2.push(thisUserReg.ref.delete());
                     }
 
                     return isMatchEventsOn().then(eventsOn => {
