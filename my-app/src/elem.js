@@ -280,7 +280,7 @@ export function HBox(props) {
 export function Search(props) {
     return (
         <div dir="rtl" >
-            <TextField label="חפש" type="search" variant="outlined" size="small" style={{ width: 200 }}
+            <TextField label="חפש" type="search" variant="outlined" size="small" style={{ width: 200 }} value={props.value || ""}
                 onChange={(e) => props.onChange ? props.onChange(e.currentTarget.value) : {}}
             />
         </div>)

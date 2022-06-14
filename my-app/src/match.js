@@ -14,7 +14,7 @@ import './match.css';
 
 import {
     Spacer, Card, Loading, HBox, VBox, Text, SmallText,
-    HBoxSB, HBoxC, SmallText2, HSeparator, VBoxC, HThinSeparator
+    HBoxSB, HBoxC, SmallText2, HSeparator, VBoxC, HThinSeparator, Search
 } from './elem'
 import { Dustbin } from './drop-box';
 import { Box } from './drag-box'
@@ -23,7 +23,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 
 import { isMobile } from 'react-device-detect';
-import { AccessTime, Delete, ExpandMore, LocationOn, Person } from '@material-ui/icons';
+import { AccessTime, Delete, ExpandMore, Filter, LocationOn, Person } from '@material-ui/icons';
 
 import {
     newMatch, isNotInMatches, suggestMatch, getMatchMessage,
@@ -65,6 +65,7 @@ export default function Match(props) {
     const [unregUsers, setUnregUsers] = useState([]);
     const [matchText, setMatchText] = useState(undefined);
     const [matchesSaved, setMatchesSaved] = useState(1);
+    const [filter, setFilter] = useState("");
 
 
     const [currentGame, setCurrentGame] = useState(undefined);
@@ -124,7 +125,7 @@ export default function Match(props) {
             let actRegistration = _registrations;
             if (_thisSatRegistrations !== undefined) {
                 // remove cases where user registered already to same day (happens in SAT only)
-                const cleanSatRegistered = _thisSatRegistrations.filter(r=>!actRegistration.some(ar=>ar.email === r.email && ar.GameID === r.GameID))
+                const cleanSatRegistered = _thisSatRegistrations.filter(r => !actRegistration.some(ar => ar.email === r.email && ar.GameID === r.GameID))
 
                 actRegistration = actRegistration.concat(cleanSatRegistered);
             }
@@ -244,7 +245,11 @@ export default function Match(props) {
         return (em.GameID === currentGame || (currentGame < 0 && isToday(em))) && !em.deleted
     }) : [];
     let currentRegistrations = registrations ? registrations.filter(em => em.GameID === currentGame) : [];
-
+    let notRegistered = unregUsers;
+    if (filter.length > 0) {
+        currentRegistrations = currentRegistrations.filter(reg => reg.displayName.includes(filter));
+        notRegistered = notRegistered.filter(reg => reg.displayName.includes(filter));
+    }
     //currentRegistrations = currentRegistrations.sort((cr1, cr2) => cr1._order - cr2._order);
 
     let width = props.windowSize.w;
@@ -442,12 +447,18 @@ export default function Match(props) {
                                                     <HBox>
                                                         <VBox>
                                                             <Dustbin sourcePair={'Pair1'} source={1} Player={match.Player1}
-                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 1)}
+                                                                AddPlayer={(user, source) => {
+                                                                    updateMatch(match.id, user, source, 1)
+                                                                    setFilter("");
+                                                                }}
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 1)}
                                                                 width={dragWidth}
                                                             />
                                                             <Dustbin sourcePair={'Pair1'} source={2} Player={match.Player2}
-                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 2)}
+                                                                AddPlayer={(user, source) => {
+                                                                    updateMatch(match.id, user, source, 2)
+                                                                    setFilter("");
+                                                                }}
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 2)}
                                                                 width={dragWidth}
                                                             />
@@ -455,12 +466,18 @@ export default function Match(props) {
                                                         <SmallText2 textAlign="center" width={30}>vs</SmallText2>
                                                         <VBox>
                                                             < Dustbin sourcePair={'Pair2'} source={3} Player={match.Player3}
-                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 3)}
+                                                                AddPlayer={(user, source) => {
+                                                                    updateMatch(match.id, user, source, 3);
+                                                                    setFilter("");
+                                                                }}
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 3)}
                                                                 width={dragWidth}
                                                             />
                                                             <Dustbin sourcePair={'Pair2'} source={4} Player={match.Player4}
-                                                                AddPlayer={(user, source) => updateMatch(match.id, user, source, 4)}
+                                                                AddPlayer={(user, source) => {
+                                                                    updateMatch(match.id, user, source, 4);
+                                                                    setFilter("");
+                                                                }}
                                                                 onRemove={() => updateMatch(match.id, undefined, 0, 4)}
                                                                 width={dragWidth}
                                                             />
@@ -496,24 +513,45 @@ export default function Match(props) {
                                     }
 
 
-                                    <VBox>
-                                        <Text fontSize={15}>שחקנים שנירשמו</Text>
-                                        <HBoxC style={{ flexWrap: 'wrap' }}>
+                                    <VBox style={{
+                                        height: "65vh",
+                                        overflowY: "scroll",
+                                        flexWrap: "nowrap",
+                                        zIndex: 1000,
+                                    }}>
+                                        <HBox>
+                                            <div style={{
+                                                height: "200vw", width: "10%",
+                                                backgroundColor: "lightgray", zIndex: 1000
+                                            }} >
+                                                <div style={{ height: 200, writingMode: "tb" }}>גרור כאן לגלילה</div>
+                                            </div>
 
-                                            {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
-                                                <Box key={reg.email} user={reg}
-                                                    sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} width={dragWidth}
-                                                    additionalInfo={reg._otherRegistrations}
-                                                />
-                                            )}
-                                        </HBoxC>
-                                        <Text fontSize={15}>כל שאר השחקנים</Text>
-                                        <HBoxC style={{ flexWrap: 'wrap' }}>
+                                            <VBox style={{ width: "90%" }}>
+                                                <Search value={filter} onChange={val => {
+                                                    setFilter(val)
+                                                }} />
 
-                                            {unregUsers.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
-                                                <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} width={dragWidth} />
-                                            )}
-                                        </HBoxC>
+                                                <Text fontSize={15}>שחקנים שנירשמו</Text>
+                                                <HBoxC style={{ flexWrap: 'wrap' }}>
+
+                                                    {currentRegistrations.filter(u => isNotInMatches(currentMatches, u.email)).map(reg =>
+                                                        <Box key={reg.email} user={reg}
+                                                            sourcePair={'unassigned'} source={0} backgroundColor={'lightblue'} width={dragWidth}
+                                                            additionalInfo={reg._otherRegistrations}
+                                                        />
+                                                    )}
+                                                </HBoxC>
+                                                <Text fontSize={15}>כל שאר השחקנים</Text>
+                                                <HBoxC style={{ flexWrap: 'wrap' }}>
+
+                                                    {notRegistered.filter(u => isNotInMatches(currentMatches, u.email)).map(user =>
+                                                        <Box key={user.email} user={user} sourcePair={'unassigned'} source={0} backgroundColor={'yellow'} width={dragWidth} />
+                                                    )}
+                                                </HBoxC>
+                                                <Spacer height="20vh" />
+                                            </VBox>
+                                        </HBox>
                                     </VBox>
 
 
