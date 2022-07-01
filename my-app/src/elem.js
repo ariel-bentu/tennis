@@ -74,7 +74,18 @@ export const getReplacementIndicator = (player) => player?._activeReplacementReq
     </VBox>)
 
 export function BoxInput(props) {
+    const style = { textAlign: 'center' };
+    if (props.focus) {
+        style.margin = 5;
+        style.backgroundColor = "lightgray";
+    }
+    if (props.tieBreak) {
+        style.position = "relative";
+        style.top = -8;
+    }
+
     return <div className="Sunken" style={{
+
         backgroundColor: props.backgroundColor,
         justifyItem: 'center',
         width: 40, height: 50, margin: 5
@@ -82,16 +93,40 @@ export function BoxInput(props) {
         {props.tieBreak ? <SmallText2 textAlign={'center'} fontSize={8}>שובר שוויון</SmallText2> : null}
         <InputBase
             inputRef={ref => props && props.focus ? (ref && ref.focus ? ref.focus() : {}) : {}}
-            onChange={(e) => {
-                props.onChange(e.currentTarget.value)
+            onInput={(e) => {
+                let newValue = e.nativeEvent.data;
+                if (props.tieBreak && props.value === "1") {
+                    newValue = props.value+newValue;
+                }
 
-                if (e.currentTarget.value !== "" && props.onNextFocus)
+                if (!props.tieBreak && (newValue === "8" || newValue == "9")) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                props.onChange(newValue)
+                // let msg = "key="+key;
+                // for (const [key, value] of Object.entries(e)) {
+                //     msg += `${key}: ${value}, `;
+                //   }
+                // alert(msg)
+                if (props.tieBreak && newValue === "1") {
+                    //allow two digits
+                    return;
+                }
+
+                if (!!(newValue !== "" && props.onNextFocus)) {
                     props.onNextFocus();
+                    console.log("move focus next")
+                }
             }}
             onFocus={() => props.onFocus ? props.onFocus() : {}}
-            value={props.value} fullwidth={true}
-            inputProps={{ pattern: "[0-9]*", style: { textAlign: 'center' } }}
-            style={{ height: '100%' }} />
+            value={props.value} 
+            fullwidth
+            type={"number"}
+            inputProps={{ pattern: props.pattern, style }}
+            
+            style={{ height: '100%'}} />
     </div>
 };
 

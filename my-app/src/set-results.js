@@ -145,7 +145,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
     const [paymentFactor, setPaymentFactor] = useState(match.paymentFactor);
 
     const togglePairQuit = (pairIndex) => {
-        setPairQuit(currPairQuit=>{
+        setPairQuit(currPairQuit => {
             if (currPairQuit === pairIndex) {
                 return undefined;
             }
@@ -170,8 +170,21 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
     }, [match])
 
     const tieBreak = editedSets.some(set => isTieBreakSet(set))
+
+    // asigns tab index to each game
+    let tabIndex = 0;
+    editedSets.forEach((set, i) => {
+        set._tabIndex = tabIndex;
+
+        if (isTieBreakSet(set)) {
+            tabIndex += 4;
+        } else {
+            tabIndex += 2;
+        }
+    });
+
     return (
-        <Paper1 style={{ width: '100%', height: '70vh', justifyContent: 'center' }}>
+        <Paper1 style={{ width: '100%', height: window.height*.7, justifyContent: 'center' }}>
             <Spacer height={20} />
             <SmallText textAlign='center' fontSize={12}>{match.Day + " ," + getNiceDate(match.date)}</SmallText>
             <Spacer height={20} />
@@ -182,18 +195,19 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 </VBox>
                 <Spacer width={15} />
                 {editedSets.map((s, i) => (
-                    <HBox style={{ width: 40, marginLeft:5, marginRight:5 }}>
+                    <HBox style={{ width: 40, marginLeft: 5, marginRight: 5 }} key={i}>
                         <SmallText2 textAlign="center" fontSize={10}>{"set " + (i + 1)}</SmallText2>
                     </HBox>
                 )
                 )}
-                <HBox style={{ width: 40, marginLeft:5, marginRight:5 }}>
+                <HBox style={{ width: 40, marginLeft: 5, marginRight: 5 }}>
                     <SmallText2 textAlign="center" fontSize={10}>פרישה</SmallText2>
                 </HBox>
             </HBoxC>
 
             {tieBreak ?
-                <TieBreakLine editedSets={editedSets} pairIndex={1} setEditedSets={setEditedSets} />
+                <TieBreakLine editedSets={editedSets} pairIndex={1} setEditedSets={setEditedSets}
+                    nextFocus={nextFocus} setNextFocus={setNextFocus} />
                 : null}
 
             <HBoxC>
@@ -205,10 +219,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
 
                 {!gameCancelled && editedSets.map((set, i) => (
                     <BoxInput backgroundColor='gold' value={set.pair1}
-                        focus={i * 2 === nextFocus}
-
+                        key={i}
+                        focus={set._tabIndex === nextFocus}
+                        pattern={"[0-7]"}
                         onNextFocus={() => setNextFocus(n => n + 1)}
-                        onFocus={() => nextFocus !== i * 2 ? setNextFocus(i * 2) : {}}
+                        onFocus={() => nextFocus !== set._tabIndex ? setNextFocus(set._tabIndex) : {}}
                         onChange={newVal => {
                             setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair1: newVal } : s))
                         }
@@ -216,7 +231,7 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                     />
                 )
                 )}
-                {!gameCancelled && <div style={{width:40}} onClick={()=>togglePairQuit(1)}>{pairQuit === 1?<RadioButtonChecked />:<RadioButtonUnchecked />}</div>}
+                {!gameCancelled && <div style={{ width: 40 }} onClick={() => togglePairQuit(1)}>{pairQuit === 1 ? <RadioButtonChecked /> : <RadioButtonUnchecked />}</div>}
             </HBoxC>
             <HBoxC>
                 <Spacer width={25} />
@@ -231,19 +246,22 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                 <Spacer width={15} />
                 {!gameCancelled && editedSets.map((set, i) => (
                     <BoxInput
+                        key={i}
+                        pattern={"[0-7]"}
                         value={set.pair2}
-                        focus={i * 2 + 1 === nextFocus}
-                        onFocus={() => nextFocus !== i * 2 + 1 ? setNextFocus(i * 2 + 1) : {}}
+                        focus={set._tabIndex + 1 === nextFocus}
+                        onFocus={() => nextFocus !== set._tabIndex + 1 ? setNextFocus(set._tabIndex + 1) : {}}
                         onNextFocus={() => setNextFocus(n => n + 1)}
                         onChange={newVal => setEditedSets(sets => sets.map((s, j) => j === i ? { ...s, pair2: newVal } : s))}
                     />
                 )
-                ) }
-                {!gameCancelled && <div style={{width:40}} onClick={()=>togglePairQuit(2)}>{pairQuit === 2?<RadioButtonChecked />:<RadioButtonUnchecked />}</div>}
+                )}
+                {!gameCancelled && <div style={{ width: 40 }} onClick={() => togglePairQuit(2)}>{pairQuit === 2 ? <RadioButtonChecked /> : <RadioButtonUnchecked />}</div>}
             </HBoxC>
 
             {tieBreak ?
-                <TieBreakLine editedSets={editedSets} pairIndex={2} setEditedSets={setEditedSets} />
+                <TieBreakLine editedSets={editedSets} pairIndex={2} setEditedSets={setEditedSets}
+                    nextFocus={nextFocus} setNextFocus={setNextFocus} />
                 : null}
 
 
@@ -306,7 +324,11 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                             return;
                         }
                         //save changes
-                        match.sets = editedSets.filter(s => s.pair1 !== "");
+                        match.sets = editedSets.filter(s => s.pair1 !== "").map(s => {
+                            const { _tabIndex, ...set } = s;
+                            return set;
+                        });
+
                         if (!pairQuit) {
                             delete match.pairQuit;
                         } else {
@@ -334,17 +356,29 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
         </Paper1 >);
 }
 
-function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
+function TieBreakLine({ editedSets, pairIndex, setEditedSets, nextFocus, setNextFocus }) {
     return (
         <HBoxC>
             <VBox style={{ width: 75 }} >
-                    <SmallText textAlign='center'></SmallText>
-                    <SmallText textAlign='center'></SmallText>
-                </VBox>
-                <Spacer width={15} />
+                <SmallText textAlign='center'></SmallText>
+                <SmallText textAlign='center'></SmallText>
+            </VBox>
+            <Spacer width={15} />
             {editedSets.map((set, i) => (
                 isTieBreakSet(set) ?
                     <BoxInput
+                        pattern="[0-9]+"
+                        focus={pairIndex === 1 ?
+                            (set._tabIndex + 2 == nextFocus) :
+                            (set._tabIndex + 3 == nextFocus)
+                        }
+                        onFocus={() => {
+                            let tabIndex = pairIndex === 1 ? set._tabIndex + 2 : set._tabIndex + 3;
+                            if (nextFocus !== tabIndex)
+                                setNextFocus(tabIndex)
+                        }}
+                        onNextFocus={() => setNextFocus(n => n + 1)}
+
                         backgroundColor={pairIndex === 1 ? 'gold' : 'transparent'}
                         tieBreak={true}
                         value={set["tbPair" + pairIndex]}
@@ -356,7 +390,7 @@ function TieBreakLine({ editedSets, pairIndex, setEditedSets }) {
                     : <Spacer width={50} height={50} />
             ))
             }
-            <Spacer width={40}/>
+            <Spacer width={40} />
         </HBoxC>
     )
 }
