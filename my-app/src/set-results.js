@@ -284,8 +284,8 @@ export default function SetResults({ UserInfo, match, notify, onCancel, onDone, 
                         const val = e.currentTarget.value;
                         const floatVal = parseFloat(val);
                         if (val && val.trim() !== "" && val.trim() !== ".") {
-                            if (isNaN(floatVal) || floatVal < 0 || floatVal > 1) {
-                                notify.error("מקדם תשלום: ערך חייב להיות בין 0 ל-1");
+                            if (isNaN(floatVal) || floatVal < 0) {
+                                notify.error("מקדם תשלום: ערך חייב להיות גדול אן שווה ל 0");
                             }
                         }
                         setPaymentFactor(val);
